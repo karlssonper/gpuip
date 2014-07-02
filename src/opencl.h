@@ -1,16 +1,15 @@
 #ifndef GPUIP_OPENCL_H_
 #define GPUIP_OPENCL_H_
-
+//----------------------------------------------------------------------------//
 #include "base.h"
-
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
 #endif
-
+//----------------------------------------------------------------------------//
 namespace gpuip {
-
+//----------------------------------------------------------------------------//
 class OpenCLImpl : public Base
 {
   public:
@@ -39,7 +38,7 @@ class OpenCLImpl : public Base
                         const cl_kernel & clKernel,
                         std::string * err);
 };
-
+//----------------------------------------------------------------------------//
 } // end namespace gpuip
-
+//----------------------------------------------------------------------------//
 #endif

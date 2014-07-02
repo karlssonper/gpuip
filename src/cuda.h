@@ -1,10 +1,12 @@
 #ifndef GPUIP_CUDA_H_
 #define GPUIP_CUDA_H_
-
+//----------------------------------------------------------------------------//
 #include "base.h"
-
+#include <cuda.h>
+#include <cuda_runtime.h>
+//----------------------------------------------------------------------------//
 namespace gpuip {
-
+//----------------------------------------------------------------------------//
 class CUDAImpl : public Base
 {
   public:
@@ -22,9 +24,10 @@ class CUDAImpl : public Base
                       std::string * err);
 
   protected:
-    
+    std::vector<CUfunction> _cudaKernels;
+    std::map<std::string, float*> _cudaBuffers;
 };
-
+//----------------------------------------------------------------------------//
 } // end namespace gpuip
 
 #endif

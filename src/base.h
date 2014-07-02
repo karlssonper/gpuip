@@ -2,6 +2,7 @@
 #define GPUIP_BASE_H_
 
 #include "gpuip.h"
+#include <stdexcept>
 
 namespace gpuip {
 

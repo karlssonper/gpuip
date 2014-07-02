@@ -1,10 +1,11 @@
 #include "opencl.h"
+#include "opencl_error.h"
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
 Base *
 CreateOpenCL(unsigned int width,
-                    unsigned int height)
+             unsigned int height)
 {
     return new OpenCLImpl(width, height);
 }
@@ -13,37 +14,39 @@ OpenCLImpl::OpenCLImpl(unsigned int width,
                        unsigned int height)
         : Base(OpenCL, width, height)
 {
-    cl_int err;
-
     // Get Platform ID
     cl_platform_id platform_id;
-    err = clGetPlatformIDs(1, &platform_id, NULL);
-    // Check error TODO
-
+    if(clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) {
+        throw std::logic_error("gpuip::OpenCLImpl() could not get platform id");
+    }
+    
     // TODO add option for CPU? Could be nice for testing
     cl_device_type device_type = CL_DEVICE_TYPE_GPU;
 
     // Get Device ID
-    err = clGetDeviceIDs(platform_id, device_type,
-                         1 /*only 1 device for now */,
-                         &_device_id, NULL);
-    // Check error TODO
-
+    if(clGetDeviceIDs(platform_id, device_type,
+                      1 /*only 1 device for now */,
+                      &_device_id, NULL) != CL_SUCCESS) {
+        throw std::logic_error("gpuip::OpenCLImpl() could not get device id");
+    }
+    
     // Create context and command queue
     _ctx = clCreateContext(NULL, 1, &_device_id, NULL, NULL, NULL);
     _queue = clCreateCommandQueue(_ctx, _device_id, 0, NULL);
 }
 //----------------------------------------------------------------------------//
 bool
-OpenCLImpl::InitBuffers(std::string * error)
+OpenCLImpl::InitBuffers(std::string * err)
 {
-    cl_int err;
+    cl_int cl_err;
     std::map<std::string,Buffer>::const_iterator it;
     for (it = _buffers.begin(); it != _buffers.end(); ++it) {
         _clBuffers[it->second.name] = clCreateBuffer(
             _ctx, CL_MEM_READ_WRITE /* TODO optimize for only read/write */,
-            _GetBufferSize(it->second), NULL, &err);
-        //TODO check error
+            _GetBufferSize(it->second), NULL, &cl_err);
+        if (_clErrorInitBuffers(cl_err, err)) {
+            return false;
+        }
     }
     return true;
 }
@@ -51,22 +54,28 @@ OpenCLImpl::InitBuffers(std::string * error)
 bool
 OpenCLImpl::Build(std::string * error)
 {
-    cl_int err;
+    cl_int cl_err;
 
     for (int i = 0; i < _kernels.size(); ++i) {
         const char * code = _kernels[i].code.c_str();
+        const char * name = _kernels[i].name.c_str();
         cl_program program = clCreateProgramWithSource(
-            _ctx, 1, &code, NULL,  &err);
-        // check error TODO
-
+            _ctx, 1, &code, NULL,  &cl_err);
+        if (_clErrorCreateProgram(cl_err, error)) {
+            return false;
+        }
+        
         // Build program
-        err = clBuildProgram(program, 1, &_device_id, NULL, NULL, NULL);
-        // check error
-
+        cl_err = clBuildProgram(program, 1, &_device_id, NULL, NULL, NULL);
+        if (_clErrorBuildProgram(cl_err, error, program, _device_id, name)) {
+            return false;
+        }
+    
         // Create kernel from program
-        const char * kernel_name = _kernels[i].name.c_str();
-        _clKernels.push_back(clCreateKernel(program, kernel_name, &err));
-        // check ERROR todo
+        _clKernels.push_back(clCreateKernel(program, name, &cl_err));
+        if (_clErrorCreateKernel(cl_err, error)) {
+            return false;
+        }
     }
     return true;
 }
@@ -86,7 +95,7 @@ bool
 OpenCLImpl::Copy(const std::string & buffer,
                  Buffer::CopyOperation op,
                  void * data,
-                 std::string * err)
+                 std::string * error)
 {
     cl_int cl_err;
     if (op == Buffer::READ_DATA) {
@@ -100,8 +109,9 @@ OpenCLImpl::Copy(const std::string & buffer,
             CL_TRUE /* function call returns when copy is done */ ,
             0, _GetBufferSize(_buffers[buffer]), data, 0 , NULL, NULL);
     }
-    // TODO check error
-    
+    if (_clErrorCopy(cl_err, error, buffer, op)) {
+        return false;
+    }
     return true;
 }
 //----------------------------------------------------------------------------//
@@ -129,20 +139,28 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     // 3. Int parameters
     for(int i = 0; i < kernel.paramsInt.size(); ++i) {
         cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),
-                             &kernel.paramsInt[i].value);
+                                &kernel.paramsInt[i].value);
     }
 
     // 4. Float parameters
     for(float i = 0; i < kernel.paramsFloat.size(); ++i) {
         cl_err = clSetKernelArg(clKernel, argc++, sizeof(float),
-                             &kernel.paramsFloat[i].value);
+                                &kernel.paramsFloat[i].value);
     }
 
+    // It should be fine to check once all the arguments have been checked
+    if (_clErrorSetKernelArg(cl_err, err, kernel.name)) {
+        return false;
+    }
+    
     const size_t global_work_size[] = { _w, _h };    
     cl_err = clEnqueueNDRangeKernel(_queue, clKernel, 2, NULL,
-                                 global_work_size, NULL, 0, NULL, NULL);
-    //TODO check error
-    
+                                    global_work_size, NULL, 0, NULL, NULL);
+
+    if (_clErrorEnqueueKernel(cl_err, err, kernel.name)) {
+        return false;
+    }
+        
     return true;
 }
 //----------------------------------------------------------------------------//
