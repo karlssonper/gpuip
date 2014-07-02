@@ -47,7 +47,8 @@ bool CUDAImpl::Build(std::string * err)
     out << "}"; // End the extern C bracket
     out.close();
 
-    int nvcc_exit_status = system("nvcc -ptx .temp.cu -o .temp.ptx");
+    int nvcc_exit_status = system(
+        "nvcc -ptx .temp.cu -o .temp.ptx --Wno-deprecated-gpu-targets");
 
     // Cleanup temp text file
     system("rm .temp.cu");
@@ -79,6 +80,11 @@ bool CUDAImpl::Build(std::string * err)
 //----------------------------------------------------------------------------//
 bool CUDAImpl::Process(std::string * err)
 {
+    for(int i = 0; i < _kernels.size(); ++i) {
+        if (!_LaunchKernel(_kernels[i], _cudaKernels[i], err)) {
+            return false;
+        }
+    }
     return true;
 }
 //----------------------------------------------------------------------------//
@@ -97,6 +103,56 @@ bool CUDAImpl::Copy(const std::string & buffer,
     if (_cudaErrorCopy(e, err, buffer, op)) {
         return false;
     }
+    return true;
+}
+//----------------------------------------------------------------------------//
+bool CUDAImpl::_LaunchKernel(Kernel & kernel,
+                             const CUfunction & cudaKernel,
+                             std::string * err)
+{
+    // Set CUDA kernel arguments
+    CUresult c_err;
+    int paramOffset = 0;
+    for (size_t i = 0; i < kernel.inBuffers.size(); ++i) {
+        c_err = cuParamSetv(cudaKernel, paramOffset,
+                            &_cudaBuffers[kernel.inBuffers[i]], sizeof(void*));
+        paramOffset += sizeof(void *);
+    }
+    for (size_t i = 0; i < kernel.outBuffers.size(); ++i) {
+        c_err = cuParamSetv(cudaKernel, paramOffset,
+                            &_cudaBuffers[kernel.outBuffers[i]], sizeof(void*));
+        paramOffset += sizeof(void *);
+    }
+    for(int i = 0; i < kernel.paramsInt.size(); ++i) {
+        c_err = cuParamSetv(cudaKernel, paramOffset,
+                            &kernel.paramsInt[i].value, sizeof(int));
+        paramOffset += sizeof(int);
+    }
+    for(int i = 0; i < kernel.paramsFloat.size(); ++i) {
+        c_err = cuParamSetv(cudaKernel, paramOffset,
+                            &kernel.paramsFloat[i].value, sizeof(float));
+        paramOffset += sizeof(float);
+    }
+
+    // It should be fine to check once all the arguments have been set
+    if(_cudaErrorCheckParamSet(c_err, err, kernel.name)) {
+        return false;
+    }
+    
+    c_err = cuParamSetSize(cudaKernel, paramOffset);
+    if (_cudaErrorParamSetSize(c_err, err, kernel.name)) {
+        return false;
+    }
+
+    // Launch the CUDA kernel
+    const int nBlocksHor = _w / 16 + 1;
+    const int nBlocksVer = _h / 16 + 1;
+    cuFuncSetBlockShape(cudaKernel, 16, 16, 1);
+    c_err = cuLaunchGrid(cudaKernel, nBlocksHor, nBlocksVer);
+    if (_cudaErrorLaunchKernel(c_err, err, kernel.name)) {
+        return false;
+    }
+        
     return true;
 }
 //----------------------------------------------------------------------------//

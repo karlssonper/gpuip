@@ -6,24 +6,49 @@
 #include <memory>
 
 const char * opencl_codeA = ""
-"__kernel void my_kernelA(__global float * A,\n"
-"                         __global float * B,\n"
-"                         __global float * C,\n"
-"                         int incA,\n"
-"                         float incB)\n"
-"{\n"
-"    int x = get_global_id(0); int y = get_global_id(1);\n"
-"    B[x+y*4] =  A[x+y*4] + incA *0.1;\n"
-"    C[x+y*4] =  A[x+y*4] + incB ;\n"        
+"__kernel void my_kernelA(__global float * A,                               \n"
+"                         __global float * B,                               \n"
+"                         __global float * C,                               \n"
+"                         int incA,                                         \n"
+"                         float incB)                                       \n"
+"{                                                                          \n"
+"    int x = get_global_id(0); int y = get_global_id(1);                    \n"
+"    B[x+y*4] =  A[x+y*4] + incA *0.1;                                      \n"
+"    C[x+y*4] =  A[x+y*4] + incB;                                           \n"
 "}";
 
 const char * opencl_codeB = ""
-"__kernel void my_kernelB(__global float * B,\n"
-"                         __global float * C,\n"
-"                         __global float * A)\n"
-"{\n"
-"    int x = get_global_id(0); int y = get_global_id(1);\n"
-"    A[x+y*4] =  B[x+y*4] + C[x+y*4];\n"
+"__kernel void my_kernelB(__global float * B,                               \n"
+"                         __global float * C,                               \n"
+"                         __global float * A)                               \n"
+"{                                                                          \n"
+"    int x = get_global_id(0); int y = get_global_id(1);                    \n"
+"    A[x+y*4] =  B[x+y*4] + C[x+y*4];                                       \n"
+"}";
+
+const char * cuda_codeA = ""
+"__global__ void my_kernelA(float * A,                                      \n"
+"                           float * B,                                      \n"
+"                           float * C,                                      \n"
+"                           int incA,                                       \n"
+"                           float incB)                                     \n"
+"{                                                                          \n"
+"    if (threadIdx.x < 4 && threadIdx.y < 4) {                              \n"
+"        int idx = threadIdx.x + 4 * threadIdx.y;                           \n"
+"        B[idx] = A[idx] + incA * 0.1;                                      \n"
+"        C[idx] = A[idx] + incB;                                            \n"
+"    }"
+"}";
+
+const char * cuda_codeB = ""
+"__global__ void my_kernelB(float * B,                                      \n"
+"                           float * C,                                      \n"
+"                           float * A)                                      \n"
+"{                                                                          \n"
+"    if (threadIdx.x < 4 && threadIdx.y < 4) {                              \n"
+"        int idx = threadIdx.x + 4 * threadIdx.y;                           \n"
+"        A[idx] = B[idx] + C[idx];                                          \n"
+"    }                                                                      \n"
 "}";
 
 inline bool equal(float a, float b)
@@ -105,6 +130,7 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
 int main()
 {
     test(gpuip::OpenCL, opencl_codeA, opencl_codeB);
+    test(gpuip::CUDA, cuda_codeA, cuda_codeB);
     
     return 0;
 }

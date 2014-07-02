@@ -66,6 +66,57 @@ inline bool _cudaErrorGetFunction(CUresult c_err, std::string * err,
     return false;
 }
 //----------------------------------------------------------------------------//
+inline bool _cudaErrorCheckParamSet(CUresult c_err, std::string * err,
+                                    const std::string & kernel_name)
+{
+    if (c_err != CUDA_SUCCESS) {
+        (*err) += "Cuda: Error, could not set arguments for kernel named ";
+        (*err) += kernel_name;
+        (*err) += "\n";
+        switch(c_err) {
+            //TODO: add cases here
+            default:
+                break;
+        }
+        return true;
+    }
+    return false;
+}
+//----------------------------------------------------------------------------//
+inline bool _cudaErrorParamSetSize(CUresult c_err, std::string * err,
+                                   const std::string & kernel_name)
+{
+    if (c_err != CUDA_SUCCESS) {
+        (*err) += "Cuda: Error, could not set arguments size for kernel named ";
+        (*err) += kernel_name;
+        (*err) += "\n";
+        switch(c_err) {
+            //TODO: add cases here
+            default:
+                break;
+        }
+        return true;
+    }
+    return false;
+}
+//----------------------------------------------------------------------------//
+inline bool _cudaErrorLaunchKernel(CUresult c_err, std::string * err,
+                                   const std::string & kernel_name)
+{
+    if (c_err != CUDA_SUCCESS) {
+        (*err) += "Cuda: Error, could not launch kernel  ";
+        (*err) += kernel_name;
+        (*err) += "\n";
+        switch(c_err) {
+            //TODO: add cases here
+            default:
+                break;
+        }
+        return true;
+    }
+    return false;
+}
+//----------------------------------------------------------------------------//
 } // end namespace gpuip
 //----------------------------------------------------------------------------//
 #endif

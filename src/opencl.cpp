@@ -148,7 +148,7 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
                                 &kernel.paramsFloat[i].value);
     }
 
-    // It should be fine to check once all the arguments have been checked
+    // It should be fine to check once all the arguments have been set
     if (_clErrorSetKernelArg(cl_err, err, kernel.name)) {
         return false;
     }

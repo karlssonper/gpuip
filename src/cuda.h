@@ -26,6 +26,10 @@ class CUDAImpl : public Base
   protected:
     std::vector<CUfunction> _cudaKernels;
     std::map<std::string, float*> _cudaBuffers;
+
+    bool _LaunchKernel(Kernel & kernel,
+                       const CUfunction & cudaKernel,
+                       std::string * err);
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip
