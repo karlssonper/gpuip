@@ -51,6 +51,27 @@ const char * cuda_codeB = ""
 "    }                                                                      \n"
 "}";
 
+const char * glsl_codeA = ""
+"uniform sampler2D A;                                                       \n"
+"uniform int incA;                                                          \n"
+"uniform float incB;                                                        \n"
+"varying vec2 texcoord;                                                     \n"
+"void main()                                                                \n"
+"{                                                                          \n"
+"    gl_FragData[0] = vec4(texture2D(A, texcoord).x+incA*0.1,0,0,1);        \n"
+"    gl_FragData[1] = vec4(texture2D(A, texcoord).x+incB,0,0,1);            \n"  
+"}";
+        
+const char * glsl_codeB = ""
+"uniform sampler2D B;                                                       \n"
+"uniform sampler2D C;                                                       \n"
+"varying vec2 texcoord;                                                     \n"
+"void main()                                                                \n"
+"{                                                                          \n"
+"    gl_FragData[0] = vec4(texture2D(B, texcoord).x +                       \n"
+"                          texture2D(C, texcoord).x, 0, 0, 1);              \n"
+"}";
+
 inline bool equal(float a, float b)
 {
     return fabs(a-b) < 0.001;
@@ -101,6 +122,7 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
     
     
     std::string error;
+    b->InitBuffers(&error);
     assert(b->InitBuffers(&error));
     
     std::vector<float> data_in(N);
@@ -131,6 +153,7 @@ int main()
 {
     test(gpuip::OpenCL, opencl_codeA, opencl_codeB);
     test(gpuip::CUDA, cuda_codeA, cuda_codeB);
+    test(gpuip::GLSL, glsl_codeA, glsl_codeB);
     
     return 0;
 }
