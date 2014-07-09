@@ -42,7 +42,7 @@ bool CUDAImpl::Build(std::string * err)
     std::ofstream out(".temp.cu");
     out << "extern \"C\" { \n"; // To avoid function name mangling 
     for (int i = 0; i < _kernels.size(); ++i) {
-        out << _kernels[i].code << "\n";
+        out << _kernels[i]->code << "\n";
     }
     out << "}"; // End the extern C bracket
     out.close();
@@ -69,8 +69,8 @@ bool CUDAImpl::Build(std::string * err)
     _cudaKernels.resize(_kernels.size());
     for (int i = 0; i < _kernels.size(); ++i) {
         c_err = cuModuleGetFunction(&_cudaKernels[i], module,
-                                    _kernels[i].name.c_str());
-        if (_cudaErrorGetFunction(c_err, err, _kernels[i].name)) {
+                                    _kernels[i]->name.c_str());
+        if (_cudaErrorGetFunction(c_err, err, _kernels[i]->name)) {
             return false;
         }
     }
@@ -81,7 +81,7 @@ bool CUDAImpl::Build(std::string * err)
 bool CUDAImpl::Process(std::string * err)
 {
     for(int i = 0; i < _kernels.size(); ++i) {
-        if (!_LaunchKernel(_kernels[i], _cudaKernels[i], err)) {
+        if (!_LaunchKernel(*_kernels[i].get(), _cudaKernels[i], err)) {
             return false;
         }
     }

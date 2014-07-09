@@ -57,8 +57,8 @@ OpenCLImpl::Build(std::string * error)
     cl_int cl_err;
 
     for (int i = 0; i < _kernels.size(); ++i) {
-        const char * code = _kernels[i].code.c_str();
-        const char * name = _kernels[i].name.c_str();
+        const char * code = _kernels[i]->code.c_str();
+        const char * name = _kernels[i]->name.c_str();
         cl_program program = clCreateProgramWithSource(
             _ctx, 1, &code, NULL,  &cl_err);
         if (_clErrorCreateProgram(cl_err, error)) {
@@ -84,7 +84,7 @@ bool
 OpenCLImpl::Process(std::string * err)
 {
     for(int i = 0; i < _kernels.size(); ++i) {
-        if (!_EnqueueKernel(_kernels[i], _clKernels[i], err)) {
+        if (!_EnqueueKernel(*_kernels[i].get(), _clKernels[i], err)) {
             return false;
         }
     }
@@ -157,7 +157,7 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     cl_err = clEnqueueNDRangeKernel(_queue, clKernel, 2, NULL,
                                     global_work_size, NULL, 0, NULL, NULL);
 
-    if (_clErrorEnqueueKernel(cl_err, err, kernel.name)) {
+    if (_clErrorEnqueueKernel(cl_err, err, kernel)) {
         return false;
     }
         

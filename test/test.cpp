@@ -1,10 +1,8 @@
 #include "../src/gpuip.h"
-#include "../src/base.h"
 #include <cassert>
 #include <stdlib.h>
 #include <math.h>
-#include <memory>
-
+//----------------------------------------------------------------------------//
 const char * opencl_codeA = ""
 "__kernel void my_kernelA(__global float * A,                               \n"
 "                         __global float * B,                               \n"
@@ -16,7 +14,6 @@ const char * opencl_codeA = ""
 "    B[x+y*4] =  A[x+y*4] + incA *0.1;                                      \n"
 "    C[x+y*4] =  A[x+y*4] + incB;                                           \n"
 "}";
-
 const char * opencl_codeB = ""
 "__kernel void my_kernelB(__global float * B,                               \n"
 "                         __global float * C,                               \n"
@@ -25,7 +22,7 @@ const char * opencl_codeB = ""
 "    int x = get_global_id(0); int y = get_global_id(1);                    \n"
 "    A[x+y*4] =  B[x+y*4] + C[x+y*4];                                       \n"
 "}";
-
+//----------------------------------------------------------------------------//
 const char * cuda_codeA = ""
 "__global__ void my_kernelA(float * A,                                      \n"
 "                           float * B,                                      \n"
@@ -39,7 +36,6 @@ const char * cuda_codeA = ""
 "        C[idx] = A[idx] + incB;                                            \n"
 "    }"
 "}";
-
 const char * cuda_codeB = ""
 "__global__ void my_kernelB(float * B,                                      \n"
 "                           float * C,                                      \n"
@@ -50,7 +46,7 @@ const char * cuda_codeB = ""
 "        A[idx] = B[idx] + C[idx];                                          \n"
 "    }                                                                      \n"
 "}";
-
+//----------------------------------------------------------------------------//
 const char * glsl_codeA = ""
 "uniform sampler2D A;                                                       \n"
 "uniform int incA;                                                          \n"
@@ -61,7 +57,6 @@ const char * glsl_codeA = ""
 "    gl_FragData[0] = vec4(texture2D(A, texcoord).x+incA*0.1,0,0,1);        \n"
 "    gl_FragData[1] = vec4(texture2D(A, texcoord).x+incB,0,0,1);            \n"  
 "}";
-        
 const char * glsl_codeB = ""
 "uniform sampler2D B;                                                       \n"
 "uniform sampler2D C;                                                       \n"
@@ -71,18 +66,18 @@ const char * glsl_codeB = ""
 "    gl_FragData[0] = vec4(texture2D(B, texcoord).x +                       \n"
 "                          texture2D(C, texcoord).x, 0, 0, 1);              \n"
 "}";
-
+//----------------------------------------------------------------------------//
 inline bool equal(float a, float b)
 {
     return fabs(a-b) < 0.001;
 }
-
+//----------------------------------------------------------------------------//
 void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
 {
     const unsigned int width = 4;
     const unsigned int height = 4;
     const unsigned int N = width * height;
-    std::auto_ptr<gpuip::Base> b(gpuip::Factory::Create(env, width, height));
+    gpuip::Base::Ptr b(gpuip::Base::Create(env, width, height));
 
     gpuip::Buffer b1;
     b1.name = "A";
@@ -99,8 +94,8 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
     b->AddBuffer(b2);
     b->AddBuffer(b3);
 
-    gpuip::Kernel * kernelA = b->CreateKernel("my_kernelA");
-    assert(kernelA != NULL);
+    gpuip::Kernel::Ptr kernelA = b->CreateKernel("my_kernelA");
+    assert(kernelA.get() != NULL);
     assert(kernelA->name == std::string("my_kernelA"));
     kernelA->code = codeA;
     kernelA->inBuffers.push_back("A");
@@ -112,15 +107,14 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
     kernelA->paramsInt.push_back(incA);
     kernelA->paramsFloat.push_back(incB);
 
-    gpuip::Kernel * kernelB = b->CreateKernel("my_kernelB");
-    assert(kernelB != NULL);
+    gpuip::Kernel::Ptr kernelB = b->CreateKernel("my_kernelB");
+    assert(kernelB.get() != NULL);
     assert(kernelB->name == std::string("my_kernelB"));
     kernelB->code = codeB;
     kernelB->inBuffers.push_back("B");
     kernelB->inBuffers.push_back("C");
     kernelB->outBuffers.push_back("A");
-    
-    
+        
     std::string error;
     b->InitBuffers(&error);
     assert(b->InitBuffers(&error));
@@ -130,7 +124,6 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
         data_in[i] = i;
     }
     assert(b->Copy("A", gpuip::Buffer::WRITE_DATA, data_in.data(), &error));
-    
     assert(b->Build(&error));
     assert(b->Process(&error));
 
@@ -148,12 +141,12 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
         assert(equal(data_outA[i], data_outB[i] + data_outC[i]));
     }  
 }
-
+//----------------------------------------------------------------------------//
 int main()
 {
     test(gpuip::OpenCL, opencl_codeA, opencl_codeB);
     test(gpuip::CUDA, cuda_codeA, cuda_codeB);
     test(gpuip::GLSL, glsl_codeA, glsl_codeB);
-    
     return 0;
 }
+//----------------------------------------------------------------------------//

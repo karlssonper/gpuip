@@ -1,7 +1,7 @@
 #ifndef GPUIP_GLSL_H_
 #define GPUIP_GLSL_H_
 //----------------------------------------------------------------------------//
-#include "base.h"
+#include "gpuip.h"
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #include <GLUT/glut.h>

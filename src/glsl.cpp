@@ -86,8 +86,8 @@ bool GLSLImpl::Build(std::string * err)
 
     _shaders.resize(_kernels.size());
     for (int i = 0; i < _kernels.size(); ++i) {
-        const char * code = _kernels[i].code.c_str();
-        const char * name = _kernels[i].name.c_str();
+        const char * code = _kernels[i]->code.c_str();
+        const char * name = _kernels[i]->name.c_str();
 
         GLuint fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
         length = strlen(code);
@@ -118,8 +118,8 @@ bool GLSLImpl::Build(std::string * err)
     // Attach the textures to FBOs color attachment points
     for (int i = 0; i < _kernels.size(); ++i) {
         glBindFramebuffer(GL_FRAMEBUFFER, _fbos[i]);
-        for (int j = 0; j < _kernels[i].outBuffers.size(); ++j) {
-            const GLuint texID = _textures[_kernels[i].outBuffers[j]];
+        for (int j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
+            const GLuint texID = _textures[_kernels[i]->outBuffers[j]];
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
                                    GL_TEXTURE_2D, texID, 0 /*mipmap level*/);
         }
@@ -144,20 +144,20 @@ bool GLSLImpl::Build(std::string * err)
 bool GLSLImpl::Process(std::string * err)
 {
     // Get old (current one) viewport coordinates and values
-    GLint oldViewport[4];
-    glGetIntegerv(GL_VIEWPORT, oldViewport);
+    GLint oldVp[4];
+    glGetIntegerv(GL_VIEWPORT, oldVp);
 
     // Set the viewport to match the width and height
     glViewport(0, 0, _w, _h);
 
     for (int i = 0; i < _kernels.size(); ++i) {
-        if (!_DrawQuad(_kernels[i], _fbos[i], _shaders[i], err)) {
+        if (!_DrawQuad(*_kernels[i].get(), _fbos[i], _shaders[i], err)) {
             return false;
         }
     }
 
     // Reset back to the previous viewport
-    glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
+    glViewport(oldVp[0], oldVp[1], oldVp[2], oldVp[3]);
     return true;
 }
 //----------------------------------------------------------------------------//
@@ -295,6 +295,8 @@ GLenum _GetInternalFormat(const Buffer & b)
         switch(format){
             case GL_RED:
                 return GL_R16F;
+            case GL_RG:
+                return GL_RG16F;
             case GL_RGB:
                 return GL_RGB16F;
             case GL_RGBA:
@@ -306,6 +308,8 @@ GLenum _GetInternalFormat(const Buffer & b)
         switch(format){
             case GL_RED:
                 return GL_R32F;
+            case GL_RG:
+                return GL_RG32F;
             case GL_RGB:
                 return GL_RGB32F;
             case GL_RGBA:

@@ -1,7 +1,7 @@
 #ifndef GPUIP_CUDA_H_
 #define GPUIP_CUDA_H_
 //----------------------------------------------------------------------------//
-#include "base.h"
+#include "gpuip.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 //----------------------------------------------------------------------------//

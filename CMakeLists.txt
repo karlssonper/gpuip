@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 project(gpuip)
 
 # Common variables for compling the library
-set(SOURCE src/gpuip src/base)
+set(SOURCE src/gpuip)
 set(LIBRARIES)
 
 # Build with OpenCL
@@ -57,7 +57,15 @@ endif(CUDA)
 option(GLSL "GLSL" ON)
 if(GLSL)
   message("-- Generating build with GLSL...")
-  set(SOURCE ${SOURCE} src/glsl)  
+
+  find_package(OpenGL REQUIRED)   
+  find_package(GLUT REQUIRED)
+  find_package(GLEW REQUIRED)
+
+  include_directories(${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS})  
+
+  set(SOURCE ${SOURCE} src/glsl) 
+  set(LIBRARIES ${LIBRARIES} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} ${GLEW_LIBRARY})
 else(GLSL)
   message("-- GLSL disabled .")
 endif(GLSL)
@@ -65,8 +73,44 @@ endif(GLSL)
 add_library(gpuip ${SOURCE})
 target_link_libraries(gpuip ${LIBRARIES})
 
-# Add unit tests
+# Build python bindings (using boost python)
+option(PYTHON "PYTHON" ON)
+if(PYTHON)
+  message("-- Generating build with python bindings...")
+  find_package(Boost 1.45.0 COMPONENTS python)
+  find_package(PythonLibs)
+  include_directories(${PYTHON_INCLUDE_DIR})
+  #include_directories(/Users/per/Downloads/boost_1_55_0)
+  #add_library(PyIp SHARED src/python.cpp )
+  #LINK_DIRECTORIES(/Users/per/Downloads/boost_1_55_0/stage/lib)
+
+  # Preprocessor will use boost shared pointers instead of std
+  add_definitions(-D_GPUIP_PYTHON_BINDINGS)
+
+  # compiler definitions for non-windows builds
+  if (NOT WIN32)
+	add_definitions(-fPIC)
+  endif()
+  add_library(pyGpuip SHARED src/python.cpp )
+  set_target_properties( pyGpuip PROPERTIES PREFIX "")
+  set_target_properties( pyGpuip PROPERTIES SUFFIX ".so")
+  target_link_libraries(pyGpuip gpuip ${PYTHON_LIBRARIES} boost_python boost_numpy)
+
+else(PYTHON)
+  message("-- Python bindings disabled.")
+endif(PYTHON)
+
+# Enable unit testing
 enable_testing()
+
+# Add C++ test
 add_executable(test_cpp test/test)
 target_link_libraries(test_cpp gpuip)
-add_test(NAME testcpp COMMAND testcpp)
+add_test(NAME test_cpp COMMAND test_cpp)
+
+# Add python test
+if (PYTHON)
+  find_package(PythonInterp REQUIRED)
+  configure_file(test/test.py test.py COPYONLY)
+  add_test(NAME test_py COMMAND ${PYTHON_EXECUTABLE} test.py)
+endif(PYTHON)

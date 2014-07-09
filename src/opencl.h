@@ -1,7 +1,7 @@
 #ifndef GPUIP_OPENCL_H_
 #define GPUIP_OPENCL_H_
 //----------------------------------------------------------------------------//
-#include "base.h"
+#include "gpuip.h"
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
