@@ -11,13 +11,13 @@ inline GLenum _GetFormat(const Buffer & b);
 //----------------------------------------------------------------------------//
 inline GLenum _GetInternalFormat(const Buffer & b);
 //----------------------------------------------------------------------------//
-Base * CreateGLSL(unsigned int width, unsigned int height)
+Base * CreateGLSL()
 {
-    return new GLSLImpl(width, height);
+    return new GLSLImpl();
 }
 //----------------------------------------------------------------------------//
-GLSLImpl::GLSLImpl(unsigned int width, unsigned int height)
-        : Base(gpuip::GLSL, width, height)
+GLSLImpl::GLSLImpl()
+        : Base(gpuip::GLSL)
 {
     int argc = 1;
     std::auto_ptr<char> argv(new char[1]);
@@ -143,10 +143,8 @@ bool GLSLImpl::Build(std::string * err)
 //----------------------------------------------------------------------------//
 bool GLSLImpl::Process(std::string * err)
 {
-    // Get old (current one) viewport coordinates and values
-    GLint oldVp[4];
-    glGetIntegerv(GL_VIEWPORT, oldVp);
-
+    glPushAttrib( GL_VIEWPORT_BIT );
+    
     // Set the viewport to match the width and height
     glViewport(0, 0, _w, _h);
 
@@ -157,7 +155,7 @@ bool GLSLImpl::Process(std::string * err)
     }
 
     // Reset back to the previous viewport
-    glViewport(oldVp[0], oldVp[1], oldVp[2], oldVp[3]);
+    glPopAttrib();
     return true;
 }
 //----------------------------------------------------------------------------//

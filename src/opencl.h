@@ -13,7 +13,7 @@ namespace gpuip {
 class OpenCLImpl : public Base
 {
   public:
-    OpenCLImpl(unsigned int width, unsigned int height);
+    OpenCLImpl();
 
     virtual bool InitBuffers(std::string * err);
     

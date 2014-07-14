@@ -55,9 +55,7 @@ class Base
     typedef std::tr1::shared_ptr<Base> Ptr;
 #endif
     
-    static Ptr Create(GpuEnvironment env,
-                      unsigned int width,
-                      unsigned int height);
+    static Ptr Create(GpuEnvironment env);
     
     virtual ~Base() {}
    
@@ -71,6 +69,8 @@ class Base
     Kernel::Ptr CreateKernel(const std::string & name);
     
     Kernel::Ptr GetKernel(const std::string & name);
+
+    void SetDimensions(unsigned int width, unsigned int height);
     
     virtual bool InitBuffers(std::string * err) = 0;
 
@@ -84,7 +84,7 @@ class Base
                       std::string * err) = 0;
                
   protected:
-    Base(GpuEnvironment env, unsigned int width, unsigned int height);
+    Base(GpuEnvironment env);
 
     GpuEnvironment _env;
     unsigned int _w; // width

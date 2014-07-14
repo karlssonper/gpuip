@@ -10,7 +10,7 @@ namespace gpuip {
 class CUDAImpl : public Base
 {
   public:
-    CUDAImpl(unsigned int width, unsigned int height);
+    CUDAImpl();
 
     virtual bool InitBuffers(std::string * err);
     

@@ -4,15 +4,13 @@
 namespace gpuip {
 //----------------------------------------------------------------------------//
 Base *
-CreateOpenCL(unsigned int width,
-             unsigned int height)
+CreateOpenCL()
 {
-    return new OpenCLImpl(width, height);
+    return new OpenCLImpl();
 }
 //----------------------------------------------------------------------------//
-OpenCLImpl::OpenCLImpl(unsigned int width,
-                       unsigned int height)
-        : Base(OpenCL, width, height)
+OpenCLImpl::OpenCLImpl()
+        : Base(OpenCL)
 {
     // Get Platform ID
     cl_platform_id platform_id;

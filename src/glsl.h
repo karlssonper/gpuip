@@ -15,7 +15,7 @@ namespace gpuip {
 class GLSLImpl : public Base
 {
   public:
-    GLSLImpl(unsigned int width, unsigned int height);
+    GLSLImpl();
 
     virtual bool InitBuffers(std::string * err);
       

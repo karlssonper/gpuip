@@ -73,7 +73,8 @@ N = width * height
 no_error = ""
 
 def test(env, codeA, codeB):
-    base = gpuip.gpuip(env, width, height)
+    base = gpuip.gpuip(env)
+    base.SetDimensions(width, height)
     assert base
 
     buffers = [gpuip.Buffer() for i in range(3)]
@@ -135,8 +136,12 @@ def test(env, codeA, codeB):
             assert eq(outdata[2][i][j], bufferA_indata[i][j] + incB.value)
 
             assert eq(outdata[0][i][j], outdata[1][i][j] + outdata[2][i][j])
+    print "Test passed!"
 
 if __name__ == '__main__':
+    print "Testing OpenCL..." 
     test(gpuip.Environment.OpenCL, opencl_codeA, opencl_codeB)
+    print "Testing CUDA..." 
     test(gpuip.Environment.CUDA, cuda_codeA, cuda_codeB)
+    print "Testing GLSL..." 
     test(gpuip.Environment.GLSL, glsl_codeA, glsl_codeB)

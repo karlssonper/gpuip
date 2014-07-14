@@ -2,27 +2,27 @@
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-Base * CreateOpenCL(unsigned int w, unsigned int h);
-Base * CreateCUDA(unsigned int w, unsigned int h);
-Base * CreateGLSL(unsigned int w, unsigned int h);
+Base * CreateOpenCL();
+Base * CreateCUDA();
+Base * CreateGLSL();
 //----------------------------------------------------------------------------//
-Base::Ptr Base::Create(GpuEnvironment env, unsigned int w, unsigned int h)
+Base::Ptr Base::Create(GpuEnvironment env)
 {
     switch(env) {
         case OpenCL:
-            return Base::Ptr(CreateOpenCL(w,h));
+            return Base::Ptr(CreateOpenCL());
         case CUDA:
-            return Base::Ptr(CreateCUDA(w,h));
+            return Base::Ptr(CreateCUDA());
         case GLSL:
-            return Base::Ptr(CreateGLSL(w,h));
+            return Base::Ptr(CreateGLSL());
         default:
             std::cerr << "gpuip error: Could not create env" << std::endl;
             return Base::Ptr();
     }
 }
 //----------------------------------------------------------------------------//
-Base::Base(GpuEnvironment env, unsigned int width, unsigned int height)
-        : _env(env), _w(width), _h(height)
+Base::Base(GpuEnvironment env)
+        : _env(env), _w(0), _h(0)
 {
     
 }
@@ -56,6 +56,12 @@ Kernel::Ptr Base::GetKernel(const std::string & name)
     std::cerr << "gpuip error: Could not find kernel named "
               << name << std::endl;
     return Kernel::Ptr();
+}
+//----------------------------------------------------------------------------//
+void Base::SetDimensions(unsigned int width, unsigned int height)
+{
+    _w = width;
+    _h = height;
 }
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

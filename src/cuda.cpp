@@ -8,13 +8,13 @@ namespace gpuip {
 //----------------------------------------------------------------------------//
 inline int _cudaGetMaxGflopsDeviceId();
 //----------------------------------------------------------------------------//
-Base * CreateCUDA(unsigned int width, unsigned int height)
+Base * CreateCUDA()
 {
-    return new CUDAImpl(width, height);
+    return new CUDAImpl();
 }
 //----------------------------------------------------------------------------//
-CUDAImpl::CUDAImpl(unsigned int width, unsigned int height)
-        : Base(CUDA, width, height)
+CUDAImpl::CUDAImpl()
+  : Base(CUDA)
 {
     if (cudaSetDevice(_cudaGetMaxGflopsDeviceId()) != cudaSuccess) {
         throw std::logic_error("gpuip::CUDAImpl() could not set device id");

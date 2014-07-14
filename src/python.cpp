@@ -32,8 +32,8 @@ class _KernelWrapper : public gpuip::Kernel
 class _BaseWrapper
 {
   public:
-    _BaseWrapper(gpuip::GpuEnvironment env, unsigned int w, unsigned int h)
-            : _base(gpuip::Base::Create(env, w, h))
+    _BaseWrapper(gpuip::GpuEnvironment env)
+            : _base(gpuip::Base::Create(env))
     {
         if (_base.get() ==  NULL) {
             throw std::runtime_error("Could not create gpuip base.");
@@ -47,6 +47,11 @@ class _BaseWrapper
         return boost::static_pointer_cast<_KernelWrapper>(ptr);
     }
 
+    void SetDimensions(unsigned int width, unsigned int height)
+    {
+        _base->SetDimensions(width,height);
+    }
+    
     void AddBuffer(const gpuip::Buffer & buffer)
     {
         _base->AddBuffer(buffer);
@@ -126,7 +131,8 @@ BOOST_PYTHON_MODULE(pyGpuip)
     
     bp::class_<_BaseWrapper, boost::shared_ptr<_BaseWrapper> >
             ("gpuip",
-             bp::init<gpuip::GpuEnvironment, unsigned int, unsigned int>())
+             bp::init<gpuip::GpuEnvironment>())
+            .def("SetDimensions", &_BaseWrapper::SetDimensions)
             .def("AddBuffer", &_BaseWrapper::AddBuffer)
             .def("CreateKernel", &_BaseWrapper::CreateKernel)
             .def("InitBuffers", &_BaseWrapper::InitBuffers)

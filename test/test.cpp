@@ -77,7 +77,8 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
     const unsigned int width = 4;
     const unsigned int height = 4;
     const unsigned int N = width * height;
-    gpuip::Base::Ptr b(gpuip::Base::Create(env, width, height));
+    gpuip::Base::Ptr b(gpuip::Base::Create(env));
+    b->SetDimensions(width, height);
 
     gpuip::Buffer b1;
     b1.name = "A";
@@ -139,13 +140,17 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
 
         // Check second kernel call, where A = B + C
         assert(equal(data_outA[i], data_outB[i] + data_outC[i]));
-    }  
+    }
+    std::cout << "Test passed!" << std::endl;
 }
 //----------------------------------------------------------------------------//
 int main()
 {
+    std::cout << "Testing OpenCL..." << std::endl;
     test(gpuip::OpenCL, opencl_codeA, opencl_codeB);
+    std::cout << "Testing CUDA..." << std::endl;
     test(gpuip::CUDA, cuda_codeA, cuda_codeB);
+    std::cout << "Testing GLSL..." << std::endl;
     test(gpuip::GLSL, glsl_codeA, glsl_codeB);
     return 0;
 }
