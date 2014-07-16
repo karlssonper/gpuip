@@ -25,6 +25,8 @@ class OpenCLImpl : public Base
                       Buffer::CopyOperation op,
                       void * data,
                       std::string * err);
+
+    virtual std::string GetBoilerplateCode(Kernel::Ptr kernel) const;
     
   protected:
     cl_device_id _device_id;
@@ -34,6 +36,14 @@ class OpenCLImpl : public Base
     std::vector<cl_kernel> _clKernels;
     std::map<std::string, cl_mem> _clBuffers;
 
+  private:
+    void _GetBoilerplateCodeBuffers(
+        std::stringstream & ss,
+        const std::vector<std::pair<Buffer, std::string> > & buffers,
+        const bool inBuffer,
+        bool & first,
+        const int indent) const;
+    
     bool _EnqueueKernel(const Kernel & kernel,
                         const cl_kernel & clKernel,
                         std::string * err);

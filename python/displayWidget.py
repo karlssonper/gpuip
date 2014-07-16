@@ -3,6 +3,7 @@ from OpenGL import GL
 from OpenGL import GL
 from OpenGL.GL import shaders
 from OpenGL.arrays import vbo
+from ctypes import c_void_p
 import OpenEXR
 import Imath
 import sys
@@ -11,11 +12,12 @@ import math
 
 vert_src = """
 attribute vec2 positionIn;
+attribute vec2 texIn;
 varying vec2 texcoord;
 void main()
 {
-      gl_Position=vec4(vec2(-1) + 2*positionIn,0, 1);
-      texcoord = positionIn;
+      gl_Position= vec4(2*positionIn - vec2(1),0,1);
+      texcoord = texIn;
 };
 """
 
@@ -64,47 +66,68 @@ def exrToNumpy(filename):
 
     return npyArray
 
+def pngToNumpy(filename):
+    from PIL import Image
+    image = Image.open(filename)
+    return numpy.array(image).transpose((1,0,2)).copy(order="C")
+
 class DisplayWidget(QtGui.QWidget):
     def __init__(self, parent):
         super(DisplayWidget, self).__init__(parent)
-
         layout = QtGui.QVBoxLayout()
 
-        topWidget = QtGui.QWidget(self)
-        topLayout = QtGui.QHBoxLayout()
-        label = QtGui.QLabel("Buffers:")
-        bufferOptions = QtGui.QComboBox(topWidget)
-        bufferOptions.addItems(["lol\t", "hey\t"])
-        topLayout.addWidget(label)
-        topLayout.addWidget(bufferOptions)
-        topWidget.setLayout(topLayout)
+        self.bufferData = {}
+        self.glWidget = GLWidget(self)       
+        self.glWidget.setSizePolicy(QtGui.QSizePolicy.Expanding,
+                                    QtGui.QSizePolicy.Preferred)
+        self.setSizePolicy(QtGui.QSizePolicy.Minimum,
+                           QtGui.QSizePolicy.Minimum)
+
         
-        self.glWidget = GLWidget(0,0, self)        
+        midLayout = QtGui.QHBoxLayout()
+        self.bufferComboBox = QtGui.QComboBox(self)
+        policy = QtGui.QSizePolicy()
+        policy.setHorizontalPolicy(QtGui.QSizePolicy.Expanding)
+        self.bufferComboBox.setSizePolicy(policy)
+        label = QtGui.QLabel("Buffers:")
+        label.setBuddy(self.bufferComboBox)
+        self.bufferComboBox.activated["QString"].connect(
+            self.onBufferSelectChange)
+        midLayout.addWidget(label)
+        midLayout.addWidget(self.bufferComboBox)
+        #midLayout.addStretch()
                 
-        bottomWidget = QtGui.QWidget(self)
         bottomLayout = QtGui.QHBoxLayout()
-        self.label = QtGui.QLabel("Exposure: 0")
-        self.slider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.label = QtGui.QLabel("Exposure: 0", self)
+        self.slider = QtGui.QSlider(QtCore.Qt.Horizontal, self)
         self.slider.setRange(-100,100)
         self.slider.setValue(0)
         self.slider.valueChanged.connect(self.onExposureChange)
         bottomLayout.addWidget(self.label)
         bottomLayout.addWidget(self.slider)
         bottomLayout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
-        bottomWidget.setLayout(bottomLayout)
-
-        topWidget.setSizePolicy(QtGui.QSizePolicy.Minimum,
-                                QtGui.QSizePolicy.Preferred)
-        self.glWidget.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                                    QtGui.QSizePolicy.Preferred)
-        bottomWidget.setSizePolicy(QtGui.QSizePolicy.Minimum,
-                                QtGui.QSizePolicy.Preferred)
-
-        layout.addWidget(topWidget)
+   
         layout.addWidget(self.glWidget)
-        layout.addWidget(bottomWidget)
+        layout.addLayout(midLayout)
+        layout.addLayout(bottomLayout)
 
         self.setLayout(layout)
+
+    def setBufferData(self, bufferData):
+        self.bufferData = bufferData
+        self.bufferComboBox.addItems(bufferData.keys())
+    
+    def setDisplayDebug(self, displayDebug):
+        self.glWidget.setDisplayDebug(displayDebug)
+
+    def onBufferSelectChange(self, value):
+        ndarray = self.bufferData[str(value)]
+        self.glWidget.copyDataToTexture(ndarray)
+        if ndarray.dtype == numpy.float32:
+            self.slider.setEnabled(True)
+        else:
+            self.slider.setEnabled(False)
+        self.glWidget.glDraw()
 
     def onExposureChange(self):
         value = 0.1 * self.slider.value()
@@ -112,22 +135,59 @@ class DisplayWidget(QtGui.QWidget):
         self.label.setText("Exposure: " + str(value))        
         self.glWidget.glDraw()
 
+    def refreshDisplay(self):
+        bufferName = str(self.bufferComboBox.currentText())
+        self.glWidget.copyDataToTexture(self.bufferData[bufferName])
+
+    def sizeHint(self):
+        return QtCore.QSize(400,400)
+
+
+
 class GLWidget(QtOpenGL.QGLWidget):
-    def __init__(self, width, height, parent):
+    def __init__(self, parent):
         super(GLWidget, self).__init__(parent)
-        self.width = width
-        self.height = height
+        self.w = 440
+        self.h = 440
+
+        self.displayDebug = None
 
         self.texture = None
         self.shader = None
+        self.useShader = False
         self.vbo = None
-
+        
+        self.scale = 0.5
+        self.steps = 0
+        self.cx = 0.5
+        self.cy = 0.5
+        
         self.gamma = 1.0/2.2
         self.exposure = 0
 
+        self.zoomFactor = 1.35
+        self.panFactor = 0.002
+
+    def setDisplayDebug(self, displayDebug):
+        self.displayDebug = displayDebug
+
     def initializeGL(self):
-        # Create texture from HDR
         self.texture = GL.glGenTextures(1)
+
+        # Build shaders
+        vert_shader = shaders.compileShader(vert_src, GL.GL_VERTEX_SHADER)
+        frag_shader = shaders.compileShader(frag_src, GL.GL_FRAGMENT_SHADER)
+        self.shader = shaders.compileProgram(vert_shader, frag_shader)
+        
+        self.vbo = GL.glGenBuffers(1)
+                
+    def copyDataToTexture(self, ndarray):
+        # Update dimensions of widget
+        self.w = ndarray.shape[0]
+        self.h = ndarray.shape[1]
+        self.updateGeometry()
+
+        # Generate new texture
         target = GL.GL_TEXTURE_2D
         GL.glBindTexture(target, self.texture)
         GL.glTexParameterf(target, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
@@ -135,24 +195,42 @@ class GLWidget(QtOpenGL.QGLWidget):
         GL.glTexParameterf(target, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
         GL.glTexParameterf(target, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
         GL.glTexParameteri(target, GL.GL_GENERATE_MIPMAP, GL.GL_FALSE);
-        data = exrToNumpy("/home/per/dev/exr_test/GoldenGate.exr")
-        self.width = data.shape[0]
-        self.height = data.shape[1]
-        self.updateGeometry()
-        GL.glTexImage2D(target, 0, GL.GL_RGB32F, data.shape[0], data.shape[1],
-                        0, GL.GL_RGB, GL.GL_FLOAT, data)
-
-        # Build shaders
-        vert_shader = shaders.compileShader(vert_src, GL.GL_VERTEX_SHADER)
-        frag_shader = shaders.compileShader(frag_src, GL.GL_FRAGMENT_SHADER)
-        self.shader = shaders.compileProgram(vert_shader, frag_shader)
         
-        # Build quad vbo
-        self.vbo = GL.glGenBuffers(1)
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.vbo);
-        vertices = numpy.array([0,0,1,0,1,1,0,1], dtype = numpy.float32)
-        GL.glBufferData(GL.GL_ARRAY_BUFFER, 32, vertices, GL.GL_STATIC_DRAW);
+        # Get texture format
+        channels = ndarray.shape[2] if ndarray.ndim == 3 else 1
+        if channels == 1:
+            glFormat = GL.GL_RED
+        elif channels == 2:
+            glFormat = GL.GL_RG
+        elif channels == 3:
+            glFormat = GL.GL_RGB
+        elif channels == 4:
+            glFormat = GL.GL_RGBA
+        glInternalFormat = glFormat
 
+        # Get texture type
+        if ndarray.dtype == numpy.float32:
+            glType = GL.GL_FLOAT
+            # Need to use the exposure shader if floating point
+            self.useShader = True
+
+            # The internal format changes with floating point textures
+            if channels == 1:
+                glInternalFormat = GL.GL_RED32F
+            elif channels == 2:
+                glInternalFormat = GL.GL_RG32F
+            elif channels == 3:
+                glInternalFormat = GL.GL_RGB32F
+            elif channels == 4:
+                glInternalFormat = GL.GL_RGBA32F
+        else:
+            glType = GL.GL_UNSIGNED_BYTE
+            self.useShader = False
+        
+        # Copy data to texture
+        GL.glTexImage2D(target, 0, glInternalFormat, self.w, self.h,
+                        0, glFormat, glType, ndarray)
+  
     def resizeGL(self, width, height):
         GL.glViewport(0,0,width,height)
         GL.glMatrixMode(GL.GL_PROJECTION)
@@ -162,25 +240,113 @@ class GLWidget(QtOpenGL.QGLWidget):
 
     def paintGL(self):
         GL.glClear(GL.GL_COLOR_BUFFER_BIT)
-        shaders.glUseProgram(self.shader)
 
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.vbo);
-        loc = GL.glGetAttribLocation(self.shader, "positionIn")
-        GL.glEnableVertexAttribArray(loc)
-        GL.glVertexAttribPointer(loc, 2, GL.GL_FLOAT, 0, 8, None)
+        if self.useShader:
+            shaders.glUseProgram(self.shader)
+            GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.vbo)
+            vertices = numpy.array(
+                [-self.scale + self.cx, -self.scale + self.cy,
+                  self.scale + self.cx, -self.scale + self.cy,
+                  self.scale + self.cx, self.scale + self.cy,
+                  -self.scale + self.cx, self.scale + self.cy,
+                  0,0,1,0,1,1,0,1], dtype = numpy.float32)
+            GL.glBufferData(GL.GL_ARRAY_BUFFER, 64, vertices, GL.GL_STATIC_DRAW)
+            loc = GL.glGetAttribLocation(self.shader, "positionIn")
+            GL.glEnableVertexAttribArray(loc)
+            GL.glVertexAttribPointer(loc, 2, GL.GL_FLOAT, 0, 8, c_void_p(0))
 
-        loc = GL.glGetUniformLocation(self.shader, "hdr_texture")
-        GL.glUniform1i(loc, 0);
-        GL.glActiveTexture(GL.GL_TEXTURE0);
-        GL.glBindTexture(GL.GL_TEXTURE_2D, self.texture)
+            loc = GL.glGetAttribLocation(self.shader, "texIn")
+            GL.glEnableVertexAttribArray(loc)
+            GL.glVertexAttribPointer(loc, 2, GL.GL_FLOAT, 0, 8, c_void_p(32))
+            
+            loc = GL.glGetUniformLocation(self.shader, "hdr_texture")
+            GL.glUniform1i(loc, 0);
+            GL.glActiveTexture(GL.GL_TEXTURE0);
+            GL.glBindTexture(GL.GL_TEXTURE_2D, self.texture)
 
-        loc = GL.glGetUniformLocation(self.shader, "g")
-        GL.glUniform1f(loc, self.gamma);
-        loc = GL.glGetUniformLocation(self.shader, "m")
-        GL.glUniform1f(loc, math.pow(2, self.exposure + 2.47393))
-        loc = GL.glGetUniformLocation(self.shader, "s")
-        GL.glUniform1f(loc, math.pow(2, -3.5 * self.gamma))
-        GL.glDrawArrays(GL.GL_QUADS, 0, 4);
+            loc = GL.glGetUniformLocation(self.shader, "g")
+            GL.glUniform1f(loc, self.gamma);
+            loc = GL.glGetUniformLocation(self.shader, "m")
+            GL.glUniform1f(loc, math.pow(2, self.exposure + 2.47393))
+            loc = GL.glGetUniformLocation(self.shader, "s")
+            GL.glUniform1f(loc, math.pow(2, -3.5 * self.gamma))
+
+            GL.glDrawArrays(GL.GL_QUADS, 0, 4);
+
+            GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
+            shaders.glUseProgram(0)
+        else:
+            # Draw a simple quad with texture coordinates
+            GL.glEnable(GL.GL_TEXTURE_2D)
+            GL.glBindTexture(GL.GL_TEXTURE_2D, self.texture)
+            GL.glDisable(GL.GL_LIGHTING)
+            GL.glColor3f(1,1,1)
+            GL.glBegin(GL.GL_QUADS)
+            GL.glTexCoord2f(1,0); 
+            GL.glVertex2f(-self.scale + self.cx,-self.scale + self.cy)
+            GL.glTexCoord2f(1,1); 
+            GL.glVertex2f(self.scale + self.cx,-self.scale + self.cy)
+            GL.glTexCoord2f(0,1); 
+            GL.glVertex2f(self.scale + self.cx, self.scale + self.cy)
+            GL.glTexCoord2f(0,0);  
+            GL.glVertex2f(-self.scale + self.cx, self.scale + self.cy)
+            GL.glEnd()
+            GL.glDisable(GL.GL_TEXTURE_2D)
+          
+    def mousePressEvent(self, event):
+        self.lastPos = event.pos()
+
+    def mouseMoveEvent(self, event):
+        dx = event.x() - self.lastPos.x()
+        dy = event.y() - self.lastPos.y()
+
+        if event.buttons() & QtCore.Qt.LeftButton:
+            self.cx += self.panFactor*dx
+            self.cy -= self.panFactor*dy
+            self.correctCenterCoordinates()
+        
+        self.lastPos = event.pos()
+
+        if self.displayDebug and event.buttons() & QtCore.Qt.RightButton:
+            # Todo.
+            ppx = event.pos().x() / float(self.width())
+            ppy = event.pos().y() / float(self.height())
+
+            sx = self.w / self.scale * 2 
+            sy = self.h / self.scale * 2
+
+            px = sx*(self.scale - self.cx + ppx)
+            py = sy*(self.scale - self.cx + ppy)
+
+            text = "Pixel coordinates: %f, %f" % (px, py)
+            self.displayDebug.setPlainText(text)
+
+        self.glDraw()
+
+    def wheelEvent(self, event):
+        if event.delta() > 0:
+            self.steps += 1
+        else:
+            self.steps -= 1
+            
+        # Only allow inital zoom (not smaller)
+        if self.steps < 0:
+            self.steps = 0
+        
+        self.scale = 0.5 * math.pow(self.zoomFactor, self.steps)
+        self.correctCenterCoordinates()
+        self.glDraw()
+
+    def correctCenterCoordinates(self):
+        if -self.scale + self.cx > 0:
+            self.cx = self.scale
+        if self.scale + self.cx < 1:
+            self.cx = 1 - self.scale
+        if -self.scale + self.cy > 0:
+            self.cy = self.scale
+        if self.scale + self.cy < 1:
+            self.cy = 1 - self.scale
 
     def sizeHint(self):
-        return QtCore.QSize(self.width,self.height)
+        return QtCore.QSize(self.w,self.h)
+    

@@ -23,10 +23,19 @@ class CUDAImpl : public Base
                       void * data,
                       std::string * err);
 
+    virtual std::string GetBoilerplateCode(Kernel::Ptr kernel) const;
+    
   protected:
     std::vector<CUfunction> _cudaKernels;
     std::map<std::string, float*> _cudaBuffers;
 
+    void _GetBoilerplateCodeBuffers(
+        std::stringstream & ss,
+        const std::vector<std::pair<Buffer, std::string> > & buffers,
+        const bool inBuffer,
+        bool & first,
+        const int indent) const;
+    
     bool _LaunchKernel(Kernel & kernel,
                        const CUfunction & cudaKernel,
                        std::string * err);

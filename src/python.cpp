@@ -8,23 +8,49 @@ namespace np = boost::numpy;
 class _KernelWrapper : public gpuip::Kernel
 {
   public:
-    void AddInBuffer(const gpuip::Buffer & buffer)
+    void SetInBuffer(const std::string & kernelBufferName,
+                     const gpuip::Buffer & buffer)
     {
-        this->inBuffers.push_back(buffer.name);
+        for (int i = 0; i < this->inBuffers.size(); ++i) {
+            if (this->inBuffers[i].second == kernelBufferName) {
+                this->inBuffers[i].first = buffer;
+                return;
+            }
+        }
+        this->inBuffers.push_back(make_pair(buffer, kernelBufferName));
     }
 
-    void AddOutBuffer(const gpuip::Buffer & buffer)
+    void SetOutBuffer(const std::string & kernelBufferName,
+                      const gpuip::Buffer & buffer)
     {
-        this->outBuffers.push_back(buffer.name);
+        for (int i = 0; i < this->outBuffers.size(); ++i) {
+            if (this->outBuffers[i].second == kernelBufferName) {
+                this->outBuffers[i].first = buffer;
+                return;
+            }
+        }
+        this->outBuffers.push_back(make_pair(buffer, kernelBufferName));
     }
 
-    void AddParamInt(const gpuip::Parameter<int> & param)
+    void SetParamInt(const gpuip::Parameter<int> & param)
     {
+        for (int i = 0 ; i < this->paramsInt.size(); ++i) {
+            if (this->paramsInt[i].name == param.name) {
+                this->paramsInt[i].value = param.value;
+                return;
+            }
+        }
         this->paramsInt.push_back(param);
     }
 
-    void AddParamFloat(const gpuip::Parameter<float> & param)
+    void SetParamFloat(const gpuip::Parameter<float> & param)
     {
+        for (int i = 0 ; i < this->paramsFloat.size(); ++i) {
+            if (this->paramsFloat[i].name == param.name) {
+                this->paramsFloat[i].value = param.value;
+                return;
+            }
+        }
         this->paramsFloat.push_back(param);
     }
 };
@@ -95,6 +121,11 @@ class _BaseWrapper
                     array.get_data(), &err);
         return err;
     }
+    
+    std::string GetBoilerplateCode(boost::shared_ptr<_KernelWrapper> k) const
+    {
+        return _base->GetBoilerplateCode(k);
+    }
   private:
     gpuip::Base::Ptr _base;
 };
@@ -124,10 +155,10 @@ BOOST_PYTHON_MODULE(pyGpuip)
     bp::class_<_KernelWrapper, boost::shared_ptr<_KernelWrapper> >("Kernel")
             .def_readwrite("name", &_KernelWrapper::name)
             .def_readwrite("code", &_KernelWrapper::code)
-            .def("AddInBuffer", &_KernelWrapper::AddInBuffer)
-            .def("AddOutBuffer", &_KernelWrapper::AddOutBuffer)
-            .def("AddParamInt", &_KernelWrapper::AddParamInt)
-            .def("AddParamFloat", &_KernelWrapper::AddParamFloat);
+            .def("SetInBuffer", &_KernelWrapper::SetInBuffer)
+            .def("SetOutBuffer", &_KernelWrapper::SetOutBuffer)
+            .def("SetParam", &_KernelWrapper::SetParamInt)
+            .def("SetParam", &_KernelWrapper::SetParamFloat);
     
     bp::class_<_BaseWrapper, boost::shared_ptr<_BaseWrapper> >
             ("gpuip",
@@ -139,6 +170,7 @@ BOOST_PYTHON_MODULE(pyGpuip)
             .def("Build", &_BaseWrapper::Build)
             .def("Process", &_BaseWrapper::Process)
             .def("ReadBuffer", &_BaseWrapper::ReadBuffer)
-            .def("WriteBuffer", &_BaseWrapper::WriteBuffer);
+            .def("WriteBuffer", &_BaseWrapper::WriteBuffer)
+            .def("GetBoilerplateCode", &_BaseWrapper::GetBoilerplateCode);
 }
 //----------------------------------------------------------------------------//

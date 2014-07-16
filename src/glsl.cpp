@@ -64,6 +64,41 @@ bool GLSLImpl::InitBuffers(std::string * err)
             return false;
         }
     }
+            
+    // Create FBOs
+    _fbos.reserve(_kernels.size());
+    glGenFramebuffers(_kernels.size(), _fbos.data());
+
+    // Create a renderbuffer object to store depth info
+    GLuint rboId;
+    glGenRenderbuffers(1, &rboId);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboId);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, _w, _h);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    // Attach the textures to FBOs color attachment points
+    for (int i = 0; i < _kernels.size(); ++i) {
+        glBindFramebuffer(GL_FRAMEBUFFER, _fbos[i]);
+        for (int j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
+            GLuint texID = _textures[_kernels[i]->outBuffers[j].first.name];
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
+                                   GL_TEXTURE_2D, texID, 0 /*mipmap level*/);
+        }
+       
+        // attach the renderbuffer to depth attachment point
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                  GL_RENDERBUFFER, rboId);
+        if (_glErrorFramebuffer(err)) {
+            return false;
+        }
+    }
+    
+    // Create and build quad vbo
+    glGenBuffers(1, &_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+    float vertices[] = {0,0,1,0,1,1,0,1};
+    glBufferData(GL_ARRAY_BUFFER, 32, vertices, GL_STATIC_DRAW);
+    
     return true;
 }
 //----------------------------------------------------------------------------//
@@ -103,40 +138,6 @@ bool GLSLImpl::Build(std::string * err)
             return false;
         }
     }
-           
-    // Create FBOs
-    _fbos.reserve(_kernels.size());
-    glGenFramebuffers(_kernels.size(), _fbos.data());
-
-    // Create a renderbuffer object to store depth info
-    GLuint rboId;
-    glGenRenderbuffers(1, &rboId);
-    glBindRenderbuffer(GL_RENDERBUFFER, rboId);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, _w, _h);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-    // Attach the textures to FBOs color attachment points
-    for (int i = 0; i < _kernels.size(); ++i) {
-        glBindFramebuffer(GL_FRAMEBUFFER, _fbos[i]);
-        for (int j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
-            const GLuint texID = _textures[_kernels[i]->outBuffers[j]];
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
-                                   GL_TEXTURE_2D, texID, 0 /*mipmap level*/);
-        }
-       
-        // attach the renderbuffer to depth attachment point
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                  GL_RENDERBUFFER, rboId);
-        if (_glErrorFramebuffer(err)) {
-            return false;
-        }
-    }
-    
-    // Create and build quad vbo
-    glGenBuffers(1, &_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-    float vertices[] = {0,0,1,0,1,1,0,1};
-    glBufferData(GL_ARRAY_BUFFER, 32, vertices, GL_STATIC_DRAW);
 
     return true;
 }
@@ -177,6 +178,25 @@ bool GLSLImpl::Copy(const std::string & buffer,
         return false;
     }
     return true;
+}
+//----------------------------------------------------------------------------//
+std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
+{
+    std::stringstream ss;
+    for(int i = 0; i < kernel->inBuffers.size(); ++i) {
+        ss << "uniform sampler2D " << kernel->inBuffers[i].second << ";\n";
+    }
+    for (int i = 0; i < kernel->paramsInt.size(); ++i) {
+        ss << "uniform int " << kernel->paramsInt[i].name <<";\n";
+    }
+    for (int i = 0; i < kernel->paramsFloat.size(); ++i) {
+        ss << "uniform float " << kernel->paramsFloat[i].name <<";\n";
+    }
+    ss << "varying vec2 texcoord;\n"
+       << "void main()\n"
+       << "{\n"
+       << "}";
+    return ss.str();
 }
 //----------------------------------------------------------------------------//
 bool GLSLImpl::_DrawQuad(const Kernel & kernel,
@@ -222,10 +242,10 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
 
     // Texture setup
     for (int i = 0; i < kernel.inBuffers.size(); ++i) {
-        loc = glGetUniformLocation(shader, kernel.inBuffers[i].c_str());
+        loc = glGetUniformLocation(shader, kernel.inBuffers[i].second.c_str());
         glUniform1i(loc, i);
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, _textures[kernel.inBuffers[i]]);
+        glBindTexture(GL_TEXTURE_2D, _textures[kernel.inBuffers[i].first.name]);
     }
 
     if (_glErrorDrawSetup(error, kernel.name)) {

@@ -4,31 +4,51 @@
 #include <math.h>
 //----------------------------------------------------------------------------//
 const char * opencl_codeA = ""
-"__kernel void my_kernelA(__global float * A,                               \n"
-"                         __global float * B,                               \n"
-"                         __global float * C,                               \n"
-"                         int incA,                                         \n"
-"                         float incB)                                       \n"
+"__kernel void                                                              \n"
+"my_kernelA(__global const float * A,                                       \n"
+"           __global float * B,                                             \n"
+"           __global float * C,                                             \n"
+"           int incA,                                                       \n"
+"           float incB)                                                     \n"
 "{                                                                          \n"
 "    int x = get_global_id(0); int y = get_global_id(1);                    \n"
 "    B[x+y*4] =  A[x+y*4] + incA *0.1;                                      \n"
 "    C[x+y*4] =  A[x+y*4] + incB;                                           \n"
 "}";
 const char * opencl_codeB = ""
-"__kernel void my_kernelB(__global float * B,                               \n"
-"                         __global float * C,                               \n"
+"__kernel void                                                              \n"
+"my_kernelB(__global const float * B,                                       \n"
+"                         __global const float * C,                         \n"
 "                         __global float * A)                               \n"
 "{                                                                          \n"
 "    int x = get_global_id(0); int y = get_global_id(1);                    \n"
 "    A[x+y*4] =  B[x+y*4] + C[x+y*4];                                       \n"
 "}";
 //----------------------------------------------------------------------------//
+const char * opencl_boilerplateA = ""
+"__kernel void\n"
+"my_kernelA(__global const float * A,\n"
+"           __global float * B,\n"
+"           __global float * C,\n"
+"           int incA,\n"
+"           float incB)\n"
+"{\n"
+"}";
+const char * opencl_boilerplateB = ""
+"__kernel void\n"
+"my_kernelB(__global const float * B,\n"
+"           __global const float * C,\n"
+"           __global float * A)\n"
+"{\n"
+"}";
+//----------------------------------------------------------------------------//
 const char * cuda_codeA = ""
-"__global__ void my_kernelA(float * A,                                      \n"
-"                           float * B,                                      \n"
-"                           float * C,                                      \n"
-"                           int incA,                                       \n"
-"                           float incB)                                     \n"
+"__global__ void                                                            \n"
+"my_kernelA(const float * A,                                                \n"
+"           float * B,                                                      \n"
+"           float * C,                                                      \n"
+"           int incA,                                                       \n"
+"           float incB)                                                     \n"
 "{                                                                          \n"
 "    if (threadIdx.x < 4 && threadIdx.y < 4) {                              \n"
 "        int idx = threadIdx.x + 4 * threadIdx.y;                           \n"
@@ -37,14 +57,32 @@ const char * cuda_codeA = ""
 "    }"
 "}";
 const char * cuda_codeB = ""
-"__global__ void my_kernelB(float * B,                                      \n"
-"                           float * C,                                      \n"
-"                           float * A)                                      \n"
+"__global__ void                                                            \n"
+"my_kernelB(const float * B,                                                \n"
+"           const float * C,                                                \n"
+"           float * A)                                                      \n"
 "{                                                                          \n"
 "    if (threadIdx.x < 4 && threadIdx.y < 4) {                              \n"
 "        int idx = threadIdx.x + 4 * threadIdx.y;                           \n"
 "        A[idx] = B[idx] + C[idx];                                          \n"
 "    }                                                                      \n"
+"}";
+//----------------------------------------------------------------------------//
+const char * cuda_boilerplateA = ""
+"__global__ void\n"
+"my_kernelA(const float * A,\n"
+"           float * B,\n"
+"           float * C,\n"
+"           int incA,\n"
+"           float incB)\n"
+"{\n"
+"}";
+const char * cuda_boilerplateB = ""
+"__global__ void\n"
+"my_kernelB(const float * B,\n"
+"           const float * C,\n"
+"           float * A)\n"
+"{\n"
 "}";
 //----------------------------------------------------------------------------//
 const char * glsl_codeA = ""
@@ -67,12 +105,29 @@ const char * glsl_codeB = ""
 "                          texture2D(C, texcoord).x, 0, 0, 1);              \n"
 "}";
 //----------------------------------------------------------------------------//
+const char * glsl_boilerplateA = ""
+"uniform sampler2D A;\n"
+"uniform int incA;\n"
+"uniform float incB;\n"
+"varying vec2 texcoord;\n"
+"void main()\n"
+"{\n"
+"}";
+const char * glsl_boilerplateB = ""
+"uniform sampler2D B;\n"
+"uniform sampler2D C;\n"
+"varying vec2 texcoord;\n"
+"void main()\n"
+"{\n"
+"}";
+//----------------------------------------------------------------------------//
 inline bool equal(float a, float b)
 {
     return fabs(a-b) < 0.001;
 }
 //----------------------------------------------------------------------------//
-void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
+void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
+          const char * boilerplateA, const char * boilerplateB)
 {
     const unsigned int width = 4;
     const unsigned int height = 4;
@@ -81,15 +136,15 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
     b->SetDimensions(width, height);
 
     gpuip::Buffer b1;
-    b1.name = "A";
+    b1.name = "b1";
     b1.channels = 1;
     b1.bpp = sizeof(float);
 
     gpuip::Buffer b2 = b1;
-    b2.name = "B";
+    b2.name = "b2";
 
     gpuip::Buffer b3 = b1;
-    b3.name = "C";
+    b3.name = "b3";
     
     b->AddBuffer(b1);
     b->AddBuffer(b2);
@@ -99,23 +154,25 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
     assert(kernelA.get() != NULL);
     assert(kernelA->name == std::string("my_kernelA"));
     kernelA->code = codeA;
-    kernelA->inBuffers.push_back("A");
-    kernelA->outBuffers.push_back("B");
-    kernelA->outBuffers.push_back("C");
+    kernelA->inBuffers.push_back(make_pair(b1,std::string("A")));
+    kernelA->outBuffers.push_back(make_pair(b2,std::string("B")));
+    kernelA->outBuffers.push_back(make_pair(b3,std::string("C")));
 
     const gpuip::Parameter<int> incA = { "incA", 2 };
     const gpuip::Parameter<float> incB = { "incB", 0.25};
     kernelA->paramsInt.push_back(incA);
     kernelA->paramsFloat.push_back(incB);
-
+    assert(b->GetBoilerplateCode(kernelA) == std::string(boilerplateA));
+    
     gpuip::Kernel::Ptr kernelB = b->CreateKernel("my_kernelB");
     assert(kernelB.get() != NULL);
     assert(kernelB->name == std::string("my_kernelB"));
     kernelB->code = codeB;
-    kernelB->inBuffers.push_back("B");
-    kernelB->inBuffers.push_back("C");
-    kernelB->outBuffers.push_back("A");
-        
+    kernelB->inBuffers.push_back(make_pair(b2,std::string("B")));
+    kernelB->inBuffers.push_back(make_pair(b3,std::string("C")));
+    kernelB->outBuffers.push_back(make_pair(b1,std::string("A")));
+    assert(b->GetBoilerplateCode(kernelB) == std::string(boilerplateB));
+    
     std::string error;
     b->InitBuffers(&error);
     assert(b->InitBuffers(&error));
@@ -124,14 +181,15 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
     for (int i = 0; i < data_in.size(); ++i) {
         data_in[i] = i;
     }
-    assert(b->Copy("A", gpuip::Buffer::WRITE_DATA, data_in.data(), &error));
+    assert(b->Copy("b1", gpuip::Buffer::WRITE_DATA,
+                   data_in.data(), &error));
     assert(b->Build(&error));
     assert(b->Process(&error));
 
     std::vector<float> data_outA(N), data_outB(N), data_outC(N);
-    assert(b->Copy("A", gpuip::Buffer::READ_DATA, data_outA.data(), &error));
-    assert(b->Copy("B", gpuip::Buffer::READ_DATA, data_outB.data(), &error));
-    assert(b->Copy("C", gpuip::Buffer::READ_DATA, data_outC.data(), &error));
+    assert(b->Copy("b1", gpuip::Buffer::READ_DATA,data_outA.data(), &error));
+    assert(b->Copy("b2", gpuip::Buffer::READ_DATA,data_outB.data(), &error));
+    assert(b->Copy("b3", gpuip::Buffer::READ_DATA,data_outC.data(), &error));
 
     for (int i = 0; i < N; ++i) {
         // Check first kernel call, where B = A + 0.2, C = A + 0.25
@@ -147,11 +205,14 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB)
 int main()
 {
     std::cout << "Testing OpenCL..." << std::endl;
-    test(gpuip::OpenCL, opencl_codeA, opencl_codeB);
+    test(gpuip::OpenCL, opencl_codeA, opencl_codeB,
+         opencl_boilerplateA, opencl_boilerplateB);
     std::cout << "Testing CUDA..." << std::endl;
-    test(gpuip::CUDA, cuda_codeA, cuda_codeB);
+    test(gpuip::CUDA, cuda_codeA, cuda_codeB,
+         cuda_boilerplateA, cuda_boilerplateB);
     std::cout << "Testing GLSL..." << std::endl;
-    test(gpuip::GLSL, glsl_codeA, glsl_codeB);
+    test(gpuip::GLSL, glsl_codeA, glsl_codeB,
+         glsl_boilerplateA, glsl_boilerplateB);
     return 0;
 }
 //----------------------------------------------------------------------------//

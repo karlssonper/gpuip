@@ -28,6 +28,8 @@ class GLSLImpl : public Base
                       void * data,
                       std::string * err);
 
+    virtual std::string GetBoilerplateCode(Kernel::Ptr kernel) const;
+    
   protected:
     GLuint _vbo;
     std::vector<GLuint> _fbos;

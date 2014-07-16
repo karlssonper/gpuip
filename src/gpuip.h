@@ -40,8 +40,8 @@ struct Kernel {
         
     std::string name;
     std::string code;
-    std::vector<std::string> inBuffers;
-    std::vector<std::string> outBuffers;
+    std::vector<std::pair<Buffer,std::string> > inBuffers;
+    std::vector<std::pair<Buffer,std::string> > outBuffers;
     std::vector<Parameter<int> > paramsInt;
     std::vector<Parameter<float> > paramsFloat;
 };
@@ -82,6 +82,8 @@ class Base
                       Buffer::CopyOperation op,
                       void * data,
                       std::string * err) = 0;
+
+    virtual std::string GetBoilerplateCode(Kernel::Ptr kernel) const = 0;
                
   protected:
     Base(GpuEnvironment env);
