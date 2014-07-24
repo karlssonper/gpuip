@@ -1,4 +1,4 @@
-import pyGpuip as gpuip
+import pygpuip as gpuip
 import numpy
 
 opencl_codeA = """
@@ -7,7 +7,9 @@ my_kernelA(__global const float * A,
            __global float * B,
            __global float * C,
            int incA,
-           float incB)
+           float incB,
+           int width,
+           int height)
 {
     int x = get_global_id(0); int y = get_global_id(1);
     B[x+y*4] =  A[x+y*4] + incA *0.1;
@@ -18,7 +20,9 @@ opencl_codeB = """
 __kernel void
 my_kernelB(__global const float * B,
            __global const float * C,
-           __global float * A)
+           __global float * A,
+           int width,
+           int height)
 {
     int x = get_global_id(0); int y = get_global_id(1);
     A[x+y*4] =  B[x+y*4] + C[x+y*4];
@@ -30,14 +34,18 @@ my_kernelA(__global const float * A,
            __global float * B,
            __global float * C,
            int incA,
-           float incB)
+           float incB,
+           int width,
+           int height)
 {
 }"""
 opencl_boilerplateB = \
 """__kernel void
 my_kernelB(__global const float * B,
            __global const float * C,
-           __global float * A)
+           __global float * A,
+           int width,
+           int height)
 {
 }"""
 
@@ -47,7 +55,9 @@ my_kernelA(float * A,
            float * B,
            float * C,
            int incA,
-           float incB)
+           float incB,
+           int width,
+           int height)
 {
     if (threadIdx.x < 4 && threadIdx.y < 4) {
         int idx = threadIdx.x + 4 * threadIdx.y;
@@ -59,7 +69,9 @@ cuda_codeB = """
 __global__ void
 my_kernelB(float * B,
            float * C,
-           float * A)
+           float * A,
+           int width,
+           int height)
 {
     if (threadIdx.x < 4 && threadIdx.y < 4) {
         int idx = threadIdx.x + 4 * threadIdx.y;
@@ -73,18 +85,23 @@ my_kernelA(const float * A,
            float * B,
            float * C,
            int incA,
-           float incB)
+           float incB,
+           int width,
+           int height)
 {
 }"""
 cuda_boilerplateB = \
 """__global__ void
 my_kernelB(const float * B,
            const float * C,
-           float * A)
+           float * A,
+           int width,
+           int height)
 {
 }"""
 
 glsl_codeA = """
+#version 120
 uniform sampler2D A;
 uniform int incA;
 uniform float incB;
@@ -95,6 +112,7 @@ void main()
     gl_FragData[1] = vec4(texture2D(A, texcoord).x+incB,0,0,1);
 }"""
 glsl_codeB = """
+#version 120
 uniform sampler2D B;
 uniform sampler2D C;
 varying vec2 texcoord;
@@ -105,7 +123,8 @@ void main()
 }"""
 
 glsl_boilerplateA = \
-"""uniform sampler2D A;
+"""#version 120
+uniform sampler2D A;
 uniform int incA;
 uniform float incB;
 varying vec2 texcoord;
@@ -113,7 +132,8 @@ void main()
 {
 }"""
 glsl_boilerplateB = \
-"""uniform sampler2D B;
+"""#version 120
+uniform sampler2D B;
 uniform sampler2D C;
 varying vec2 texcoord;
 void main()
@@ -131,11 +151,9 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     assert base
 
     buffers = [gpuip.Buffer() for i in range(3)]
-    buffers[0].name = "b0"
-    buffers[1].name = "b1"
-    buffers[2].name = "b2"
-    
-    for b in buffers:
+    for i, b in enumerate(buffers):
+        b.name = "b%i" % i
+        b.data = numpy.zeros((width,height), dtype = numpy.float32)
         b.channels = 1
         b.bpp = 4
         base.AddBuffer(b)
@@ -169,37 +187,43 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     assert base.GetBoilerplateCode(kernelB) == boilerplateB
 
     assert base.InitBuffers() == no_error
-    bufferA_indata = numpy.zeros((width,height), dtype = numpy.float32)
+    indata = numpy.zeros((width,height), dtype = numpy.float32)
     for i in range(width):
         for j in range(height):
-            bufferA_indata[i][j] = i + j * width
-    assert base.WriteBuffer(buffers[0], bufferA_indata) == no_error
+            indata[i][j] = i + j * width
+    buffers[0].data[:] = indata
+    assert base.WriteBuffer(buffers[0]) == no_error
+
     assert base.Build() == no_error
     assert base.Process() == no_error
 
-    outdata = [numpy.zeros((width,height), dtype = numpy.float32) \
-                          for i in range(3)]
-    for i in range(3):
-        assert base.ReadBuffer(buffers[i], outdata[i]) == no_error
+    for b in buffers:
+        assert base.ReadBuffer(b) == no_error
 
     def eq(a,b):
         return abs(a-b) < 0.0001
-
+    
+    b0,b1,b2 = buffers[0].data, buffers[1].data, buffers[2].data
     for i in range(width):
         for j in range(height):
-            assert eq(outdata[1][i][j], bufferA_indata[i][j] + incA.value*0.1)
-            assert eq(outdata[2][i][j], bufferA_indata[i][j] + incB.value)
+            assert eq(b1[i][j], indata[i][j] + incA.value*0.1)
+            assert eq(b2[i][j], indata[i][j] + incB.value)
 
-            assert eq(outdata[0][i][j], outdata[1][i][j] + outdata[2][i][j])
+            assert eq(b0[i][j], b1[i][j] + b2[i][j])
     print "Test passed!"
 
 if __name__ == '__main__':
-    print "Testing OpenCL..." 
-    test(gpuip.Environment.OpenCL, opencl_codeA, opencl_codeB,
-         opencl_boilerplateA, opencl_boilerplateB)
-    print "Testing CUDA..." 
-    test(gpuip.Environment.CUDA, cuda_codeA, cuda_codeB,
-         cuda_boilerplateA, cuda_boilerplateB)
-    print "Testing GLSL..." 
-    test(gpuip.Environment.GLSL, glsl_codeA, glsl_codeB,
-         glsl_boilerplateA, glsl_boilerplateB)
+    if gpuip.CanCreateGpuEnvironment(gpuip.Environment.OpenCL):
+        print "Testing OpenCL..." 
+        test(gpuip.Environment.OpenCL, opencl_codeA, opencl_codeB,
+             opencl_boilerplateA, opencl_boilerplateB)
+
+    if gpuip.CanCreateGpuEnvironment(gpuip.Environment.CUDA):
+        print "Testing CUDA..." 
+        test(gpuip.Environment.CUDA, cuda_codeA, cuda_codeB,
+             cuda_boilerplateA, cuda_boilerplateB)
+
+    if gpuip.CanCreateGpuEnvironment(gpuip.Environment.GLSL):
+        print "Testing GLSL..." 
+        test(gpuip.Environment.GLSL, glsl_codeA, glsl_codeB,
+             glsl_boilerplateA, glsl_boilerplateB)

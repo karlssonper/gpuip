@@ -36,7 +36,7 @@ FIND_PATH(GLFW_INCLUDE_DIRS GLFW/glfw3.h DOC "Path to GLFW include directory."
 )
 
 FIND_LIBRARY(GLFW_LIBRARIES DOC "Absolute path to GLFW library."
-  NAMES glfw glfw3.lib
+  NAMES glfw glfw3
   HINTS
   $ENV{GLFW_ROOT}
   PATH_SUFFIXES lib/win32 #For finding the library file under the root of the glfw expanded archive, typically on Windows.
@@ -46,6 +46,13 @@ FIND_LIBRARY(GLFW_LIBRARIES DOC "Absolute path to GLFW library."
   /usr/lib
   ${GLFW_ROOT_DIR}/lib-msvc100/release # added by ptr
 )
+
+if (APPLE)
+  set(GLFW_cocoa "-framework Cocoa" CACHE STRING "Cocoa framework for OSX")
+  set(GLFW_corevideo "-framework CoreVideo" CACHE STRING "CoreVideo framework for OSX")
+  set(GLFW_iokit "-framework IOKit" CACHE STRING "IOKit framework for OSX")
+  set(GLFW_LIBRARIES ${GLFW_LIBRARIES} ${GLFW_cocoa} ${GLFW_corevideo} ${GLFW_iokit})
+endif(APPLE)
 
 SET(GLFW_FOUND 0)
 IF(GLFW_LIBRARY AND GLFW_INCLUDE_DIR)

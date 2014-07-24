@@ -1,5 +1,6 @@
 from xml.dom import minidom
-import pyGpuip as gpuip
+import pygpuip
+import numpy
 
 class Settings(object):
     class Buffer(object):
@@ -17,7 +18,10 @@ class Settings(object):
             self.default = default if type == "float" else int(default)
             self.min = min if type == "float" else int(min)
             self.max = max if type == "float" else int(max)
-            self.value = self.default if type == "float" else int(default)
+            self.setValue(self.default)
+
+        def setValue(self, value):
+            self.value = value if type == "float" else int(value)
 
     class Kernel(object):
         class KernelBuffer(object):
@@ -32,10 +36,28 @@ class Settings(object):
             self.inBuffers = []
             self.outBuffers = []
 
+        def getParam(self, name):
+            for p in self.params:
+                if p.name == name:
+                    return p
+            return None
+
     def __init__(self):
         self.buffers = []
         self.kernels = []
         self.environment = ""
+
+    def getKernel(self, name):
+        for k in self.kernels:
+            if k.name == name:
+                return k
+        return None
+
+    def getBuffer(self, name):
+        for b in self.buffers:
+            if b.name == name:
+                return b
+        return None
 
     def read(self, xml_file):
         xmldom = minidom.parse(xml_file)
@@ -178,17 +200,17 @@ class Settings(object):
 
     def create(self):
         if self.environment == "OpenCL":
-            env = gpuip.Environment.OpenCL
+            env = pygpuip.Environment.OpenCL
         elif self.environment == "CUDA":
-            env = gpuip.Environment.CUDA
+            env = pygpuip.Environment.CUDA
         elif self.environment == "GLSL":
-            env = gpuip.Environment.GLSL
-        gpuip_obj = gpuip.gpuip(env)
+            env = pygpuip.Environment.GLSL
+        gpuip_obj = pygpuip.gpuip(env)
 
         # Create and add buffers
         buffers = {}
         for b in self.buffers:
-            buf = gpuip.Buffer()
+            buf = pygpuip.Buffer()
             buf.name = b.name
             buf.channels = b.channels
 
@@ -207,11 +229,11 @@ class Settings(object):
             kernels.append(kernel)
   
         # Set buffer linking and parameters for each kernels
-        self.updateKernels(gpuip, buffers, kernels)
+        self.updateKernels(kernels, buffers)
 
         return gpuip_obj, buffers, kernels
             
-    def updateKernels(self, gpuip, buffers, kernels):
+    def updateKernels(self, kernels, buffers):
         for kernel, k in zip(kernels, self.kernels):
             # If no buffers were added but kernels have buffers -> error
             if not len(buffers) and (len(k.inBuffers) or len(k.outBuffers)):
@@ -233,9 +255,9 @@ class Settings(object):
             # Params
             for p in k.params:
                 if p.type == "float":
-                    param = gpuip.ParamFloat()
+                    param = pygpuip.ParamFloat()
                 elif p.type == "int":
-                    param = gpuip.ParamInt()
+                    param = pygpuip.ParamInt()
                 param.name = p.name
                 param.value = p.value
                 kernel.SetParam(param)

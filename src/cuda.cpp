@@ -137,7 +137,8 @@ std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
        }
        ss <<  "float " << kernel->paramsFloat[i].name;
    }
-    
+   ss << ",\n" <<  std::string(ws, ' ') << "int width";
+   ss << ",\n" <<  std::string(ws, ' ') << "int height";
    ss << ")\n{\n}";
     
    return ss.str();

@@ -3,56 +3,54 @@ cmake_minimum_required(VERSION 2.8)
 
 project(gpuip)
 
+# Local cmake find modules can be found in the cmake folder
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # Common variables for compling the library
 set(SOURCE src/gpuip)
 set(LIBRARIES)
 
+if (NOT WIN32)
+  add_definitions(-fPIC)
+  add_definitions(-Wall)
+endif()
+
 # Build with OpenCL
 option(OpenCL "OpenCL" ON)
 if(OpenCL)
-  message("-- Generating build with OpenCL...")
-
+  message(STATUS "Generating build with OpenCL...")
+  add_definitions(-D_GPUIP_OPENCL)
   find_package(OpenCL REQUIRED)
   include_directories(${OPENCL_INCLUDE_DIRS})
   set(LIBRARIES ${LIBRARIES} ${OPENCL_LIBRARIES})
-
-  # Build the OpenCLImpl
   set(SOURCE ${SOURCE} src/opencl)  
 else(OpenCL)
-  message("-- OpenCL disabled .")
+  message(STATUS "OpenCL disabled .")
 endif(OpenCL)
 
 # Build with CUDA
 option(CUDA "CUDA" ON)
 if(CUDA)
-  message("-- Generating build with CUDA...")
-
-  # Use standard CMake find cuda module
+  message(STATUS "Generating build with CUDA...")
+  add_definitions(-D_GPUIP_CUDA)
   find_package(CUDA REQUIRED)
-
-  # Add cuda include directories
   include_directories(${CUDA_INCLUDE_DIRS})
   
-  set(CUDA_DRIVER_LIBRARY ${CUDA_LIBRARIES})
-  STRING(REGEX REPLACE "cudart" "cuda" CUDA_DRIVER_LIBRARY ${CUDA_DRIVER_LIBRARY})
-
-  message(${CUDA_LIBRARIES})
-  # Link against the Cuda libraries 
+  # The Find Cuda module only links the runtime library and not the driver lib
+  STRING(REGEX REPLACE "cudart" "cuda" 
+	CUDA_DRIVER_LIBRARY ${CUDA_LIBRARIES})
   set(LIBRARIES ${LIBRARIES} ${CUDA_LIBRARIES} ${CUDA_DRIVER_LIBRARY})
 
-  # Build the CUDAImpl
   set(SOURCE ${SOURCE} src/cuda)  
 else(CUDA)
-  message("-- CUDA disabled .")
+  message(STATUS "CUDA disabled .")
 endif(CUDA)
 
 # Build with GLSL (needs OpenGL)
 option(GLSL "GLSL" ON)
 if(GLSL)
-  message("-- Generating build with GLSL...")
-
+  message(STATUS "Generating build with GLSL...")
+  add_definitions(-D_GPUIP_GLSL)
   find_package(OpenGL REQUIRED)   
   
   # Easier to set these manually in windows
@@ -63,63 +61,65 @@ if(GLSL)
 	find_package(GLEW REQUIRED)
   endif(WIN32)
   find_package(GLFW REQUIRED)
-  include_directories(${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS} ${GLFW_INCLUDE_DIRS})  
-
+  include_directories(${OPENGL_INCLUDE_DIRS} 
+                            ${GLEW_INCLUDE_DIRS} 
+	                        ${GLFW_INCLUDE_DIRS})  
   set(SOURCE ${SOURCE} src/glsl) 
-  set(LIBRARIES ${LIBRARIES} ${OPENGL_LIBRARIES} ${GLFW_LIBRARIES} ${GLEW_LIBRARY})
+  set(LIBRARIES ${LIBRARIES} ${OPENGL_LIBRARIES} 
+	${GLFW_LIBRARIES} ${GLEW_LIBRARY})
 else(GLSL)
-  message("-- GLSL disabled .")
+  message(STATUS "GLSL disabled .")
 endif(GLSL)
 
-add_library(gpuip ${SOURCE})
+# Build the gpuip library
+add_library(gpuip_static ${SOURCE})
+add_library(gpuip SHARED ${SOURCE})
+target_link_libraries(gpuip_static ${LIBRARIES})
 target_link_libraries(gpuip ${LIBRARIES})
+install(TARGETS gpuip DESTINATION lib)
 
-#set(BOOST_ROOT "C:/Boost/include/boost-1_45")
-#set(Boost_NO_SYSTEM_PATHS true)
-#set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_45/")
-#set(BOOST_LIBRARYDIR "C:/Boost/lib")
-#set(Boost_USE_MULTITHREAD ON)
-#SET(Boost_USE_STATIC_LIBS OFF)
-#SET(Boost_USE_MULTITHREADED ON)		#
-#SET(Boost_USE_STATIC_RUNTIME OFF)
-#add_definitions(-DBOOST_ALL_NO_LIB)
-#add_definitions(-DBOOST_PYTHON_STATIC_LIB)
 # Build python bindings (using boost python)
 option(PYTHON "PYTHON" ON)
 if(PYTHON)
-  message("-- Generating build with python bindings...")
-  find_package(Boost REQUIRED COMPONENTS python)
-  find_package(PythonLibs)
-  include_directories(${PYTHON_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-  # Preprocessor will use boost shared pointers instead of std
+  message(STATUS "Generating build with python bindings...")
   add_definitions(-D_GPUIP_PYTHON_BINDINGS)
-
-  # compiler definitions for non-windows builds
-  if (NOT WIN32)
-	add_definitions(-fPIC)
-  endif()
-  add_library(pyGpuip SHARED src/python.cpp )
-  set_target_properties( pyGpuip PROPERTIES PREFIX "")
+  find_package(Boost REQUIRED COMPONENTS python)
+  find_package(PythonLibs REQUIRED)
+  include_directories(${PYTHON_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
+  
+  # Look for boost numpy in the boost library dir
   if (WIN32)
-	set_target_properties( pyGpuip PROPERTIES SUFFIX ".pyd")
+  	set(Boost_NUMPY_LIBRARY ${Boost_LIBRARY_DIRS}/boost_numpy.lib)
   else (WIN32)
-	set_target_properties( pyGpuip PROPERTIES SUFFIX ".so")
-  endif()
- 
-  #link_directories(${Boost_LIBRARY_DIRS})
-  message(${Boost_PYTHON_LIBRARY} )
-foreach( test  ${BOOST_LIBRARIES})
-    message("BOOST LIBRARIES: " ${test})
-  endforeach( test   ${BOOST_LIBRARIES})
-  set(Boost_NUMPY_LIBRARY ${Boost_LIBRARY_DIRS}/boost_numpy.lib)
-  message(${Boost_NUMPY_LIBRARY})
+  	if (APPLE)
+   	  set(Boost_NUMPY_LIBRARY ${Boost_LIBRARY_DIRS}/libboost_numpy.dylib)
+	else (APPLE)
+	  set(Boost_NUMPY_LIBRARY ${Boost_LIBRARY_DIRS}/libboost_numpy.so)
+	endif(APPLE)
+  endif(WIN32)
 
-  #set(BOOST_LIBRARIES ${BOOST_LIBRARIES} boost_numpy)
-  #target_link_libraries(pyGpuip gpuip ${PYTHON_LIBRARIES} "C:/Boost/lib/boost_python-vc100-mt-1_55.lib"  "C:/Boost/lib/libboost_python-vc100-mt-1_55.lib" "C:/Boost/lib/boost_numpy.lib")
-  target_link_libraries(pyGpuip gpuip ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_NUMPY_LIBRARY})
+  add_library(pygpuip SHARED src/python.cpp )
+  target_link_libraries(pygpuip gpuip_static ${PYTHON_LIBRARIES} 
+	${Boost_PYTHON_LIBRARY} ${Boost_NUMPY_LIBRARY})
+  
+  # Rename python shared lib from libpyGpuip.{so,lib} to pyGpuip.{so,pyd}
+  set_target_properties( pygpuip PROPERTIES PREFIX "")
+  if (WIN32)
+	set_target_properties( pygpuip PROPERTIES SUFFIX ".pyd")
+  else (WIN32)
+	set_target_properties( pygpuip PROPERTIES SUFFIX ".so")
+  endif(WIN32)
+  
+  # Install python bindings in the python site-packages
+  execute_process(COMMAND 
+	python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" 
+	OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+  install(TARGETS pygpuip DESTINATION ${PYTHON_SITE_PACKAGES})
+
+  add_subdirectory(python)
 
 else(PYTHON)
-  message("-- Python bindings disabled.")
+  message(STATUS "Python bindings disabled.")
 endif(PYTHON)
 
 # Enable unit testing
@@ -127,7 +127,7 @@ enable_testing()
 
 # Add C++ test
 add_executable(test_cpp test/test)
-target_link_libraries(test_cpp gpuip)
+target_link_libraries(test_cpp gpuip_static)
 add_test(NAME test_cpp COMMAND test_cpp)
 
 # Add python test
