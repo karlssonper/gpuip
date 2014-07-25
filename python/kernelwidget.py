@@ -79,7 +79,7 @@ class Parameter(object):
         self.minVal = minVal
         self.maxVal = maxVal
         self.typename = typename
-        self.callbackFunc = None
+        self.callbackFunc = callbackFunc
 
         # Each parameters has a label with the name, a lineedit with text value
         # and a slider with the value (relative to min max)
@@ -189,7 +189,7 @@ class CodeEditor(QtGui.QTextEdit):
         self.highlighter = Highlighter(self.document())
 
     def sizeHint(self):
-        return QtCore.QSize(self.w,500)
+        return QtCore.QSize(self.w,200)
         
 class Highlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, parent=None):
@@ -200,7 +200,10 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         color.setNamedColor("#66D9EF")
         keywordFormat.setForeground(color)
         
-        keywords = ["char", "double", "float", "int", "long", 
+        keywords = ["char", "double", 
+                    "float", "float2", "float3", "float4",
+                    "uchar", "uchar2", "uchar3", "uchar4",
+                    "int", "int2", "int3", "int4",  "long", 
                     "short", "signed", "unsigned", "union", "void"]
         keywordPatterns = ["\\b" + kw + "\\b" for kw in keywords]
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
@@ -220,7 +223,8 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         color.setNamedColor("#F92672")
         keywordFormat.setForeground(color)
         keywords = ["const", "inline", "template", "typedef", "typename", 
-                    "if", "for", "while", "switch", "case", "break", "else"]
+                    "if", "for", "while", "switch", "case", 
+                    "return", "break", "else"]
         keywordPatterns = ["\\b" + kw + "\\b" for kw in keywords]
         self.highlightingRules += [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]

@@ -2,11 +2,11 @@ from PySide import QtGui, QtCore
 
 class BuffersWidget(QtGui.QWidget):
     class Buffer(object):
-        def __init__(self, name, format, channels, parent):
+        def __init__(self, name, format, channels, input, output, parent):
             self.layout = QtGui.QVBoxLayout()
 
-            self.inputLineEdit = QtGui.QLineEdit("", parent)
-            self.outputLineEdit = QtGui.QLineEdit("", parent)
+            self.inputLineEdit = QtGui.QLineEdit(input, parent)
+            self.outputLineEdit = QtGui.QLineEdit(output, parent)
             self.inputLineEdit.setMinimumWidth(100)
             self.outputLineEdit.setMinimumWidth(99)
             inputButton = QtGui.QPushButton("...", parent)
@@ -34,14 +34,14 @@ class BuffersWidget(QtGui.QWidget):
         def selectInput(self):
              inputImageFile = QtGui.QFileDialog.getOpenFileName(
                  None, "Select input image", 
-                 QtCore.QDir.currentPath(), "Png (*png)")
+                 QtCore.QDir.currentPath(), "Exr (*exr);;Png (*png)")
              if inputImageFile[0]:
                  self.inputLineEdit.setText(inputImageFile[0])
  
         def selectOutput(self):
             outputImageFile = QtGui.QFileDialog.getSaveFileName(
                  None, "Choose output image", 
-                 QtCore.QDir.currentPath(), "Png (*png)")
+                 QtCore.QDir.currentPath(), "Exr(*exr);;Png (*png)")
             if outputImageFile[0]:
                 self.outputLineEdit.setText(outputImageFile[0])
                        
@@ -52,8 +52,9 @@ class BuffersWidget(QtGui.QWidget):
         self.setLayout(self.layout)
         self.buffers = {}
  
-    def addBuffer(self, name, format, channels):
-        self.buffers[name] = BuffersWidget.Buffer(name, format, channels, self)
+    def addBuffer(self, name, format, channels, input, output):
+        self.buffers[name] = BuffersWidget.Buffer(name, format, channels, 
+                                                  input, output, self)
         self.layout.addLayout(self.buffers[name].layout)
 
         # Add separating line after each buffer
