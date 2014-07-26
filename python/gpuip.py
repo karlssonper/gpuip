@@ -10,27 +10,27 @@ def getCommandLineArguments():
     # Command line arguments
     desc = "Framework for Image Processing on the GPU"
     parser = argparse.ArgumentParser(desc)
-    parser.add_argument("file", 
+    parser.add_argument("file",
                         help="Image Processing file *.ip")
-    parser.add_argument("-p", "--param", 
-                        action="append", 
-                        nargs = 3, 
+    parser.add_argument("-p", "--param",
+                        action="append",
+                        nargs = 3,
                         metavar = ("kernel", "param", "value"),
                         help="Change value of a parameter.")
-    parser.add_argument("-i", "--inbuffer", 
-                        action="append", 
+    parser.add_argument("-i", "--inbuffer",
+                        action="append",
                         nargs = 2,
                         metavar = ("buffer", "path"),
                         help = "Set input image to a buffer")
-    parser.add_argument("-o", "--outbuffer", 
+    parser.add_argument("-o", "--outbuffer",
                         action="append",
                         nargs = 2,
                         metavar = ("buffer", "path"),
                         help = "Set output image to a buffer")
-    parser.add_argument("-v","--verbose", 
+    parser.add_argument("-v","--verbose",
                         action="store_true",
                         help="Outputs information")
-    parser.add_argument("-ng", "--nogui", 
+    parser.add_argument("-ng", "--nogui",
                         action="store_true",
                         help="Command line version")
     return parser.parse_args()
@@ -45,7 +45,7 @@ def getSettings(args):
 
     ipsettings = settings.Settings()
     ipsettings.read(args.file)
-    
+
     # Change parameter values
     if args.param:
         for p in args.param:
@@ -88,12 +88,12 @@ def runGUI(ippath, ipsettings):
 
     # Makes it possible to close program with ctrl+c in a terminal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
+
     from PySide import QtGui
     app = QtGui.QApplication(sys.argv)
     app.setStyle("plastique")
     mainwindow = mainwindow.MainWindow(path = ippath, settings = ipsettings)
-    mainwindow.show()    
+    mainwindow.show()
     sys.exit(app.exec_())
 
 def runCommandLine(ipsettings, verbose):
@@ -103,17 +103,17 @@ def runCommandLine(ipsettings, verbose):
         err += "example: \n"
         err += "  gpuip --nogui smooth.ip"""
         terminate(err)
-    
+
     def check_error(err):
         if err:
             terminate(err)
-    
+
     ### 0. Create gpuip items from settings
     gpuip, buffers, kernels = ipsettings.create()
 
     ### 1. Build
     check_error(gpuip.Build())
-    
+
     ### 2. Init Buffers
     bufferNames = ""
     inputBuffers = []
@@ -126,7 +126,7 @@ def runCommandLine(ipsettings, verbose):
     gpuip.SetDimensions(width, height)
     utils.allocateBufferData(buffers, width, height)
     check_error(gpuip.InitBuffers())
-    
+
     ### 3. Import images to buffers
     for b in ipsettings.buffers:
         if b.input:
@@ -135,7 +135,7 @@ def runCommandLine(ipsettings, verbose):
 
     ### 4. Process
     check_error(gpuip.Process())
-            
+
     ### 5. Export buffers to images
     for b in ipsettings.buffers:
         if b.output:
@@ -149,3 +149,4 @@ if __name__ == "__main__":
         runCommandLine(ipsettings, args.verbose)
     else:
         runGUI(args.file, ipsettings)
+

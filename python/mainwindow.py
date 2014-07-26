@@ -16,7 +16,7 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle("gpuip")
         self.setWindowIcon(icons.get("pug"))
         self.setStyleSheet(stylesheet.data)
-        # Start in center of the screen, covering 80% 
+        # Start in center of the screen, covering 80%
         r = QtGui.QDesktopWidget().availableGeometry()
         self.setGeometry(r.width()*0.10, r.height() * 0.10,
                          r.width() * 0.80, r.height() * 0.80)
@@ -25,11 +25,11 @@ class MainWindow(QtGui.QMainWindow):
         self.interactive = False
         self.createMenuAndActions()
         self.createDockWidgets()
-        
+
         # Central tab widget (main part of the gui)
         self.kernelTabWidget = QtGui.QTabWidget(self)
         self.setCentralWidget(self.kernelTabWidget)
-        
+
         self.reset()
 
         self.settings = settings
@@ -111,14 +111,14 @@ class MainWindow(QtGui.QMainWindow):
 
         bufferNames = [b.name for b in self.settings.buffers]
         for b in self.settings.buffers:
-            self.buffersWidget.addBuffer(b.name, b.type, 
+            self.buffersWidget.addBuffer(b.name, b.type,
                                          b.channels, b.input, b.output)
         self.buffersWidget.layout.addStretch()
-        
+
         refresh = True
         self.kernelWidgets = {}
         for k in self.settings.kernels:
-            w = kernelwidget.KernelWidget(self.kernelTabWidget, 
+            w = kernelwidget.KernelWidget(self.kernelTabWidget,
                                           self.interactiveProcess)
             for inb in k.inBuffers:
                 w.addInBuffer(inb.name, inb.buffer, bufferNames)
@@ -128,7 +128,7 @@ class MainWindow(QtGui.QMainWindow):
                 w.addParameter(p.name, p.value, p.default, p.min, p.max, p.type)
             self.kernelTabWidget.addTab(w, k.name)
             self.kernelWidgets[k.name] = w
-            
+
             if k.code != "":
                 w.codeEditor.setText(k.code)
                 refresh = False
@@ -150,7 +150,7 @@ class MainWindow(QtGui.QMainWindow):
         # Remove all kernel widgets from the kernel tab widget
         for i in range(self.kernelTabWidget.count()):
             self.kernelTabWidget.removeTab(0)
-                
+
     def initBuffers(self):
         self.updateSettings()
         bufferNames = ""
@@ -183,7 +183,7 @@ class MainWindow(QtGui.QMainWindow):
             kernelWidget = self.kernelWidgets[kernel.name]
             kernel.code = str(kernelWidget.codeEditor.toPlainText())
             kernelNames += kernel.name + ", "
-       
+
         self.log("Building kernels [ <i>%s</i> ] ..." % kernelNames[:-2])
 
         err = self.gpuip.Build()
@@ -197,7 +197,7 @@ class MainWindow(QtGui.QMainWindow):
                                self.tr(err), QtGui.QMessageBox.Ok,
                                       QtGui.QMessageBox.Ok)
             return False
-            
+
     def interactiveProcess(self):
         if self.interactive:
             # Run previous steps if necessary. If any fails, return function
@@ -263,7 +263,7 @@ class MainWindow(QtGui.QMainWindow):
                 if err:
                     self.logError(err)
                     return False
-                
+
         self.logSuccess("Buffer data transfered to images.")
         return True
 
@@ -310,7 +310,7 @@ class MainWindow(QtGui.QMainWindow):
     def createDockWidgets(self):
         LEFT = QtCore.Qt.LeftDockWidgetArea
         RIGHT = QtCore.Qt.RightDockWidgetArea
-   
+
         # Create Log dock
         dock = QtGui.QDockWidget("Log", self)
         self.logBrowser = QtGui.QTextBrowser(dock)
@@ -347,7 +347,7 @@ class MainWindow(QtGui.QMainWindow):
 
         toolBar = self.addToolBar("Toolbar")
         toolBar.setIconSize(self.toolbarIconSize)
-        
+
         def _addAction(icon, actionName, shortcut, func, menu, toolbar):
             action = QtGui.QAction(icon, actionName, self)
             action.triggered.connect(func)
@@ -357,34 +357,35 @@ class MainWindow(QtGui.QMainWindow):
             if toolbar:
                 toolbar.addAction(action)
 
-        _addAction(icons.get("new"), "&New", QtGui.QKeySequence.New, 
+        _addAction(icons.get("new"), "&New", QtGui.QKeySequence.New,
                    self.new, fileMenu, toolBar)
-        _addAction(icons.get("newExisting"), "&New from existing", None, 
+        _addAction(icons.get("newExisting"), "&New from existing", None,
                    self.newFromExisting, fileMenu, toolBar),
-        _addAction(icons.get("open"), "&Open", QtGui.QKeySequence.Open, 
+        _addAction(icons.get("open"), "&Open", QtGui.QKeySequence.Open,
                    self.open, fileMenu, toolBar),
-        _addAction(icons.get("save"), "&Save", QtGui.QKeySequence.Save, 
+        _addAction(icons.get("save"), "&Save", QtGui.QKeySequence.Save,
                    self.save, fileMenu, toolBar),
-        _addAction(icons.get("save"), "&Save As", QtGui.QKeySequence.SaveAs, 
+        _addAction(icons.get("save"), "&Save As", QtGui.QKeySequence.SaveAs,
                    self.saveAs, fileMenu, None),
-        _addAction(QtGui.QIcon(""), "&QuitQQQ", "Ctrl+Q", 
+        _addAction(QtGui.QIcon(""), "&QuitQQQ", "Ctrl+Q",
                    self.close, fileMenu, None),
         toolBar.addSeparator()
-        _addAction(icons.get("refresh"), "&Refresh Boilerplate Code", "Ctrl+R", 
+        _addAction(icons.get("refresh"), "&Refresh Boilerplate Code", "Ctrl+R",
                    self.refreshBoilerplateCode,editorMenu,toolBar),
         toolBar.addSeparator()
-        _addAction(icons.get("build"), "1. &Build", "Ctrl+B", 
+        _addAction(icons.get("build"), "1. &Build", "Ctrl+B",
                    self.build, runMenu, toolBar),
-        _addAction(icons.get("init"), "2. &Init Buffers", "Ctrl+I", 
+        _addAction(icons.get("init"), "2. &Init Buffers", "Ctrl+I",
                    self.initBuffers, runMenu, toolBar),
-        _addAction(icons.get("import"), "3. &Import from images", "Ctrl+W", 
+        _addAction(icons.get("import"), "3. &Import from images", "Ctrl+W",
                    self.import_from_images, runMenu, toolBar),
-        _addAction(icons.get("process"), "4. &Process", "Ctrl+P", 
+        _addAction(icons.get("process"), "4. &Process", "Ctrl+P",
                    self.process, runMenu, toolBar),
-        _addAction(icons.get("export"), "5. &Export to images", "Ctrl+E", 
+        _addAction(icons.get("export"), "5. &Export to images", "Ctrl+E",
                    self.export_to_images, runMenu, toolBar),
-        _addAction(QtGui.QIcon(""), "&All steps", "Ctrl+A", 
+        _addAction(QtGui.QIcon(""), "&All steps", "Ctrl+A",
                    self.run_all_steps, runMenu, None),
 
         _addAction(QtGui.QIcon(""), "About &Qt", None,
                    QtGui.qApp.aboutQt, helpMenu, None)
+

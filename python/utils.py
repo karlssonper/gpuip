@@ -12,7 +12,7 @@ def _exrToNumpy(filename, npyArray):
     # Open EXR file
     exr_file = OpenEXR.InputFile(filename)
 
-    # Get width and height 
+    # Get width and height
     dw = exr_file.header()['dataWindow']
     width, height = dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1
 
@@ -48,8 +48,8 @@ def _numpyToExr(npyArray, filename):
     chan = Imath.Channel(Imath.PixelType(Imath.PixelType.FLOAT))
     HEADER['channels'] = dict([(c, chan) for c in "RGB"])
     exr = OpenEXR.OutputFile(filename, HEADER)
-    exr.writePixels({'R': npyArray[:,:,0].tostring(), 
-                     'G': npyArray[:,:,1].tostring(), 
+    exr.writePixels({'R': npyArray[:,:,0].tostring(),
+                     'G': npyArray[:,:,1].tostring(),
                      'B': npyArray[:,:,2].tostring()})
     exr.close()
 
@@ -66,7 +66,7 @@ def _exrImageSize(filename):
     # Open EXR file
     exr_file = OpenEXR.InputFile(filename)
 
-    # Get width and height 
+    # Get width and height
     dw = exr_file.header()['dataWindow']
 
     # Return width, height
@@ -127,7 +127,7 @@ def numpyToImage(numpy, filename):
         err = "Could not export data to %s. " % filename
         err += "format '" + filename[filename.rfind("."):] + "' not supported."
         return err
-    
+
 def getImageSize(filename):
     lower = filename.lower()
     if lower.endswith("exr"):
@@ -158,3 +158,4 @@ def allocateBufferData(buffers, width, height):
 
 def getTimeStr():
     return str(strftime("[%Y-%m-%d %H:%M:%S] ", gmtime()))
+

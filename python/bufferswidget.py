@@ -15,7 +15,7 @@ class BuffersWidget(QtGui.QWidget):
             outputButton.clicked.connect(self.selectOutput)
 
             labelNames = ["Name", "Format", "Channels", "Input", "Output" ]
-            rhsWidgets = [[QtGui.QLabel(name,parent)] , 
+            rhsWidgets = [[QtGui.QLabel(name,parent)] ,
                           [QtGui.QLabel(format,parent)],
                           [QtGui.QLabel(str(channels),parent)],
                           [self.inputLineEdit, inputButton],
@@ -30,30 +30,30 @@ class BuffersWidget(QtGui.QWidget):
                 if len(widgets) == 1:
                     layout.addStretch()
                 self.layout.addLayout(layout)
- 
+
         def selectInput(self):
              inputImageFile = QtGui.QFileDialog.getOpenFileName(
-                 None, "Select input image", 
+                 None, "Select input image",
                  QtCore.QDir.currentPath(), "Exr (*exr);;Png (*png)")
              if inputImageFile[0]:
                  self.inputLineEdit.setText(inputImageFile[0])
- 
+
         def selectOutput(self):
             outputImageFile = QtGui.QFileDialog.getSaveFileName(
-                 None, "Choose output image", 
+                 None, "Choose output image",
                  QtCore.QDir.currentPath(), "Exr(*exr);;Png (*png)")
             if outputImageFile[0]:
                 self.outputLineEdit.setText(outputImageFile[0])
-                       
+
     def __init__(self, parent = None):
         super(BuffersWidget, self).__init__( parent)
- 
+
         self.layout = QtGui.QVBoxLayout()
         self.setLayout(self.layout)
         self.buffers = {}
- 
+
     def addBuffer(self, name, format, channels, input, output):
-        self.buffers[name] = BuffersWidget.Buffer(name, format, channels, 
+        self.buffers[name] = BuffersWidget.Buffer(name, format, channels,
                                                   input, output, self)
         self.layout.addLayout(self.buffers[name].layout)
 
@@ -65,8 +65,7 @@ class BuffersWidget(QtGui.QWidget):
 
     def getBufferInput(self, name):
         return str(self.buffers[name].inputLineEdit.text())
- 
+
     def getBufferOutput(self, name):
         return str(self.buffers[name].outputLineEdit.text())
-     
-    
+

@@ -10,7 +10,7 @@ class NewDialog(QtGui.QDialog):
                          r.height() * 0.25,
                          r.width() * 0.5,
                          r.height() * 0.5)
-      
+
         envGroupBox = QtGui.QGroupBox("Environment", self)
         layout = QtGui.QVBoxLayout()
         self.envComboBox = QtGui.QComboBox(envGroupBox)
@@ -22,20 +22,19 @@ class NewDialog(QtGui.QDialog):
 
         self.buffersGroupBox = BufferGroupBox(self)
         self.kernels = []
-                
+
         buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | \
                                                QtGui.QDialogButtonBox.Cancel)
-        addKernelBtn = buttonBox.addButton("Add Kernel", 
+        addKernelBtn = buttonBox.addButton("Add Kernel",
                                            QtGui.QDialogButtonBox.ActionRole)
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
         addKernelBtn.clicked.connect(self.addKernel)
 
-
         self.topLayout = QtGui.QVBoxLayout()
         self.topLayout.addWidget(envGroupBox)
         self.topLayout.addWidget(self.buffersGroupBox)
-        
+
         # Create tab widget
         self.tabWidget = QtGui.QTabWidget(self)
         tmp = QtGui.QWidget(self.tabWidget)
@@ -74,11 +73,11 @@ class NewDialog(QtGui.QDialog):
         for i,k in enumerate(settings.kernels):
             if i: # First kernel is always added automatically
                 self.addKernel()
-            
+
             kernel = self.kernels[-1]
             kernel.nameLineEdit.setText(k.name)
             kernel.codeFileLineEdit.setText(k.code_file)
-            
+
             # In Buffers
             kernel.inBuffersComboBox.setCurrentIndex(len(k.inBuffers))
             for lineEdit, inb in zip(kernel.inBufferLineEdits, k.inBuffers):
@@ -100,10 +99,10 @@ class NewDialog(QtGui.QDialog):
 
     def getSettings(self):
         s = settings.Settings()
-        
+
         # Environment
         s.environment = str(self.envComboBox.currentText())
-        
+
         # Buffers
         for b in self.buffersGroupBox.buffers:
             s.buffers.append(settings.Settings.Buffer(
@@ -138,7 +137,7 @@ class NewDialog(QtGui.QDialog):
             s.kernels.append(sk)
 
         return s
-       
+
 class BufferGroupBox(QtGui.QGroupBox):
     class Buffer(object):
         def __init__(self, gridLayout, row, parent):
@@ -151,10 +150,10 @@ class BufferGroupBox(QtGui.QGroupBox):
             gridLayout.addWidget(self.nameLineEdit, row, 0)
             gridLayout.addWidget(self.typeComboBox, row, 1)
             gridLayout.addWidget(self.channelsComboBox, row, 2)
-            
+
     def __init__(self, parent):
          super(BufferGroupBox,self).__init__(parent)
-    
+
          self.buffers = []
 
          self.gridLayout = QtGui.QGridLayout()
@@ -176,7 +175,7 @@ class BufferGroupBox(QtGui.QGroupBox):
     def addBuffer(self):
         b = BufferGroupBox.Buffer(self.gridLayout, len(self.buffers)+1, self)
         self.buffers.append(b)
-         
+
 class KernelGroupBox(QtGui.QGroupBox):
     class Parameter(object):
         def __init__(self, gridLayout, row, parent):
@@ -192,7 +191,7 @@ class KernelGroupBox(QtGui.QGroupBox):
             gridLayout.addWidget(self.defaultLineEdit, row, 2)
             gridLayout.addWidget(self.minLineEdit, row, 3)
             gridLayout.addWidget(self.maxLineEdit, row, 4)
-            
+
         def getData(self):
             name = self.nameLineEdit.text()
             type = str(self.typeComboBox.currentText()).strip()
@@ -204,8 +203,8 @@ class KernelGroupBox(QtGui.QGroupBox):
                 defaultVal = str(int(eval(defaultVal)))
                 minVal = str(int(eval(minVal)))
                 maxVal = str(int(eval(maxVal)))
-                
-            return name, type, defaultVal, minVal, maxVal 
+
+            return name, type, defaultVal, minVal, maxVal
 
     def __init__(self, number, parent):
         super(KernelGroupBox, self).__init__("Kernel %i" % number, parent)
@@ -216,7 +215,7 @@ class KernelGroupBox(QtGui.QGroupBox):
         topLayout = QtGui.QHBoxLayout()
         topLayout.addWidget(nameLabel)
         topLayout.addWidget(self.nameLineEdit)
-        
+
         codeFileLabel = QtGui.QLabel("Code: ", self)
         self.codeFileLineEdit = QtGui.QLineEdit("")
         codeBtn = QtGui.QPushButton("...")
@@ -240,7 +239,7 @@ class KernelGroupBox(QtGui.QGroupBox):
         self.inBufferLineEdits = []
         self.inBuffersLayout.addLayout(layout)
         self.inBuffersLayout.addStretch()
-        
+
         outBuffersGroupBox = QtGui.QGroupBox("Output Buffers", self)
         self.outBuffersLayout = QtGui.QVBoxLayout()
         outBuffersGroupBox.setLayout(self.outBuffersLayout)
@@ -255,9 +254,9 @@ class KernelGroupBox(QtGui.QGroupBox):
         self.outBufferLineEdits = []
         self.outBuffersLayout.addLayout(layout)
         self.outBuffersLayout.addStretch()
-        
+
         paramGroupBox = QtGui.QGroupBox("Parameters", self)
-        
+
         self.gridLayout = QtGui.QGridLayout()
         paramGroupBox.setLayout(self.gridLayout)
         self.gridLayout.addWidget(QtGui.QLabel("Name",self), 0, 0)
@@ -265,14 +264,14 @@ class KernelGroupBox(QtGui.QGroupBox):
         self.gridLayout.addWidget(QtGui.QLabel("Default",self), 0, 2)
         self.gridLayout.addWidget(QtGui.QLabel("Min",self), 0, 3)
         self.gridLayout.addWidget(QtGui.QLabel("Max",self), 0, 4)
-        
+
         self.params = []
 
         addParamButton = QtGui.QPushButton("    Add Param    ", self)
         addParamButton.clicked.connect(self.addParam)
         addParamButton.setSizePolicy(QtGui.QSizePolicy.Maximum,
                                      QtGui.QSizePolicy.Maximum)
-        
+
         # Shrink all group boxes
         for groupBox in [inBuffersGroupBox, outBuffersGroupBox, paramGroupBox]:
             groupBox.setSizePolicy(QtGui.QSizePolicy.Expanding,
@@ -296,7 +295,7 @@ class KernelGroupBox(QtGui.QGroupBox):
         lineEdit = QtGui.QLineEdit(name)
         self.outBuffersLayout.addWidget(lineEdit)
         self.outBufferLineEdits.append(lineEdit)
-        
+
     def setInBuffers(self, idx):
         for lineEdit in self.inBufferLineEdits:
             self.inBuffersLayout.removeWidget(lineEdit)
@@ -331,4 +330,4 @@ class KernelGroupBox(QtGui.QGroupBox):
         p = KernelGroupBox.Parameter(self.gridLayout, len(self.params)+1, self)
         self.params.append(p)
         return p
-       
+
