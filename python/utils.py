@@ -1,4 +1,5 @@
 import numpy
+from time import gmtime, strftime
 
 def _exrToNumpy(filename, npyArray):
     try:
@@ -154,3 +155,6 @@ def allocateBufferData(buffers, width, height):
         ndtype = numpy.float32 if buf.bpp/buf.channels == 4 else numpy.ubyte
         channels = buf.channels if buf.channels != 3 else 4
         buf.data = numpy.zeros((width, height, channels), dtype = ndtype)
+
+def getTimeStr():
+    return str(strftime("[%Y-%m-%d %H:%M:%S] ", gmtime()))

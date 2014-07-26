@@ -8,8 +8,6 @@ import icons
 import utils
 import pygpuip
 from PySide import QtGui, QtCore
-import sys
-from time import gmtime, strftime
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, path, settings = None):
@@ -175,7 +173,7 @@ class MainWindow(QtGui.QMainWindow):
             self.logError(err)
             return False
         else:
-            self.log("Buffers were initiated successfully.")
+            self.logSuccess("All buffers were initiated.")
             self.needsInitBuffers = False
             return True
 
@@ -190,7 +188,7 @@ class MainWindow(QtGui.QMainWindow):
 
         err = self.gpuip.Build()
         if not err:
-            self.log("All kernels were built successfully.")
+            self.logSuccess("All kernels were built.")
             self.needsBuild = False
             return True
         else:
@@ -220,7 +218,7 @@ class MainWindow(QtGui.QMainWindow):
             self.logError(err)
             return False
 
-        self.log("All kernels were processed successfully...")
+        self.logSuccess("All kernels were processed.")
 
         for b in self.buffers:
             err = self.gpuip.ReadBuffer(self.buffers[b])
@@ -245,7 +243,7 @@ class MainWindow(QtGui.QMainWindow):
                 if err:
                     self.logError(err)
                     return False
-        self.log("Image data was successfully transfered to buffers.")
+        self.logSuccess("Image data transfered to all buffers.")
 
         for b in self.settings.buffers:
             if b.input:
@@ -266,7 +264,7 @@ class MainWindow(QtGui.QMainWindow):
                     self.logError(err)
                     return False
                 
-        self.log("Buffer data was successfully transfered from to images.")
+        self.logSuccess("Buffer data transfered to images.")
         return True
 
     def run_all_steps(self):
@@ -277,13 +275,15 @@ class MainWindow(QtGui.QMainWindow):
         self.export_to_images()
 
     def log(self, msg):
-        tt = str(strftime("[%Y-%m-%d %H:%M:%S]: ", gmtime()))
-        self.logBrowser.append(tt + msg)
+        self.logBrowser.append(utils.getTimeStr() + msg)
+
+    def logSuccess(self, msg):
+        success = "<font color='green'>Success: </font>"
+        self.logBrowser.append(utils.getTimeStr() + success + msg)
 
     def logError(self, msg):
-        tt = str(strftime("[%Y-%m-%d %H:%M:%S] ", gmtime()))
         error = "<font color='red'>Error: </font>"
-        self.logBrowser.append(tt + error + msg)
+        self.logBrowser.append(utils.getTimeStr() + error + msg)
 
     def toggleInteractive(self):
         self.interactive = not self.interactive
@@ -308,8 +308,8 @@ class MainWindow(QtGui.QMainWindow):
             editor.setText(code)
 
     def createDockWidgets(self):
-        left = QtCore.Qt.LeftDockWidgetArea
-        right = QtCore.Qt.RightDockWidgetArea
+        LEFT = QtCore.Qt.LeftDockWidgetArea
+        RIGHT = QtCore.Qt.RightDockWidgetArea
    
         # Create Log dock
         dock = QtGui.QDockWidget("Log", self)
@@ -321,7 +321,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # Create buffers dock
         self.dockBuffers = QtGui.QDockWidget("Buffers", self)
-        self.dockBuffers.setAllowedAreas(left | right)
+        self.dockBuffers.setAllowedAreas(LEFT | RIGHT)
         self.buffersWidget = bufferswidget.BuffersWidget(self)
         self.dockBuffers.setWidget(self.buffersWidget)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.dockBuffers)
@@ -329,7 +329,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # Create display dock
         dock = QtGui.QDockWidget("Display", self)
-        dock.setAllowedAreas(left | right)
+        dock.setAllowedAreas(LEFT | RIGHT)
         self.displayWidget = displaywidget.DisplayWidget(dock)
         checkBox = self.displayWidget.interactiveCheckBox
         checkBox.stateChanged.connect(self.toggleInteractive)
@@ -340,16 +340,6 @@ class MainWindow(QtGui.QMainWindow):
         # The buffers tab starts with being stacked on the display dock
         self.tabifyDockWidget(dock, self.dockBuffers)
 
-        # Create display debug dock (starts hidden)
-        dock = QtGui.QDockWidget("Display Debug", self)
-        dock.setAllowedAreas(left | right)
-        self.displayDebugWidget = QtGui.QTextBrowser(dock)
-        self.displayWidget.setDisplayDebug(self.displayDebugWidget)
-        dock.setWidget(self.displayDebugWidget)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
-        dock.close()
-        self.windowsMenu.addAction(dock.toggleViewAction())
-
     def createMenuAndActions(self):
         menuNames = ["&File", "&Editor", "&Run", "&Windows", "&Help"]
         fileMenu, editorMenu, runMenu, self.windowsMenu, helpMenu = \
@@ -358,76 +348,43 @@ class MainWindow(QtGui.QMainWindow):
         toolBar = self.addToolBar("Toolbar")
         toolBar.setIconSize(self.toolbarIconSize)
         
-        # each item is a list of 
-        # [icon, action name, shortcut, function, menu, add to toolbar]
-        items = [
-            [icons.get("new"), "&New", QtGui.QKeySequence.New, 
-             self.new, fileMenu, True],
-
-            [icons.get("newExisting"), "&New from existing", None, 
-             self.newFromExisting, fileMenu, True],
-
-            [icons.get("open"), "&Open", QtGui.QKeySequence.Open, 
-             self.open, fileMenu, True],
-
-            [icons.get("save"), "&Save", QtGui.QKeySequence.Save, 
-             self.save, fileMenu, True],
-
-            [icons.get("save"), "&Save As", QtGui.QKeySequence.SaveAs, 
-             self.saveAs, fileMenu, False],
-
-            [QtGui.QIcon(""), "&QuitQQQ", "Ctrl+Q", 
-             self.close, fileMenu, False],
-
-            [icons.get("refresh"), "&Refresh Boilerplate Code", "Ctrl+R", 
-             self.refreshBoilerplateCode,editorMenu,True],
-
-            [icons.get("build"), "1. &Build", "Ctrl+B", 
-             self.build, runMenu, True],
-
-            [icons.get("init"), "2. &Init Buffers", "Ctrl+I", 
-             self.initBuffers, runMenu, True],
-
-            [icons.get("import"), "3. &Import from images", "Ctrl+W", 
-             self.import_from_images, runMenu, True],
-
-            [icons.get("process"), "4. &Process", "Ctrl+P", 
-             self.process, runMenu, True],
-
-            [icons.get("export"), "5. &Export to images", "Ctrl+E", 
-             self.export_to_images, runMenu, True],
-
-            [QtGui.QIcon(""), "&All steps", "Ctrl+A", 
-             self.run_all_steps, runMenu, False],
-
-            [QtGui.QIcon(""), "About &Qt", None,
-             QtGui.qApp.aboutQt, helpMenu, False]
-            ]
-            
-        prevMenu = items[0][4] # to know when to add a separator in the toolbar
-        for i in items:
-            ico, name, shortcut, func, menu, add = i[0],i[1],i[2],i[3],i[4],i[5]
-
-            # Create action
-            action = QtGui.QAction(ico, name, self)
-            
-            # Set shortcut
+        def _addAction(icon, actionName, shortcut, func, menu, toolbar):
+            action = QtGui.QAction(icon, actionName, self)
+            action.triggered.connect(func)
             if shortcut:
                 action.setShortcut(shortcut)
-            
-            # Connect the action with a function
-            action.triggered.connect(func)
-
-            # Add the action to a menu
             menu.addAction(action)
+            if toolbar:
+                toolbar.addAction(action)
 
-            # Add to toolbar
-            if add:
-                # If different menu then previous, add a separating line
-                if menu != prevMenu:
-                    toolBar.addSeparator()
-                    prevMenu = menu
-                toolBar.addAction(action)
-           
-        action = QtGui.QAction(QtGui.QIcon(""), "close", self)
-        action.setShortcut("Ctrl+C")
+        _addAction(icons.get("new"), "&New", QtGui.QKeySequence.New, 
+                   self.new, fileMenu, toolBar)
+        _addAction(icons.get("newExisting"), "&New from existing", None, 
+                   self.newFromExisting, fileMenu, toolBar),
+        _addAction(icons.get("open"), "&Open", QtGui.QKeySequence.Open, 
+                   self.open, fileMenu, toolBar),
+        _addAction(icons.get("save"), "&Save", QtGui.QKeySequence.Save, 
+                   self.save, fileMenu, toolBar),
+        _addAction(icons.get("save"), "&Save As", QtGui.QKeySequence.SaveAs, 
+                   self.saveAs, fileMenu, None),
+        _addAction(QtGui.QIcon(""), "&QuitQQQ", "Ctrl+Q", 
+                   self.close, fileMenu, None),
+        toolBar.addSeparator()
+        _addAction(icons.get("refresh"), "&Refresh Boilerplate Code", "Ctrl+R", 
+                   self.refreshBoilerplateCode,editorMenu,toolBar),
+        toolBar.addSeparator()
+        _addAction(icons.get("build"), "1. &Build", "Ctrl+B", 
+                   self.build, runMenu, toolBar),
+        _addAction(icons.get("init"), "2. &Init Buffers", "Ctrl+I", 
+                   self.initBuffers, runMenu, toolBar),
+        _addAction(icons.get("import"), "3. &Import from images", "Ctrl+W", 
+                   self.import_from_images, runMenu, toolBar),
+        _addAction(icons.get("process"), "4. &Process", "Ctrl+P", 
+                   self.process, runMenu, toolBar),
+        _addAction(icons.get("export"), "5. &Export to images", "Ctrl+E", 
+                   self.export_to_images, runMenu, toolBar),
+        _addAction(QtGui.QIcon(""), "&All steps", "Ctrl+A", 
+                   self.run_all_steps, runMenu, None),
+
+        _addAction(QtGui.QIcon(""), "About &Qt", None,
+                   QtGui.qApp.aboutQt, helpMenu, None)

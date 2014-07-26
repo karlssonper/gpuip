@@ -5,9 +5,6 @@ from OpenGL.GL import shaders
 from OpenGL.arrays import vbo
 from OpenGL.GL.ARB import texture_rg
 from ctypes import c_void_p
-import OpenEXR
-import Imath
-import sys
 import numpy
 import math
 
@@ -54,7 +51,6 @@ class DisplayWidget(QtGui.QWidget):
         self.buffers = None
         self.glWidget = GLWidget(self)       
               
-        midLayout = QtGui.QHBoxLayout()
         self.bufferComboBox = QtGui.QComboBox(self)
         policy = QtGui.QSizePolicy()
         policy.setHorizontalPolicy(QtGui.QSizePolicy.Expanding)
@@ -64,16 +60,17 @@ class DisplayWidget(QtGui.QWidget):
         self.bufferComboBox.currentIndexChanged["QString"].connect(
             self.onBufferSelectChange)
         self.interactiveCheckBox = QtGui.QCheckBox("Interactive", self)
+        midLayout = QtGui.QHBoxLayout()
         midLayout.addWidget(label)
         midLayout.addWidget(self.bufferComboBox)
         midLayout.addWidget(self.interactiveCheckBox)
-                       
-        bottomLayout = QtGui.QHBoxLayout()
+                    
         self.label = QtGui.QLabel("Exposure: 0", self)
         self.slider = QtGui.QSlider(QtCore.Qt.Horizontal, self)
         self.slider.setRange(-100,100)
         self.slider.setValue(0)
         self.slider.valueChanged.connect(self.onExposureChange)
+        bottomLayout = QtGui.QHBoxLayout()
         bottomLayout.addWidget(self.label)
         bottomLayout.addWidget(self.slider)
         bottomLayout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
@@ -96,10 +93,7 @@ class DisplayWidget(QtGui.QWidget):
             self.refreshDisplay()
         else:
             self.bufferComboBox.setCurrentIndex(idx)
-    
-    def setDisplayDebug(self, displayDebug):
-        self.glWidget.setDisplayDebug(displayDebug)
-
+   
     def onBufferSelectChange(self, value):
         ndarray = self.buffers[str(value)].data
         self.glWidget.copyDataToTexture(ndarray)
@@ -121,17 +115,17 @@ class DisplayWidget(QtGui.QWidget):
     def sizeHint(self):
         return QtCore.QSize(400,400)
 
-
-
 class GLWidget(QtOpenGL.QGLWidget):
     def __init__(self, parent):
         super(GLWidget, self).__init__(parent)
+        
         self.w = 440
         self.h = 440
 
-        self.displayDebug = None
+        self.rightBtnDown = False
 
         self.texture = None
+        self.texturedata = None
         self.shader = None
         self.hdr_mode = 0
         self.vbo = None
@@ -147,14 +141,12 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.zoomFactor = 1.35
         self.panFactor = 0.002
 
-    def setDisplayDebug(self, displayDebug):
-        self.displayDebug = displayDebug
-
     def initializeGL(self):
         pass
 
     def copyDataToTexture(self, ndarray):
         # Update dimensions of widget
+        self.texturedata = ndarray
         self.w = ndarray.shape[0]
         self.h = ndarray.shape[1]
         self.updateGeometry()
@@ -204,15 +196,14 @@ class GLWidget(QtOpenGL.QGLWidget):
         # Copy data to texture
         GL.glTexImage2D(target, 0, glInternalFormat, self.w, self.h,
                         0, glFormat, glType, ndarray)
-        #print ndarray
-  
+          
     def resizeGL(self, width, height):
         GL.glViewport(0,0,width,height)
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glLoadIdentity()
         GL.glOrtho(0,1,0,1,0,1)
         GL.glMatrixMode(GL.GL_MODELVIEW)
-
+      
     def compileShaders(self):
          # Build shaders
         vert_shader = shaders.compileShader(vert_src, GL.GL_VERTEX_SHADER)
@@ -222,12 +213,12 @@ class GLWidget(QtOpenGL.QGLWidget):
     def paintGL(self):
         if GL.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER) == 33305:
             return
-
+        
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+        
         if not self.texture:
             return
-
-        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
-
+            
         if not self.shader:
             self.compileShaders()
 
@@ -242,6 +233,7 @@ class GLWidget(QtOpenGL.QGLWidget):
              self.scale + self.cx, self.scale + self.cy,
              -self.scale + self.cx, self.scale + self.cy,
              0,0,1,0,1,1,0,1], dtype = numpy.float32)
+        
         GL.glBufferData(GL.GL_ARRAY_BUFFER, 64, vertices, GL.GL_STATIC_DRAW)
         loc = GL.glGetAttribLocation(self.shader, "positionIn")
         GL.glEnableVertexAttribArray(loc)
@@ -251,29 +243,36 @@ class GLWidget(QtOpenGL.QGLWidget):
         GL.glEnableVertexAttribArray(loc)
         GL.glVertexAttribPointer(loc, 2, GL.GL_FLOAT, 0, 8, c_void_p(32))
         
-        loc = GL.glGetUniformLocation(self.shader, "texture")
-        GL.glUniform1i(loc, 0);
+        def _uniformLoc(name):
+            return GL.glGetUniformLocation(self.shader,name)
+        GL.glUniform1f(_uniformLoc("g"), self.gamma);
+        GL.glUniform1f(_uniformLoc("m"), math.pow(2, self.exposure + 2.47393))
+        GL.glUniform1f(_uniformLoc("s"), math.pow(2, -3.5 * self.gamma))
+        GL.glUniform1i(_uniformLoc("hdr_mode"), self.hdr_mode);
+        GL.glUniform1i(_uniformLoc("texture"), 0);
         GL.glActiveTexture(GL.GL_TEXTURE0);
         GL.glBindTexture(GL.GL_TEXTURE_2D, self.texture)
-
-        loc = GL.glGetUniformLocation(self.shader, "hdr_mode")
-        GL.glUniform1i(loc, self.hdr_mode);
-
-        loc = GL.glGetUniformLocation(self.shader, "g")
-        GL.glUniform1f(loc, self.gamma);
-        loc = GL.glGetUniformLocation(self.shader, "m")
-        GL.glUniform1f(loc, math.pow(2, self.exposure + 2.47393))
-        loc = GL.glGetUniformLocation(self.shader, "s")
-        GL.glUniform1f(loc, math.pow(2, -3.5 * self.gamma))
-
+            
         GL.glDrawArrays(GL.GL_QUADS, 0, 4);
 
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
         shaders.glUseProgram(0)
-           
+
+        if self.rightBtnDown:
+            self.renderPixelInfo()
+
     def mousePressEvent(self, event):
         self.lastPos = event.pos()
-
+        
+        if event.button()== QtCore.Qt.RightButton:
+            self.rightBtnDown = True
+            self.glDraw()
+            
+    def mouseReleaseEvent(self, event):
+        if event.button() == QtCore.Qt.RightButton:
+            self.rightBtnDown = False
+            self.glDraw()
+                
     def mouseMoveEvent(self, event):
         dx = event.x() - self.lastPos.x()
         dy = event.y() - self.lastPos.y()
@@ -284,21 +283,6 @@ class GLWidget(QtOpenGL.QGLWidget):
             self.correctCenterCoordinates()
         
         self.lastPos = event.pos()
-
-        if self.displayDebug and event.buttons() & QtCore.Qt.RightButton:
-            # Todo.
-            ppx = event.pos().x() / float(self.width())
-            ppy = event.pos().y() / float(self.height())
-
-            sx = self.w / self.scale * 2 
-            sy = self.h / self.scale * 2
-
-            px = sx*(self.scale - self.cx + ppx)
-            py = sy*(self.scale - self.cx + ppy)
-
-            text = "Pixel coordinates: %f, %f" % (px, py)
-            self.displayDebug.setPlainText(text)
-
         self.glDraw()
 
     def wheelEvent(self, event):
@@ -327,4 +311,68 @@ class GLWidget(QtOpenGL.QGLWidget):
 
     def sizeHint(self):
         return QtCore.QSize(self.w,self.h)
+
+    def renderPixelInfo(self):
+        # Get pixel positions px and py
+        size = 2.0*(self.scale)
+        offx = self.w * (self.scale - self.cx) / size
+        offy = self.h * (self.scale - self.cy) / size
+        px = int(offx + (self.lastPos.x() * self.w) / (self.width() * size))
+        py = int(offy + (self.lastPos.y() * self.h) / (self.height()* size))
+        py = self.h - py
+        px = min(max(px,0), self.w - 1)
+        py = min(max(py,0), self.h - 1)
+        
+        val = [None, None, None, None]
+        for i in xrange(self.texturedata.shape[2]):
+            val[i] = self.texturedata[px][py][i]
+        texts = ["x:%i y:%i" % (px,py), 
+                 "R:%f" % val[0] if val[0] else "n/a", 
+                 "G:%f" % val[1] if val[1] else "n/a",
+                 "B:%f" % val[2] if val[2] else "n/a"]
+        font = QtGui.QFont()
+        font.setFamily("Monospace")
+        font.setFixedPitch(True);
+        metrics = QtGui.QFontMetrics(font)
+        sx = 20 # spacing variable
+        w,h = metrics.width(texts[0]), metrics.height()
+        metrics.width(" ")
+        x,y  = self.lastPos.x(), self.height() - self.lastPos.y() - sx
+        dx,dy = 1.0/self.width(), 1.0/self.height()
+            
+        # Calculate pixel info position
+        # Swap position if outside screen
+        if x + 1.5*sx + w < self.width():
+            x0 = x + 0.75*sx
+            x1 = x + 1.5*sx + w + 10
+            tx = x + sx
+        else:
+            x0 = x - 0.75*sx
+            x1 = x - 1.5*sx - w
+            tx = x - sx - w
+        if y + sx - 5 * h > 0:
+            y0 = y + sx
+            y1 = y + sx - 5 * h
+            ty = self.height()-y
+        else:
+            y0 = y - sx + 3 * h
+            y1 = y - sx + 8 * h
+            ty = self.height()-y - 5 * h - 0.5*sx
+
+        # Draw transparent quad
+        GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+        GL.glEnable(GL.GL_BLEND)
+        GL.glBegin(GL.GL_QUADS)
+        GL.glColor4f(0,0,0,0.8)
+        for x,y in zip([x0,x1,x1,x0],[y0,y0,y1,y1]):
+            GL.glVertex2f(x * dx, y * dy)
+        GL.glEnd()
+        GL.glDisable(GL.GL_BLEND)
+        
+        # Render text
+        GL.glColor4f(1,1,1,1)
+        for i,text in enumerate(texts):
+            self.renderText(tx, ty + i*h, text, font)
+        
+
     
