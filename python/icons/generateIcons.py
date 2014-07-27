@@ -1,17 +1,17 @@
 from PIL import Image
 import os
 icons = {}
-icons["pug"] = "resources/pug.png"
-icons["new"] = "resources/new.png"
-icons["newExisting"] = "resources/newExisting.png"
-icons["open"] = "resources/open.png"
-icons["save"] = "resources/save.png"
-icons["refresh"] = "resources/refresh.png"
-icons["build"] = "resources/build.png"
-icons["import"] = "resources/import.png"
-icons["process"] = "resources/process.png"
-icons["export"] = "resources/export.png"
-icons["init"] = "resources/init.png"
+icons["pug"] = "pug.png"
+icons["new"] = "new.png"
+icons["newExisting"] = "newExisting.png"
+icons["open"] = "open.png"
+icons["save"] = "save.png"
+icons["refresh"] = "refresh.png"
+icons["build"] = "build.png"
+icons["import"] = "import.png"
+icons["process"] = "process.png"
+icons["export"] = "export.png"
+icons["init"] = "init.png"
 
 out = """
 from PySide import QtGui
