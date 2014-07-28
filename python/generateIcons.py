@@ -23,6 +23,7 @@ def get(name):
     image = QtGui.QImage(data[name], width[name], height[name], 
                          QtGui.QImage.Format_ARGB32)
     return QtGui.QIcon(QtGui.QPixmap.fromImage(image))
+
 """
 
 for i in icons:
