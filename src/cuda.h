@@ -27,14 +27,9 @@ class CUDAImpl : public Base
     
   protected:
     std::vector<CUfunction> _cudaKernels;
+    bool _cudaBuild;
+    CUmodule _cudaModule;
     std::map<std::string, float*> _cudaBuffers;
-
-    void _GetBoilerplateCodeBuffers(
-        std::stringstream & ss,
-        const std::vector<std::pair<Buffer, std::string> > & buffers,
-        const bool inBuffer,
-        bool & first,
-        const int indent) const;
     
     bool _LaunchKernel(Kernel & kernel,
                        const CUfunction & cudaKernel,

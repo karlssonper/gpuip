@@ -37,10 +37,19 @@ bool
 OpenCLImpl::InitBuffers(std::string * err)
 {
     cl_int cl_err;
+    std::map<std::string,  cl_mem>::iterator itb;
+    for(itb = _clBuffers.begin(); itb != _clBuffers.end(); ++itb) {
+        cl_err = clReleaseMemObject(itb->second);
+        if (_clErrorReleaseMemObject(cl_err, err)) {
+            return false;
+        }
+    }
+    _clBuffers.clear();
+    
     std::map<std::string,Buffer>::const_iterator it;
     for (it = _buffers.begin(); it != _buffers.end(); ++it) {
         _clBuffers[it->second.name] = clCreateBuffer(
-            _ctx, CL_MEM_READ_WRITE /* TODO optimize for only read/write */,
+            _ctx, CL_MEM_READ_WRITE,
             _GetBufferSize(it->second), NULL, &cl_err);
         if (_clErrorInitBuffers(cl_err, err)) {
             return false;
@@ -53,11 +62,16 @@ bool
 OpenCLImpl::Build(std::string * error)
 {
     // Clear previous kernels if rebuilding
-    _clKernels.clear();
-    
     cl_int cl_err;
+    for(size_t i = 0; i < _clKernels.size(); ++i) {
+        cl_err = clReleaseKernel(_clKernels[i]);
+        if (_clErrorReleaseKernel(cl_err, error)) {
+            return false;
+        }
+    }
+    _clKernels.clear();
 
-    for (int i = 0; i < _kernels.size(); ++i) {
+    for(size_t i = 0; i < _kernels.size(); ++i) {
         const char * code = _kernels[i]->code.c_str();
         const char * name = _kernels[i]->name.c_str();
         cl_program program = clCreateProgramWithSource(
@@ -84,7 +98,7 @@ OpenCLImpl::Build(std::string * error)
 bool
 OpenCLImpl::Process(std::string * err)
 {
-    for(int i = 0; i < _kernels.size(); ++i) {
+    for(size_t i = 0; i < _kernels.size(); ++i) {
         if (!_EnqueueKernel(*_kernels[i].get(), _clKernels[i], err)) {
             return false;
         }
@@ -132,61 +146,70 @@ inline std::string _GetTypeStr(const Buffer & buffer)
         default:
             type << "float";
     };
-    type << buffer.channels;
+    if (buffer.channels > 1) {
+        type << buffer.channels;
+    }
     return type.str();
 }
 std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
 
+    // Indent string
+    ss << ",\n" << std::string(kernel->name.size() + 1, ' ');
+    const std::string indent = ss.str();
+    ss.str(""); //clears the sstream
+    
     ss << "__kernel void\n" << kernel->name << "(";
 
-    // whitespace before each param (indent)
-    const int ws = kernel->name.size() + 1;
-
     bool first = true;
-    _GetBoilerplateCodeBuffers(ss, kernel->inBuffers, true, first, ws);
-    _GetBoilerplateCodeBuffers(ss, kernel->outBuffers, false, first, ws);
 
-    for (int i = 0; i < kernel->paramsInt.size(); ++i) {
-        if (first) {
-            first = false;
-        } else {
-            ss << ",\n" << std::string(ws, ' ');
-        }
-        
+    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
+        ss << (first ? "" : indent);
+        first = false;
+        const std::string & bname = kernel->inBuffers[i].first.name;
+        ss << "__global const " << _GetTypeStr(_buffers.find(bname)->second)
+           << " * " << kernel->inBuffers[i].second;
+    }
+    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+        ss << (first ? "" : indent);
+        first = false;
+        const std::string & bname = kernel->outBuffers[i].first.name;
+        ss << "__global " <<  _GetTypeStr(_buffers.find(bname)->second)
+           << " * " << kernel->outBuffers[i].second;
+    }
+    for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
+        ss << (first ? "" : indent);
+        first = false;        
         ss << "const int " << kernel->paramsInt[i].name;
     }
-    for (int i = 0; i < kernel->paramsFloat.size(); ++i) {
-        if (first) {
-            first = false;
-        } else {
-            ss << ",\n" << std::string(ws, ' ');
-        }
-        ss <<  "const float " << kernel->paramsFloat[i].name;
+    for(size_t i = 0; i < kernel->paramsFloat.size(); ++i) {
+        ss << (first ? "" : indent);
+        first = false;
+        ss << "const float " << kernel->paramsFloat[i].name;
     }
-
-    ss << ",\n" <<  std::string(ws, ' ') << "const int width";
-    ss << ",\n" <<  std::string(ws, ' ') << "const int height)\n";
+    ss << indent << "const int width" << indent << "const int height)\n";
+    
     ss << "{\n";
     ss << "    const int x = get_global_id(0);\n";
     ss << "    const int y = get_global_id(1);\n\n";
     ss << "    // array index\n";
     ss << "    const int idx = x + width * y;\n\n";
     ss << "    // inside image bounds check\n";
-    ss << "    if (x >= width || y >= height) { \n";
+    ss << "    if (x >= width || y >= height) {\n";
     ss << "        return;\n";
     ss << "    }\n\n";
     ss << "    // kernel code\n";
 
-    for (int i = 0; i < kernel->outBuffers.size(); ++i) {
-        const Buffer & b = _buffers.find(kernel->outBuffers[i].first.name)->second;
+    for (size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+        const Buffer & b = _buffers.find(
+            kernel->outBuffers[i].first.name)->second;
         ss << "    " << kernel->outBuffers[i].second << "[idx] = ";
         if (b.channels == 1) {
             ss << "0;\n";
         } else {
             ss << "make_" << _GetTypeStr(b) << "(";
-            for (int j = 0; j < b.channels; ++j) {
+            for (size_t j = 0; j < b.channels; ++j) {
                 ss << (j ==0 ? "" : ", ") << "0";
             }
             ss << ");\n";
@@ -195,26 +218,6 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
     ss << "}";
     
     return ss.str();
-}
-//----------------------------------------------------------------------------//
-void OpenCLImpl::_GetBoilerplateCodeBuffers(
-    std::stringstream & ss,
-    const std::vector<std::pair<Buffer, std::string> > & buffers,
-    const bool inBuffer,
-    bool & first,
-    const int indent) const
-{
-    for(int i = 0; i < buffers.size(); ++i) {
-        if (first) {
-            first = false;
-        } else {
-            ss << ",\n"  << std::string(indent, ' ');
-        }
-        
-        const Buffer & buffer = _buffers.find(buffers[i].first.name)->second;
-        ss << "__global " << (inBuffer ? "const " : "")
-           << _GetTypeStr(buffer) << " * " << buffers[i].second;
-    }
 }
 //----------------------------------------------------------------------------//
 bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
@@ -227,25 +230,25 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     // Set kernel arguments in the following order:
     // 1. Input buffers.
     const size_t size = sizeof(cl_mem);
-    for (int j = 0; j < kernel.inBuffers.size(); ++j) {
+    for(size_t j = 0; j < kernel.inBuffers.size(); ++j) {
         cl_err = clSetKernelArg(clKernel, argc++, size,
                                 &_clBuffers[kernel.inBuffers[j].first.name]);
     }
 
     // 2. Output buffers.
-    for (int j = 0; j < kernel.outBuffers.size(); ++j) {
+    for(size_t j = 0; j < kernel.outBuffers.size(); ++j) {
         cl_err = clSetKernelArg(clKernel, argc++, size,
                                 &_clBuffers[kernel.outBuffers[j].first.name]);
     }
 
     // 3. Int parameters
-    for(int i = 0; i < kernel.paramsInt.size(); ++i) {
+    for(size_t i = 0; i < kernel.paramsInt.size(); ++i) {
         cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),
                                 &kernel.paramsInt[i].value);
     }
 
     // 4. Float parameters
-    for(float i = 0; i < kernel.paramsFloat.size(); ++i) {
+    for(size_t i = 0; i < kernel.paramsFloat.size(); ++i) {
         cl_err = clSetKernelArg(clKernel, argc++, sizeof(float),
                                 &kernel.paramsFloat[i].value);
     }

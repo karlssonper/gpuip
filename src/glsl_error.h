@@ -8,6 +8,7 @@ namespace gpuip {
 inline std::string _glErrorToString(GLenum error)
 {
     std::stringstream ss;
+    //deprecated in mac os
 #ifndef __APPLE__
     const GLubyte * errLog = gluErrorString(error);
     ss << errLog;

@@ -40,12 +40,40 @@ GLSLImpl::GLSLImpl()
     if (glGetError() != GL_NO_ERROR) {
         throw std::logic_error("gpuip::GLSLImpl() error in init.");
     }
+
+    // Simple vert shader code for a quad with texture coordinates
+    static const char * vert_shader_code = 
+            "#version 120\n"
+            "attribute vec2 positionIn;\n"
+            "varying vec2 x;\n"
+            "void main()\n"
+            "{\n"
+            "      gl_Position = vec4(vec2(-1) + 2*positionIn,0, 1);\n"
+            "      x = positionIn;\n"
+            "}";
+
+    _vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+    int length = strlen(vert_shader_code);
+    glShaderSource(_vertexShaderID, 1, &vert_shader_code, &length);
+    glCompileShader(_vertexShaderID);
 }
 //----------------------------------------------------------------------------//
 bool GLSLImpl::InitBuffers(std::string * err)
 {
+    std::map<std::string, GLuint>::iterator itt;
+    if (!_fbos.empty()) {
+        glDeleteRenderbuffers(1, &_rboId);
+        glDeleteBuffers(_fbos.size(),_fbos.data());
+    }
+    for(itt = _textures.begin(); itt != _textures.end(); ++itt) {
+        glDeleteTextures(1, &itt->second);
+    }
+    _fbos.clear();
+    _textures.clear();
+    
+    
     std::map<std::string,Buffer>::const_iterator it;
-    for (it = _buffers.begin(); it != _buffers.end(); ++it) {
+    for(it = _buffers.begin(); it != _buffers.end(); ++it) {
         GLuint texID;
         glGenTextures(1, &texID);
         glBindTexture(GL_TEXTURE_2D, texID);
@@ -78,16 +106,16 @@ bool GLSLImpl::InitBuffers(std::string * err)
     glGenFramebuffers(_kernels.size(), _fbos.data());
 
     // Create a renderbuffer object to store depth info
-    GLuint rboId;
-    glGenRenderbuffers(1, &rboId);
-    glBindRenderbuffer(GL_RENDERBUFFER, rboId);
+    GLuint _rboId;
+    glGenRenderbuffers(1, &_rboId);
+    glBindRenderbuffer(GL_RENDERBUFFER, _rboId);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, _w, _h);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
     // Attach the textures to FBOs color attachment points
-    for (int i = 0; i < _kernels.size(); ++i) {
+    for(size_t i = 0; i < _kernels.size(); ++i) {
         glBindFramebuffer(GL_FRAMEBUFFER, _fbos[i]);
-        for (int j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
+        for(size_t j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
             GLuint texID = _textures[_kernels[i]->outBuffers[j].first.name];
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
                                    GL_TEXTURE_2D, texID, 0 /*mipmap level*/);
@@ -95,7 +123,7 @@ bool GLSLImpl::InitBuffers(std::string * err)
        
         // attach the renderbuffer to depth attachment point
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                  GL_RENDERBUFFER, rboId);
+                                  GL_RENDERBUFFER, _rboId);
         if (_glErrorFramebuffer(err)) {
             return false;
         }
@@ -112,37 +140,24 @@ bool GLSLImpl::InitBuffers(std::string * err)
 //----------------------------------------------------------------------------//
 bool GLSLImpl::Build(std::string * err)
 {
-    // Simple vert shader code for a quad with texture coordinates
-    static const char * vert_shader_code = 
-            "#version 120\n"
-            "attribute vec2 positionIn;\n"
-            "varying vec2 texcoord;\n"
-            "void main()\n"
-            "{\n"
-            "      gl_Position = vec4(vec2(-1) + 2*positionIn,0, 1);\n"
-            "      texcoord = positionIn;\n"
-            "}";
-
-    GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-    int length = strlen(vert_shader_code);
-    glShaderSource(vertexShaderID, 1, &vert_shader_code, &length);
-    glCompileShader(vertexShaderID);
-
-    _shaders.resize(_kernels.size());
-    for (int i = 0; i < _kernels.size(); ++i) {
+    for(size_t i = 0; i < _programs.size(); ++i) {
+        glDeleteProgram(_programs[i]);
+    }
+    
+    _programs.resize(_kernels.size());
+    for(size_t i = 0; i < _kernels.size(); ++i) {
         const char * code = _kernels[i]->code.c_str();
-        
-        GLuint fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-        length = strlen(code);
+        const GLuint fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+        const int length = strlen(code);
         glShaderSource(fragShaderID, 1, &code, &length);
         glCompileShader(fragShaderID);
   
-        _shaders[i] = glCreateProgram();
-        glAttachShader(_shaders[i], fragShaderID);
-        glAttachShader(_shaders[i], vertexShaderID);
-        glLinkProgram(_shaders[i]);
-
-        if(_glCheckBuildError(_shaders[i], fragShaderID, err)) {
+        _programs[i] = glCreateProgram();
+        glAttachShader(_programs[i], fragShaderID);
+        glAttachShader(_programs[i], _vertexShaderID);
+        glLinkProgram(_programs[i]);
+        glDeleteShader(fragShaderID);
+        if(_glCheckBuildError(_programs[i], fragShaderID, err)) {
             return false;
         }
     }
@@ -157,8 +172,8 @@ bool GLSLImpl::Process(std::string * err)
     // Set the viewport to match the width and height
     glViewport(0, 0, _w, _h);
 
-    for (int i = 0; i < _kernels.size(); ++i) {
-        if (!_DrawQuad(*_kernels[i].get(), _fbos[i], _shaders[i], err)) {
+    for(size_t i = 0; i < _kernels.size(); ++i) {
+        if (!_DrawQuad(*_kernels[i].get(), _fbos[i], _programs[i], err)) {
             return false;
         }
     }
@@ -192,25 +207,34 @@ std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
     ss << "#version 120\n";
-    for(int i = 0; i < kernel->inBuffers.size(); ++i) {
+    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
         ss << "uniform sampler2D " << kernel->inBuffers[i].second << ";\n";
     }
-    for (int i = 0; i < kernel->paramsInt.size(); ++i) {
+    for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
         ss << "uniform int " << kernel->paramsInt[i].name <<";\n";
     }
-    for (int i = 0; i < kernel->paramsFloat.size(); ++i) {
+    for(size_t i = 0; i < kernel->paramsFloat.size(); ++i) {
         ss << "uniform float " << kernel->paramsFloat[i].name <<";\n";
     }
-    ss << "varying vec2 texcoord;\n"
+    ss << "varying vec2 x; // texture coordinates\n"
+       << "uniform float dx; // delta\n"
        << "void main()\n"
-       << "{\n"
-       << "}";
+       << "{\n";
+    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+        if (i) {
+            ss << "\n";
+        }
+        ss << "    // gl_FragData[" << i << "] is buffer "
+           << kernel->outBuffers[i].second << "\n"
+           << "    glFragData[" << i<<"] = vec4(0,0,0,1);\n";  
+    }    
+    ss << "}";
     return ss.str();
 }
 //----------------------------------------------------------------------------//
 bool GLSLImpl::_DrawQuad(const Kernel & kernel,
                    GLuint fbo,
-                   GLuint shader,
+                   GLuint program,
                    std::string * error)
 {   
     // Bind framebuffer and clear previous content
@@ -219,39 +243,40 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
 
     // Tell OpenGL how many buffers to draw
     std::vector<GLenum> enums;
-    for (int i = 0; i < kernel.outBuffers.size(); ++i) {
+    for(size_t i = 0; i < kernel.outBuffers.size(); ++i) {
         enums.push_back(GL_COLOR_ATTACHMENT0 + i);
     }
     glDrawBuffers(enums.size(), &enums[0]);
 
-    // Load shader (kernel)
-    glUseProgram(shader);
+    // Load program (kernel)
+    glUseProgram(program);
 
     // Bind vbo
     glBindBuffer(GL_ARRAY_BUFFER, _vbo);
     
     // Coordinates for drawing the quad
-    GLint loc = glGetAttribLocation(shader, "positionIn");
+    GLint loc = glGetAttribLocation(program, "positionIn");
     glEnableVertexAttribArray(loc);
     glVertexAttribPointer(loc, 2, GL_FLOAT, 0, 8, 0);
        
     // Uniform data setup
-    for (size_t i = 0; i < kernel.paramsInt.size(); ++i) {
-        loc = glGetUniformLocation(shader, kernel.paramsInt[i].name.c_str());
+    for(size_t i = 0; i < kernel.paramsInt.size(); ++i) {
+        loc = glGetUniformLocation(program, kernel.paramsInt[i].name.c_str());
         glUniform1i(loc, kernel.paramsInt[i].value);
     }
-    for (size_t i = 0; i < kernel.paramsFloat.size(); ++i) {
-        loc = glGetUniformLocation(shader, kernel.paramsFloat[i].name.c_str());
+    for(size_t i = 0; i < kernel.paramsFloat.size(); ++i) {
+        loc = glGetUniformLocation(program, kernel.paramsFloat[i].name.c_str());
         glUniform1f(loc, kernel.paramsFloat[i].value);
     }
+    glUniform1f(glGetUniformLocation(program, "dx"), 1.0f/_w);
 
     // Save current active texture 
     GLint activeTexture;
     glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTexture);
 
     // Texture setup
-    for (int i = 0; i < kernel.inBuffers.size(); ++i) {
-        loc = glGetUniformLocation(shader, kernel.inBuffers[i].second.c_str());
+    for(size_t i = 0; i < kernel.inBuffers.size(); ++i) {
+        loc = glGetUniformLocation(program, kernel.inBuffers[i].second.c_str());
         glUniform1i(loc, i);
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, _textures[kernel.inBuffers[i].first.name]);
@@ -268,7 +293,7 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
         return false;
     }
     
-    // Unload framebuffer, vbo and shader
+    // Unload framebuffer, vbo and program
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glUseProgram(0); 

@@ -20,7 +20,7 @@ class _KernelWrapper : public gpuip::Kernel
     void SetInBuffer(const std::string & kernelBufferName,
                      const _BufferWrapper & buffer)
     {
-        for (int i = 0; i < this->inBuffers.size(); ++i) {
+        for(size_t i = 0; i < this->inBuffers.size(); ++i) {
             if (this->inBuffers[i].second == kernelBufferName) {
                 this->inBuffers[i].first = buffer;
                 return;
@@ -32,7 +32,7 @@ class _KernelWrapper : public gpuip::Kernel
     void SetOutBuffer(const std::string & kernelBufferName,
                       const _BufferWrapper & buffer)
     {
-        for (int i = 0; i < this->outBuffers.size(); ++i) {
+        for(size_t i = 0; i < this->outBuffers.size(); ++i) {
             if (this->outBuffers[i].second == kernelBufferName) {
                 this->outBuffers[i].first = buffer;
                 return;
@@ -43,7 +43,7 @@ class _KernelWrapper : public gpuip::Kernel
 
     void SetParamInt(const gpuip::Parameter<int> & param)
     {
-        for (int i = 0 ; i < this->paramsInt.size(); ++i) {
+        for(size_t i = 0 ; i < this->paramsInt.size(); ++i) {
             if (this->paramsInt[i].name == param.name) {
                 this->paramsInt[i].value = param.value;
                 return;
@@ -54,7 +54,7 @@ class _KernelWrapper : public gpuip::Kernel
 
     void SetParamFloat(const gpuip::Parameter<float> & param)
     {
-        for (int i = 0 ; i < this->paramsFloat.size(); ++i) {
+        for(size_t i = 0 ; i < this->paramsFloat.size(); ++i) {
             if (this->paramsFloat[i].name == param.name) {
                 this->paramsFloat[i].value = param.value;
                 return;

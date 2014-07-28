@@ -37,13 +37,6 @@ class OpenCLImpl : public Base
     std::map<std::string, cl_mem> _clBuffers;
 
   private:
-    void _GetBoilerplateCodeBuffers(
-        std::stringstream & ss,
-        const std::vector<std::pair<Buffer, std::string> > & buffers,
-        const bool inBuffer,
-        bool & first,
-        const int indent) const;
-    
     bool _EnqueueKernel(const Kernel & kernel,
                         const cl_kernel & clKernel,
                         std::string * err);

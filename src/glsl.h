@@ -27,13 +27,15 @@ class GLSLImpl : public Base
     
   protected:
     GLuint _vbo;
+    GLuint _rboId;
+    GLuint _vertexShaderID;
     std::vector<GLuint> _fbos;
-    std::vector<GLuint> _shaders;
+    std::vector<GLuint> _programs;
     std::map<std::string, GLuint> _textures;
 
     bool _DrawQuad(const Kernel & kernel,
                    GLuint fbo,
-                   GLuint shader,
+                   GLuint program,
                    std::string * error);
 };
 //----------------------------------------------------------------------------//

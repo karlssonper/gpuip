@@ -367,7 +367,7 @@ class MainWindow(QtGui.QMainWindow):
                    self.save, fileMenu, toolBar),
         _addAction(icons.get("save"), "&Save As", QtGui.QKeySequence.SaveAs,
                    self.saveAs, fileMenu, None),
-        _addAction(QtGui.QIcon(""), "&QuitQQQ", "Ctrl+Q",
+        _addAction(QtGui.QIcon(""), "&Quit", "Ctrl+Q",
                    self.close, fileMenu, None),
         toolBar.addSeparator()
         _addAction(icons.get("refresh"), "&Refresh Boilerplate Code", "Ctrl+R",

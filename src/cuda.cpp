@@ -15,18 +15,29 @@ Base * CreateCUDA()
 }
 //----------------------------------------------------------------------------//
 CUDAImpl::CUDAImpl()
-  : Base(CUDA)
+        : Base(CUDA), _cudaBuild(false)
 {
     if (cudaSetDevice(_cudaGetMaxGflopsDeviceId()) != cudaSuccess) {
         throw std::logic_error("gpuip::CUDAImpl() could not set device id");
     };
+    cudaFree(0); //use runtime api to create a CUDA context automatically
 }
 //----------------------------------------------------------------------------//
 bool CUDAImpl::InitBuffers(std::string * err)
 {
     cudaError_t c_err;
+
+    std::map<std::string, float*>::iterator itb;
+    for(itb = _cudaBuffers.begin(); itb != _cudaBuffers.end(); ++itb) {
+        c_err = cudaFree(itb->second);
+        if (_cudaErrorFree(c_err, err)) {
+            return false;
+        }
+    }
+    _cudaBuffers.clear();
+        
     std::map<std::string,Buffer>::const_iterator it;
-    for (it = _buffers.begin(); it != _buffers.end(); ++it) {
+    for(it = _buffers.begin(); it != _buffers.end(); ++it) {
         _cudaBuffers[it->second.name] = NULL;
         c_err = cudaMalloc(&_cudaBuffers[it->second.name],
                            _GetBufferSize(it->second));
@@ -39,10 +50,20 @@ bool CUDAImpl::InitBuffers(std::string * err)
 //----------------------------------------------------------------------------//
 bool CUDAImpl::Build(std::string * err)
 {
+    CUresult c_err;
+    if (_cudaBuild) {
+        _cudaKernels.clear();
+        _cudaBuild = false;
+        c_err = cuModuleUnload(_cudaModule);
+        if (_cudaErrorLoadModule(c_err, err)) {
+            return false;
+        }
+    }
+    
     // Create temporary file to compile
     std::ofstream out(".temp.cu");
     out << "extern \"C\" { \n"; // To avoid function name mangling 
-    for (int i = 0; i < _kernels.size(); ++i) {
+    for(size_t i = 0; i < _kernels.size(); ++i) {
         out << _kernels[i]->code << "\n";
     }
     out << "}"; // End the extern C bracket
@@ -60,28 +81,29 @@ bool CUDAImpl::Build(std::string * err)
     }
 
     // Load cuda ptx from file
-    CUmodule module;
-    CUresult c_err = cuModuleLoad(&module, ".temp.ptx");
+    c_err = cuModuleLoad(&_cudaModule, ".temp.ptx");
     system("rm .temp.ptx");
     if (_cudaErrorLoadModule(c_err, err)) {
         return false;
     }
 
     _cudaKernels.resize(_kernels.size());
-    for (int i = 0; i < _kernels.size(); ++i) {
-        c_err = cuModuleGetFunction(&_cudaKernels[i], module,
+    for(size_t i = 0; i < _kernels.size(); ++i) {
+        c_err = cuModuleGetFunction(&_cudaKernels[i], _cudaModule,
                                     _kernels[i]->name.c_str());
         if (_cudaErrorGetFunction(c_err, err, _kernels[i]->name)) {
             return false;
         }
     }
+
+    _cudaBuild = true;
     
     return true;
 }
 //----------------------------------------------------------------------------//
 bool CUDAImpl::Process(std::string * err)
 {
-    for(int i = 0; i < _kernels.size(); ++i) {
+    for(size_t i = 0; i < _kernels.size(); ++i) {
         if (!_LaunchKernel(*_kernels[i].get(), _cudaKernels[i], err)) {
             return false;
         }
@@ -107,75 +129,95 @@ bool CUDAImpl::Copy(const std::string & buffer,
     return true;
 }
 //----------------------------------------------------------------------------//
+inline std::string _GetTypeStr(const Buffer & buffer)
+{
+    std::stringstream type;
+    switch(buffer.bpp/buffer.channels) {
+        case 1:
+            type << "uchar";
+            break;
+        case 4:
+            type << "float";
+            break;
+        case 8:
+            type << "double";
+            break;
+        default:
+            type << "float";
+    };
+    if (buffer.channels > 1) {
+        type << buffer.channels;
+    }
+    return type.str();
+}
 std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const 
 {
    std::stringstream ss;
 
+   // Indent string
+   ss << ",\n" << std::string(kernel->name.size() + 1, ' ');
+   const std::string indent = ss.str();
+   ss.str("");
+   
    ss << "__global__ void\n" << kernel->name << "(";
 
-   // whitespace before each param (indent)
-   const int ws = kernel->name.size() + 1;
-
    bool first = true;
-   _GetBoilerplateCodeBuffers(ss, kernel->inBuffers, true, first, ws);
-   _GetBoilerplateCodeBuffers(ss, kernel->outBuffers, false, first, ws);
 
-   for (int i = 0; i < kernel->paramsInt.size(); ++i) {
-       if (first) {
-           first = false;
-       } else {
-           ss << ",\n" << std::string(ws, ' ');
-       }
-        
-       ss << "int " << kernel->paramsInt[i].name;
+   for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
+       ss << (first ? "" : indent);
+       first = false;
+       const std::string & bname = kernel->inBuffers[i].first.name;
+       ss << "const " << _GetTypeStr(_buffers.find(bname)->second)
+          << " * " << kernel->inBuffers[i].second;
    }
-   for (int i = 0; i < kernel->paramsFloat.size(); ++i) {
-       if (first) {
-           first = false;
-       } else {
-           ss << ",\n" << std::string(ws, ' ');;
-       }
-       ss <<  "float " << kernel->paramsFloat[i].name;
+
+   for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+       ss << (first ? "" : indent);
+       first = false;
+       const std::string & bname = kernel->outBuffers[i].first.name;
+       ss <<  _GetTypeStr(_buffers.find(bname)->second)
+          << " * " << kernel->outBuffers[i].second;
    }
-   ss << ",\n" <<  std::string(ws, ' ') << "int width";
-   ss << ",\n" <<  std::string(ws, ' ') << "int height";
-   ss << ")\n{\n}";
-    
+
+   for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
+       ss << (first ? "" : indent);
+       first = false;        
+       ss << "const int " << kernel->paramsInt[i].name;
+   }
+   for(size_t i = 0; i < kernel->paramsFloat.size(); ++i) {
+       ss << (first ? "" : indent);
+       first = false;
+       ss << "const float " << kernel->paramsFloat[i].name;
+   }
+   ss << indent << "const int width" << indent << "const int height)\n";
+  
+   ss << "{\n";
+   ss << "    const int x = blockIdx.x * blockDim.x + threadIdx.x;\n";
+   ss << "    const int y = blockIdx.y * blockDim.y + threadIdx.y;\n\n";
+   ss << "    // array index\n";
+   ss << "    const int idx = x + width * y;\n\n";
+   ss << "    // inside image bounds check\n";
+   ss << "    if (x >= width || y >= height) {\n";
+   ss << "        return;\n";
+   ss << "    }\n\n";
+   ss << "    // kernel code\n";
+
+   for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+       const Buffer & b = _buffers.find(
+           kernel->outBuffers[i].first.name)->second;
+       ss << "    " << kernel->outBuffers[i].second << "[idx] = ";
+       if (b.channels == 1) {
+           ss << "0;\n";
+       } else {
+           ss << "make_" << _GetTypeStr(b) << "(";
+           for(size_t j = 0; j < b.channels; ++j) {
+               ss << (j ==0 ? "" : ", ") << "0";
+           }
+           ss << ");\n";
+       }
+   }    
+   ss << "}";
    return ss.str();
-}
-//----------------------------------------------------------------------------//
-void CUDAImpl::_GetBoilerplateCodeBuffers(
-    std::stringstream & ss,
-    const std::vector<std::pair<Buffer, std::string> > & buffers,
-    const bool inBuffer,
-    bool & first,
-    const int indent) const
-{
-    for(int i = 0; i < buffers.size(); ++i) {
-        if (first) {
-            first = false;
-        } else {
-            ss << ",\n"  << std::string(indent, ' ');
-        }
-        const Buffer & buffer = _buffers.find(buffers[i].first.name)->second;
-        std::string type;
-        switch(buffer.bpp/buffer.channels) {
-            case 1:
-                type = "unsigned char";
-                break;
-            case 4:
-                type = "float";
-                break;
-            case 8:
-                type = "double";
-                break;
-            default:
-                type = "float";
-        };
-    
-        ss << (inBuffer ? "const " : "") << type
-           << " * " << buffers[i].second;
-    }
 }
 //----------------------------------------------------------------------------//
 bool CUDAImpl::_LaunchKernel(Kernel & kernel,
@@ -185,29 +227,34 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
     // Set CUDA kernel arguments
     CUresult c_err;
     int paramOffset = 0;
-    for (size_t i = 0; i < kernel.inBuffers.size(); ++i) {
+    for(size_t i = 0; i < kernel.inBuffers.size(); ++i) {
         c_err = cuParamSetv(cudaKernel, paramOffset,
                             &_cudaBuffers[kernel.inBuffers[i].first.name],
                             sizeof(void*));
         paramOffset += sizeof(void *);
     }
-    for (size_t i = 0; i < kernel.outBuffers.size(); ++i) {
+    for(size_t i = 0; i < kernel.outBuffers.size(); ++i) {
         c_err = cuParamSetv(cudaKernel, paramOffset,
                             &_cudaBuffers[kernel.outBuffers[i].first.name],
                             sizeof(void*));
         paramOffset += sizeof(void *);
     }
-    for(int i = 0; i < kernel.paramsInt.size(); ++i) {
+    for(size_t i = 0; i < kernel.paramsInt.size(); ++i) {
         c_err = cuParamSetv(cudaKernel, paramOffset,
                             &kernel.paramsInt[i].value, sizeof(int));
         paramOffset += sizeof(int);
     }
-    for(int i = 0; i < kernel.paramsFloat.size(); ++i) {
+    for(size_t i = 0; i < kernel.paramsFloat.size(); ++i) {
         c_err = cuParamSetv(cudaKernel, paramOffset,
                             &kernel.paramsFloat[i].value, sizeof(float));
         paramOffset += sizeof(float);
     }
-
+    // int and width parameters
+    c_err = cuParamSetv(cudaKernel, paramOffset, &_w, sizeof(int));
+    paramOffset += sizeof(int);
+    c_err = cuParamSetv(cudaKernel, paramOffset, &_h, sizeof(int));
+    paramOffset += sizeof(int);
+    
     // It should be fine to check once all the arguments have been set
     if(_cudaErrorCheckParamSet(c_err, err, kernel.name)) {
         return false;
