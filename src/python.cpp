@@ -5,11 +5,20 @@
 namespace bp = boost::python;
 namespace np = boost::numpy;
 //----------------------------------------------------------------------------//
+class _BufferWrapper : public gpuip::Buffer
+{
+  public:
+    _BufferWrapper() : data(
+        np::empty(bp::make_tuple(0,0),
+                  np::dtype::get_builtin<unsigned char>())) { }
+    np::ndarray data;
+};
+//----------------------------------------------------------------------------//
 class _KernelWrapper : public gpuip::Kernel
 {
   public:
     void SetInBuffer(const std::string & kernelBufferName,
-                     const gpuip::Buffer & buffer)
+                     const _BufferWrapper & buffer)
     {
         for (int i = 0; i < this->inBuffers.size(); ++i) {
             if (this->inBuffers[i].second == kernelBufferName) {
@@ -21,7 +30,7 @@ class _KernelWrapper : public gpuip::Kernel
     }
 
     void SetOutBuffer(const std::string & kernelBufferName,
-                      const gpuip::Buffer & buffer)
+                      const _BufferWrapper & buffer)
     {
         for (int i = 0; i < this->outBuffers.size(); ++i) {
             if (this->outBuffers[i].second == kernelBufferName) {
@@ -78,7 +87,7 @@ class _BaseWrapper
         _base->SetDimensions(width,height);
     }
     
-    void AddBuffer(const gpuip::Buffer & buffer)
+    void AddBuffer(const _BufferWrapper & buffer)
     {
         _base->AddBuffer(buffer);
     }
@@ -104,21 +113,19 @@ class _BaseWrapper
         return err;
     }
 
-    std::string ReadBuffer(const gpuip::Buffer & buffer,
-                           np::ndarray & array)
+    std::string ReadBuffer(_BufferWrapper & buffer)
     {
         std::string err;
         _base->Copy(buffer.name, gpuip::Buffer::READ_DATA,
-                    array.get_data(), &err);
+                    buffer.data.get_data(), &err);
         return err;
     }
 
-    std::string WriteBuffer(const gpuip::Buffer & buffer,
-                            const np::ndarray & array)
+    std::string WriteBuffer(const _BufferWrapper & buffer)
     {
         std::string err;
         _base->Copy(buffer.name, gpuip::Buffer::WRITE_DATA,
-                    array.get_data(), &err);
+                    buffer.data.get_data(), &err);
         return err;
     }
     
@@ -130,7 +137,7 @@ class _BaseWrapper
     gpuip::Base::Ptr _base;
 };
 //----------------------------------------------------------------------------//
-BOOST_PYTHON_MODULE(pyGpuip)
+BOOST_PYTHON_MODULE(pygpuip)
 {
     np::initialize();
 
@@ -139,11 +146,12 @@ BOOST_PYTHON_MODULE(pyGpuip)
             .value("CUDA", gpuip::CUDA)
             .value("GLSL", gpuip::GLSL);
 
-    bp::class_<gpuip::Buffer>("Buffer")
-            .def_readwrite("name", &gpuip::Buffer::name)
-            .def_readwrite("channels", &gpuip::Buffer::channels)
-            .def_readwrite("bpp", &gpuip::Buffer::bpp);
-
+    bp::class_<_BufferWrapper>("Buffer")
+            .def_readwrite("name", &_BufferWrapper::name)
+            .def_readwrite("channels", &_BufferWrapper::channels)
+            .def_readwrite("bpp", &_BufferWrapper::bpp)
+            .def_readwrite("data", &_BufferWrapper::data);
+    
     bp::class_<gpuip::Parameter<int> >("ParamInt")
             .def_readwrite("name", &gpuip::Parameter<int>::name)
             .def_readwrite("value", &gpuip::Parameter<int>::value);
@@ -172,5 +180,7 @@ BOOST_PYTHON_MODULE(pyGpuip)
             .def("ReadBuffer", &_BaseWrapper::ReadBuffer)
             .def("WriteBuffer", &_BaseWrapper::WriteBuffer)
             .def("GetBoilerplateCode", &_BaseWrapper::GetBoilerplateCode);
+
+    bp::def("CanCreateGpuEnvironment", &gpuip::Base::CanCreateGpuEnvironment);
 }
 //----------------------------------------------------------------------------//

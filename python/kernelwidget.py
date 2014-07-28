@@ -4,7 +4,7 @@ import sys
 class KernelWidget(QtGui.QSplitter):
     def __init__(self, parent = None, callbackFunc = None):
         super(KernelWidget, self).__init__(QtCore.Qt.Horizontal,parent)
-     
+
         #Optional callback function. Called everytime a paramter is changed
         self.callbackFunc = callbackFunc
 
@@ -18,7 +18,7 @@ class KernelWidget(QtGui.QSplitter):
         rightWidget.setLayout(rightLayout)
         rightWidget.setSizePolicy(QtGui.QSizePolicy.Minimum,
                                   QtGui.QSizePolicy.Minimum)
-                       
+
         # Three group boxes for in buffers, out buffers and parameters
         groupBoxesNames = ["Input Buffers", "Output Buffers", "Parameters"]
         groupBoxes = [QtGui.QGroupBox(s,self) for s in groupBoxesNames]
@@ -30,7 +30,7 @@ class KernelWidget(QtGui.QSplitter):
                                    QtGui.QSizePolicy.Minimum)
             rightLayout.addWidget(groupBox)
         rightLayout.addStretch()
-        
+
         # Add widgets to splitter
         self.addWidget(self.codeEditor)
         self.addWidget(rightWidget)
@@ -43,7 +43,6 @@ class KernelWidget(QtGui.QSplitter):
         self.inBuffers[name] = Buffer(self, name, buffer, bufferNames,
                                       self.gridLayouts["Input Buffers"],
                                       len(self.inBuffers))
-        
 
     def addOutBuffer(self, name, buffer, bufferNames):
         self.outBuffers[name] = Buffer(self, name, buffer, bufferNames,
@@ -51,9 +50,9 @@ class KernelWidget(QtGui.QSplitter):
                                       len(self.outBuffers))
 
     def addParameter(self, name, val, defVal, minVal, maxVal, typename):
-        self.params[name] = Parameter(self.gridLayouts["Parameters"], 
-                                      len(self.params), name, val, defVal, 
-                                      minVal, maxVal, typename, 
+        self.params[name] = Parameter(self.gridLayouts["Parameters"],
+                                      len(self.params), name, val, defVal,
+                                      minVal, maxVal, typename,
                                       self.callbackFunc)
 class Buffer(object):
     def __init__(self, parent, name, buffer, bufferNames, grid, row):
@@ -72,14 +71,14 @@ class Buffer(object):
         grid.addWidget(self.cbox, row, 1)
 
 class Parameter(object):
-    def __init__(self, gridLayout, row, name, val, defVal, minVal, maxVal, 
+    def __init__(self, gridLayout, row, name, val, defVal, minVal, maxVal,
                  typename, callbackFunc = None):
         self.name = name
         self.defaultVal = defVal
         self.minVal = minVal
         self.maxVal = maxVal
         self.typename = typename
-        self.callbackFunc = None
+        self.callbackFunc = callbackFunc
 
         # Each parameters has a label with the name, a lineedit with text value
         # and a slider with the value (relative to min max)
@@ -101,11 +100,11 @@ class Parameter(object):
         gridLayout.addWidget(self.label, row, 0)
         gridLayout.addWidget(self.lineEdit, row, 1)
         gridLayout.addWidget(self.slider, row, 2)
-        
-        # When a slider is changed it should update the line edit and vice verse 
+
+        # When a slider is changed it should update the line edit and vice verse
         self.lineEdit.textChanged.connect(self.onLineEditChange)
         self.slider.valueChanged.connect(self.onSliderChange)
-        
+
         # Helper variables to know when to trigger updates
         self.updateSlider = True
         self.updateLineEdit = True
@@ -114,7 +113,7 @@ class Parameter(object):
         self.lineEdit.setText(txt)
 
     def onLineEditChange(self):
-        # Changing the line edit triggers slider update that triggers 
+        # Changing the line edit triggers slider update that triggers
         # line edit update again. This is to prevent the second update
         if not self.updateLineEdit:
             return
@@ -128,7 +127,7 @@ class Parameter(object):
         except SyntaxError:
             # If error, fallback on the default value
             val = self.defaultVal
-        
+
         # Don't run the onSliderChange  function
         self.updateSlider = False
 
@@ -149,10 +148,10 @@ class Parameter(object):
             self.callbackFunc()
 
     def onSliderChange(self):
-        # Changing the slider triggers line edit update that triggers 
+        # Changing the slider triggers line edit update that triggers
         # slider update again. This is to prevent the second update
         if not self.updateSlider:
-            return 
+            return
 
         # Evaluate val based on slider position
         val = 0.01*self.slider.value() * (self.maxVal-self.minVal) + self.minVal
@@ -189,8 +188,8 @@ class CodeEditor(QtGui.QTextEdit):
         self.highlighter = Highlighter(self.document())
 
     def sizeHint(self):
-        return QtCore.QSize(self.w,500)
-        
+        return QtCore.QSize(self.w,200)
+
 class Highlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, parent=None):
         super(Highlighter, self).__init__(parent)
@@ -199,8 +198,11 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         color = QtGui.QColor(0,0,0)
         color.setNamedColor("#66D9EF")
         keywordFormat.setForeground(color)
-        
-        keywords = ["char", "double", "float", "int", "long", 
+
+        keywords = ["char", "double",
+                    "float", "float2", "float3", "float4",
+                    "uchar", "uchar2", "uchar3", "uchar4",
+                    "int", "int2", "int3", "int4",  "long",
                     "short", "signed", "unsigned", "union", "void"]
         keywordPatterns = ["\\b" + kw + "\\b" for kw in keywords]
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
@@ -219,8 +221,9 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         color = QtGui.QColor(0,0,0)
         color.setNamedColor("#F92672")
         keywordFormat.setForeground(color)
-        keywords = ["const", "inline", "template", "typedef", "typename", 
-                    "if", "for", "while", "switch", "case", "break", "else"]
+        keywords = ["const", "inline", "template", "typedef", "typename",
+                    "if", "for", "while", "switch", "case",
+                    "return", "break", "else"]
         keywordPatterns = ["\\b" + kw + "\\b" for kw in keywords]
         self.highlightingRules += [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
@@ -271,3 +274,4 @@ class Highlighter(QtGui.QSyntaxHighlighter):
                     self.multiLineCommentFormat)
             startIndex = self.commentStartExpression.indexIn(text,
                     startIndex + commentLength);
+

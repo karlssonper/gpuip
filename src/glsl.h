@@ -2,13 +2,8 @@
 #define GPUIP_GLSL_H_
 //----------------------------------------------------------------------------//
 #include "gpuip.h"
-#ifdef __APPLE__
-#include <OpenGL/gl.h>
-#include <GLUT/glut.h>
-#else
 #include <GL/glew.h>
-#include <GL/glut.h>
-#endif
+#include <GLFW/glfw3.h>
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//

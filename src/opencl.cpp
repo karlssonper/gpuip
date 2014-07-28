@@ -52,6 +52,9 @@ OpenCLImpl::InitBuffers(std::string * err)
 bool
 OpenCLImpl::Build(std::string * error)
 {
+    // Clear previous kernels if rebuilding
+    _clKernels.clear();
+    
     cl_int cl_err;
 
     for (int i = 0; i < _kernels.size(); ++i) {
@@ -95,7 +98,7 @@ OpenCLImpl::Copy(const std::string & buffer,
                  void * data,
                  std::string * error)
 {
-    cl_int cl_err;
+    cl_int cl_err = CL_SUCCESS; //set to success to get rid of compiler warnings
     if (op == Buffer::READ_DATA) {
         cl_err =  clEnqueueReadBuffer(
             _queue,  _clBuffers[buffer],
@@ -113,6 +116,25 @@ OpenCLImpl::Copy(const std::string & buffer,
     return true;
 }
 //----------------------------------------------------------------------------//
+inline std::string _GetTypeStr(const Buffer & buffer)
+{
+    std::stringstream type;
+    switch(buffer.bpp/buffer.channels) {
+        case 1:
+            type << "uchar";
+            break;
+        case 4:
+            type << "float";
+            break;
+        case 8:
+            type << "double";
+            break;
+        default:
+            type << "float";
+    };
+    type << buffer.channels;
+    return type.str();
+}
 std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
@@ -133,18 +155,44 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
             ss << ",\n" << std::string(ws, ' ');
         }
         
-        ss << "int " << kernel->paramsInt[i].name;
+        ss << "const int " << kernel->paramsInt[i].name;
     }
     for (int i = 0; i < kernel->paramsFloat.size(); ++i) {
         if (first) {
             first = false;
         } else {
-            ss << ",\n" << std::string(ws, ' ');;
+            ss << ",\n" << std::string(ws, ' ');
         }
-        ss <<  "float " << kernel->paramsFloat[i].name;
+        ss <<  "const float " << kernel->paramsFloat[i].name;
     }
-    
-    ss << ")\n{\n}";
+
+    ss << ",\n" <<  std::string(ws, ' ') << "const int width";
+    ss << ",\n" <<  std::string(ws, ' ') << "const int height)\n";
+    ss << "{\n";
+    ss << "    const int x = get_global_id(0);\n";
+    ss << "    const int y = get_global_id(1);\n\n";
+    ss << "    // array index\n";
+    ss << "    const int idx = x + width * y;\n\n";
+    ss << "    // inside image bounds check\n";
+    ss << "    if (x >= width || y >= height) { \n";
+    ss << "        return;\n";
+    ss << "    }\n\n";
+    ss << "    // kernel code\n";
+
+    for (int i = 0; i < kernel->outBuffers.size(); ++i) {
+        const Buffer & b = _buffers.find(kernel->outBuffers[i].first.name)->second;
+        ss << "    " << kernel->outBuffers[i].second << "[idx] = ";
+        if (b.channels == 1) {
+            ss << "0;\n";
+        } else {
+            ss << "make_" << _GetTypeStr(b) << "(";
+            for (int j = 0; j < b.channels; ++j) {
+                ss << (j ==0 ? "" : ", ") << "0";
+            }
+            ss << ");\n";
+        }
+    }    
+    ss << "}";
     
     return ss.str();
 }
@@ -162,24 +210,10 @@ void OpenCLImpl::_GetBoilerplateCodeBuffers(
         } else {
             ss << ",\n"  << std::string(indent, ' ');
         }
+        
         const Buffer & buffer = _buffers.find(buffers[i].first.name)->second;
-        std::string type;
-        switch(buffer.bpp/buffer.channels) {
-            case 1:
-                type = "unsigned char";
-                break;
-            case 4:
-                type = "float";
-                break;
-            case 8:
-                type = "double";
-                break;
-            default:
-                type = "float";
-        };
-    
         ss << "__global " << (inBuffer ? "const " : "")
-           << type << " * " << buffers[i].second;
+           << _GetTypeStr(buffer) << " * " << buffers[i].second;
     }
 }
 //----------------------------------------------------------------------------//
@@ -215,6 +249,10 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
         cl_err = clSetKernelArg(clKernel, argc++, sizeof(float),
                                 &kernel.paramsFloat[i].value);
     }
+
+    // Set width and height parameters
+    cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),&_w);
+    cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),&_h);
 
     // It should be fine to check once all the arguments have been set
     if (_clErrorSetKernelArg(cl_err, err, kernel.name)) {

@@ -58,7 +58,9 @@ class Base
     static Ptr Create(GpuEnvironment env);
     
     virtual ~Base() {}
-   
+
+    static bool CanCreateGpuEnvironment(GpuEnvironment env);
+    
     GpuEnvironment GetGpuEnvironment() const
     {
         return _env;
@@ -94,11 +96,8 @@ class Base
     std::map<std::string, Buffer> _buffers;
     std::vector<Kernel::Ptr> _kernels;
 
-    unsigned int _GetBufferSize(const Buffer & buffer) const
-    {
-        return buffer.bpp * _w * _h;
-    }
-    
+    unsigned int _GetBufferSize(const Buffer & buffer) const;
+  
   private:
     Base();
     Base(const Base &);

@@ -19,16 +19,24 @@ Base * CreateGLSL()
 GLSLImpl::GLSLImpl()
         : Base(gpuip::GLSL)
 {
-    int argc = 1;
-    std::auto_ptr<char> argv(new char[1]);
-    char * argvp = argv.get();
-    glutInit(&argc, &argvp);
-    glutInitDisplayMode(GLUT_DOUBLE);
-    glutInitWindowPosition(0,0);
-    glutInitWindowSize(1,1);
-    glutCreateWindow("");
-    glewInit();
+    if (!glfwInit()) {
+         throw std::logic_error("gpuip could not initiate GLFW");
+    }
 
+    GLFWwindow *  window = glfwCreateWindow(1, 1, "", NULL, NULL);
+
+    if (!window) {
+        throw std::logic_error("gpuip could not create window with glfw");
+    }
+
+    glfwMakeContextCurrent(window);
+
+    GLenum result = glewInit();
+    if (result != GLEW_OK) {
+        std::cerr << glewGetErrorString(result) << std::endl;
+        throw std::logic_error("gpuip could not initiate GLEW");
+    }
+    
     if (glGetError() != GL_NO_ERROR) {
         throw std::logic_error("gpuip::GLSLImpl() error in init.");
     }
@@ -106,6 +114,7 @@ bool GLSLImpl::Build(std::string * err)
 {
     // Simple vert shader code for a quad with texture coordinates
     static const char * vert_shader_code = 
+            "#version 120\n"
             "attribute vec2 positionIn;\n"
             "varying vec2 texcoord;\n"
             "void main()\n"
@@ -122,8 +131,7 @@ bool GLSLImpl::Build(std::string * err)
     _shaders.resize(_kernels.size());
     for (int i = 0; i < _kernels.size(); ++i) {
         const char * code = _kernels[i]->code.c_str();
-        const char * name = _kernels[i]->name.c_str();
-
+        
         GLuint fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
         length = strlen(code);
         glShaderSource(fragShaderID, 1, &code, &length);
@@ -183,6 +191,7 @@ bool GLSLImpl::Copy(const std::string & buffer,
 std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
+    ss << "#version 120\n";
     for(int i = 0; i < kernel->inBuffers.size(); ++i) {
         ss << "uniform sampler2D " << kernel->inBuffers[i].second << ";\n";
     }

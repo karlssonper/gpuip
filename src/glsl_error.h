@@ -7,9 +7,11 @@ namespace gpuip {
 //----------------------------------------------------------------------------//
 inline std::string _glErrorToString(GLenum error)
 {
-    const GLubyte * errLog = gluErrorString(error);
     std::stringstream ss;
+#ifndef __APPLE__
+    const GLubyte * errLog = gluErrorString(error);
     ss << errLog;
+#endif
     return ss.str();
 }
 //----------------------------------------------------------------------------//
