@@ -199,7 +199,8 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         color.setNamedColor("#66D9EF")
         keywordFormat.setForeground(color)
 
-        keywords = ["char", "double",
+        keywords = ["char", "double", "sampler2D",
+                    "vec2", "vec3", "vec4",
                     "float", "float2", "float3", "float4",
                     "uchar", "uchar2", "uchar3", "uchar4",
                     "int", "int2", "int3", "int4",  "long",
@@ -212,7 +213,7 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         color = QtGui.QColor(0,0,0)
         color.setNamedColor("#4e9a06")
         keywordFormat.setForeground(color)
-        keywords = ["__kernel", "__global", "__global__"]
+        keywords = ["__kernel", "__global", "__global__", "uniform", "varying"]
         keywordPatterns = ["\\b" + kw + "\\b" for kw in keywords]
         self.highlightingRules += [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]

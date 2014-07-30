@@ -116,7 +116,7 @@ unsigned int  Base::_GetBufferSize(const Buffer & buffer) const
 
     // Special case in OpenCL since it pads with {uchar,float}4
     // even if the array is of type {uchar,float}3
-    if ((_env == OpenCL or _env == CUDA) and buffer.channels == 3) {
+    if (_env == OpenCL and buffer.channels == 3) {
         bpp = (bpp /3 ) * 4;
     }
         

@@ -155,11 +155,14 @@ class MainWindow(QtGui.QMainWindow):
         self.updateSettings()
         bufferNames = ""
         inputBuffers = []
+        clock = utils.StopWatch()
         for b in self.settings.buffers:
             if b.input:
+                #self.buffers[b.name].Read(b.input)
+                #self.buffers[b.name].Write(b.input)
                 inputBuffers.append(b.input)
             bufferNames += b.name + ", "
-
+        self.logSuccess("IMPORT.", clock)
         self.log("Initiating buffers [ <i> %s </i> ] ..." % bufferNames)
         width, height, err = utils.getLargestImageSize(inputBuffers)
         if err:
@@ -168,12 +171,13 @@ class MainWindow(QtGui.QMainWindow):
 
         self.gpuip.SetDimensions(width, height)
         utils.allocateBufferData(self.buffers, width, height)
+        clock = utils.StopWatch()
         err = self.gpuip.InitBuffers()
         if err:
             self.logError(err)
             return False
         else:
-            self.logSuccess("All buffers were initiated.")
+            self.logSuccess("All buffers were initiated.", clock)
             self.needsInitBuffers = False
             return True
 
@@ -186,9 +190,10 @@ class MainWindow(QtGui.QMainWindow):
 
         self.log("Building kernels [ <i>%s</i> ] ..." % kernelNames[:-2])
 
+        clock = utils.StopWatch()
         err = self.gpuip.Build()
         if not err:
-            self.logSuccess("All kernels were built.")
+            self.logSuccess("All kernels were built.", clock)
             self.needsBuild = False
             return True
         else:
@@ -213,24 +218,27 @@ class MainWindow(QtGui.QMainWindow):
         self.log("Processing kernels...")
 
         self.settings.updateKernels(self.kernels, self.buffers)
+        clock = utils.StopWatch()
         err = self.gpuip.Process()
         if err:
             self.logError(err)
             return False
 
-        self.logSuccess("All kernels were processed.")
+        self.logSuccess("All kernels were processed.", clock)
 
+        clock = utils.StopWatch()
         for b in self.buffers:
             err = self.gpuip.ReadBuffer(self.buffers[b])
             if err:
                 self.logError(err)
                 return False
-
+        self.logSuccess("Data transfered from GPU.", clock)
         self.displayWidget.refreshDisplay()
 
     def import_from_images(self):
         self.updateSettings()
 
+        clock = utils.StopWatch()
         for b in self.settings.buffers:
             if b.input:
                 self.log("Importing data from image <i>%s</i> to <i>%s</i>." \
@@ -243,7 +251,7 @@ class MainWindow(QtGui.QMainWindow):
                 if err:
                     self.logError(err)
                     return False
-        self.logSuccess("Image data transfered to all buffers.")
+        self.logSuccess("Image data transfered to all buffers.", clock)
 
         for b in self.settings.buffers:
             if b.input:
@@ -255,6 +263,7 @@ class MainWindow(QtGui.QMainWindow):
     def export_to_images(self):
         self.updateSettings()
 
+        clock = utils.StopWatch()
         for b in self.settings.buffers:
             if b.output:
                 self.log("Exporting data from buffer <i>%s</i> to <i>%s</i>." \
@@ -264,7 +273,7 @@ class MainWindow(QtGui.QMainWindow):
                     self.logError(err)
                     return False
 
-        self.logSuccess("Buffer data transfered to images.")
+        self.logSuccess("Buffer data transfered to images.", clock)
         return True
 
     def run_all_steps(self):
@@ -277,9 +286,10 @@ class MainWindow(QtGui.QMainWindow):
     def log(self, msg):
         self.logBrowser.append(utils.getTimeStr() + msg)
 
-    def logSuccess(self, msg):
+    def logSuccess(self, msg, clock):
         success = "<font color='green'>Success: </font>"
-        self.logBrowser.append(utils.getTimeStr() + success + msg)
+        clockStr= "<i> " + str(clock) + "</i>"
+        self.logBrowser.append(utils.getTimeStr() + success + msg + clockStr)
 
     def logError(self, msg):
         error = "<font color='red'>Error: </font>"

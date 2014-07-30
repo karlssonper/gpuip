@@ -73,6 +73,16 @@ class Base
     Kernel::Ptr GetKernel(const std::string & name);
 
     void SetDimensions(unsigned int width, unsigned int height);
+
+    unsigned int GetWidth() const
+    {
+        return _w;
+    }
+
+    unsigned int GetHeight() const
+    {
+        return _h;
+    }
     
     virtual bool InitBuffers(std::string * err) = 0;
 

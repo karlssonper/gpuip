@@ -1,6 +1,11 @@
 #include "gpuip.h"
 #include <boost/python.hpp>
 #include <boost/numpy.hpp>
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STBI_NO_HDR
+#include "stb_image.h"
+#include "stb_image_write.h"
 //----------------------------------------------------------------------------//
 namespace bp = boost::python;
 namespace np = boost::numpy;
@@ -8,10 +13,61 @@ namespace np = boost::numpy;
 class _BufferWrapper : public gpuip::Buffer
 {
   public:
-    _BufferWrapper() : data(
-        np::empty(bp::make_tuple(0,0),
-                  np::dtype::get_builtin<unsigned char>())) { }
+    _BufferWrapper() : data(np::empty(
+        bp::make_tuple(0,0), np::dtype::get_builtin<unsigned char>())){}
+
+    std::string Read(const std::string & filename)
+    {
+        std::string err;
+        int x,y,n;
+        unsigned char * ptr = stbi_load(filename.c_str(),&x,&y,&n,channels);
+        _Resize(x,y);
+        memcpy(data.get_data(), ptr, sizeof(unsigned char)*x*y*channels);
+        stbi_image_free(ptr);
+        return err;
+    }
+
+    std::string Write(const std::string & filename)
+    {
+        std::string err;
+        const int w = data.shape(0);
+        const int h = data.shape(1);
+        const int comp = data.shape(2);
+        if (filename.find_last_of(".png") != std::string::npos) {
+            const int stride = w * sizeof(unsigned char) * comp;
+            stbi_write_png(filename.c_str(), w, h, comp,data.get_data(),stride);
+        } else if (filename.find_last_of(".bmp") != std::string::npos) {
+            stbi_write_bmp(filename.c_str(), w, h, comp, data.get_data());
+        } else if (filename.find_last_of(".tga") != std::string::npos) {
+            stbi_write_tga(filename.c_str(), w, h, comp, data.get_data());
+        }
+        return err;
+    }
+
+    std::string ReadEXR(const std::string & filename)
+    {
+        std::string err;
+        return err;
+    }
+
+    std::string WriteEXR(const std::string & filename)
+    {
+        std::string err;
+        return err;
+    }
+
     np::ndarray data;
+
+  protected:
+
+    void _Resize(unsigned int width, unsigned int height)
+    {
+        np::dtype dtype = np::dtype::get_builtin<unsigned char>();
+        if (bpp / channels == 4) {
+            dtype = np::dtype::get_builtin<float>();
+        }
+        data = np::zeros(bp::make_tuple(width,height,channels), dtype);
+    }
 };
 //----------------------------------------------------------------------------//
 class _KernelWrapper : public gpuip::Kernel
@@ -87,9 +143,9 @@ class _BaseWrapper
         _base->SetDimensions(width,height);
     }
     
-    void AddBuffer(const _BufferWrapper & buffer)
+    void AddBuffer(boost::shared_ptr<_BufferWrapper> buffer)
     {
-        _base->AddBuffer(buffer);
+        _base->AddBuffer(*buffer.get());
     }
 
     std::string InitBuffers()
@@ -146,11 +202,13 @@ BOOST_PYTHON_MODULE(pygpuip)
             .value("CUDA", gpuip::CUDA)
             .value("GLSL", gpuip::GLSL);
 
-    bp::class_<_BufferWrapper>("Buffer")
+    bp::class_<_BufferWrapper, boost::shared_ptr<_BufferWrapper> >("Buffer")
             .def_readwrite("name", &_BufferWrapper::name)
             .def_readwrite("channels", &_BufferWrapper::channels)
             .def_readwrite("bpp", &_BufferWrapper::bpp)
-            .def_readwrite("data", &_BufferWrapper::data);
+            .def_readwrite("data", &_BufferWrapper::data)
+            .def("Read", &_BufferWrapper::Read)
+            .def("Write", &_BufferWrapper::Write);
     
     bp::class_<gpuip::Parameter<int> >("ParamInt")
             .def_readwrite("name", &gpuip::Parameter<int>::name)

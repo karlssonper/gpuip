@@ -78,7 +78,7 @@ if(PYTHON)
   find_package(PythonLibs REQUIRED)
   include_directories(${PYTHON_INCLUDE_DIR} ${Boost_INCLUDE_DIRS} ${Boost_NUMPY_INCLUDE_DIRS})
 
-  add_library(pygpuip SHARED python.cpp )
+  add_library(pygpuip SHARED python.cpp)
   target_link_libraries(pygpuip gpuip_static ${PYTHON_LIBRARIES} 
 	${Boost_PYTHON_LIBRARY} ${Boost_NUMPY_LIBRARY})
   

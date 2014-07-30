@@ -134,7 +134,11 @@ inline std::string _GetTypeStr(const Buffer & buffer)
     std::stringstream type;
     switch(buffer.bpp/buffer.channels) {
         case 1:
-            type << "uchar";
+            if (buffer.channels > 1) {
+                type << "uchar";
+            } else {
+                type << "unsigned char";
+            }
             break;
         case 4:
             type << "float";

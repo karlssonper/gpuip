@@ -85,7 +85,9 @@ class DisplayWidget(QtGui.QWidget):
         for i in xrange(self.bufferComboBox.count()):
             self.bufferComboBox.removeItem(0)
         self.buffers = buffers
-        self.bufferComboBox.addItems(buffers.keys())
+        buffersList = buffers.keys()
+        buffersList.sort()
+        self.bufferComboBox.addItems(buffersList)
 
     def setActiveBuffer(self, bufferName):
         idx = self.bufferComboBox.findText(bufferName)
@@ -145,6 +147,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         pass
 
     def copyDataToTexture(self, ndarray):
+        print ndarray
         # Update dimensions of widget
         self.texturedata = ndarray
         self.w = ndarray.shape[0]

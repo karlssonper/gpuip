@@ -1,6 +1,13 @@
 import numpy
-from time import gmtime, strftime
+from time import gmtime, strftime, time
 
+class StopWatch(object):
+    def __init__(self):
+        self.t = time()
+    
+    def __str__(self):
+        return "%.2f" %((time() - self.t) * 1000.0) + " ms"
+        
 def _exrToNumpy(filename, npyArray):
     try:
         import OpenEXR
@@ -153,7 +160,7 @@ def allocateBufferData(buffers, width, height):
     for b in buffers:
         buf = buffers[b]
         ndtype = numpy.float32 if buf.bpp/buf.channels == 4 else numpy.ubyte
-        channels = buf.channels if buf.channels != 3 else 4
+        channels = buf.channels if buf.channels != 3 else 3
         buf.data = numpy.zeros((width, height, channels), dtype = ndtype)
 
 def getTimeStr():

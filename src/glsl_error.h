@@ -17,6 +17,7 @@ inline std::string _glErrorToString(GLenum error)
 }
 //----------------------------------------------------------------------------//
 inline bool _glCheckBuildError(GLuint shader,
+                               GLuint vert_shader,
                                GLuint frag_shader,
                                std::string * err)
 {
@@ -29,6 +30,9 @@ inline bool _glCheckBuildError(GLuint shader,
         GLsizei length;
 
         ss << "GLSL build error.\n";
+
+        glGetShaderInfoLog(vert_shader, ERROR_BUFSIZE, &length, errorLog);
+        ss << "Vertex shader errors:\n" << std::string(errorLog, length);
         
         glGetShaderInfoLog(frag_shader, ERROR_BUFSIZE, &length, errorLog);
         ss << "\nFragment shader errors:\n" << std::string(errorLog, length);

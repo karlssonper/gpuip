@@ -26,6 +26,7 @@ class GLSLImpl : public Base
     virtual std::string GetBoilerplateCode(Kernel::Ptr kernel) const;
     
   protected:
+    bool _glewInit;
     GLuint _vbo;
     GLuint _rboId;
     GLuint _vertexShaderID;
@@ -37,6 +38,8 @@ class GLSLImpl : public Base
                    GLuint fbo,
                    GLuint program,
                    std::string * error);
+
+    bool _InitGLEW(std::string * err);
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

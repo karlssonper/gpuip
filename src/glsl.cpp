@@ -2,6 +2,19 @@
 #include "glsl_error.h"
 #include <string.h>
 #include <memory>
+#ifdef __APPLE__
+//apple
+#else
+#ifdef _WIN32
+//win
+#else
+#include <GL/glx.h>
+#endif
+#endif
+
+
+
+
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
@@ -11,55 +24,50 @@ inline GLenum _GetFormat(const Buffer & b);
 //----------------------------------------------------------------------------//
 inline GLenum _GetInternalFormat(const Buffer & b);
 //----------------------------------------------------------------------------//
+bool _HasGLContext();
+//----------------------------------------------------------------------------//
+bool _CreateGLContext(std::string * err);
+//----------------------------------------------------------------------------//
 Base * CreateGLSL()
 {
     return new GLSLImpl();
 }
 //----------------------------------------------------------------------------//
 GLSLImpl::GLSLImpl()
-        : Base(gpuip::GLSL)
+        : Base(gpuip::GLSL), _glewInit(false)
 {
-    if (!glfwInit()) {
-         throw std::logic_error("gpuip could not initiate GLFW");
+}
+//----------------------------------------------------------------------------//
+bool GLSLImpl::_InitGLEW(std::string * err)
+{
+    if(!_HasGLContext() and !_CreateGLContext(err)) {
+        return false;
     }
-
-    GLFWwindow *  window = glfwCreateWindow(1, 1, "", NULL, NULL);
-
-    if (!window) {
-        throw std::logic_error("gpuip could not create window with glfw");
+    
+    GLenum result = glewInit();
+    if (result != GLEW_OK) {
+        std::stringstream ss;
+        ss << glewGetErrorString(result) << "\ngpuip could not initiate GLEW\n";
+        (*err) += ss.str();
+        return false;
+    } else {
+        _glewInit = true;
     }
-
-    glfwMakeContextCurrent(window);
-
+    return true;
+}
+//----------------------------------------------------------------------------//
+bool GLSLImpl::InitBuffers(std::string * err)
+{
+    if (!_glewInit) {
+        _InitGLEW(err);
+    }
+    
     GLenum result = glewInit();
     if (result != GLEW_OK) {
         std::cerr << glewGetErrorString(result) << std::endl;
         throw std::logic_error("gpuip could not initiate GLEW");
     }
     
-    if (glGetError() != GL_NO_ERROR) {
-        throw std::logic_error("gpuip::GLSLImpl() error in init.");
-    }
-
-    // Simple vert shader code for a quad with texture coordinates
-    static const char * vert_shader_code = 
-            "#version 120\n"
-            "attribute vec2 positionIn;\n"
-            "varying vec2 x;\n"
-            "void main()\n"
-            "{\n"
-            "      gl_Position = vec4(vec2(-1) + 2*positionIn,0, 1);\n"
-            "      x = positionIn;\n"
-            "}";
-
-    _vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-    int length = strlen(vert_shader_code);
-    glShaderSource(_vertexShaderID, 1, &vert_shader_code, &length);
-    glCompileShader(_vertexShaderID);
-}
-//----------------------------------------------------------------------------//
-bool GLSLImpl::InitBuffers(std::string * err)
-{
     std::map<std::string, GLuint>::iterator itt;
     if (!_fbos.empty()) {
         glDeleteRenderbuffers(1, &_rboId);
@@ -69,8 +77,7 @@ bool GLSLImpl::InitBuffers(std::string * err)
         glDeleteTextures(1, &itt->second);
     }
     _fbos.clear();
-    _textures.clear();
-    
+    _textures.clear(); 
     
     std::map<std::string,Buffer>::const_iterator it;
     for(it = _buffers.begin(); it != _buffers.end(); ++it) {
@@ -128,6 +135,7 @@ bool GLSLImpl::InitBuffers(std::string * err)
             return false;
         }
     }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
     // Create and build quad vbo
     glGenBuffers(1, &_vbo);
@@ -140,9 +148,29 @@ bool GLSLImpl::InitBuffers(std::string * err)
 //----------------------------------------------------------------------------//
 bool GLSLImpl::Build(std::string * err)
 {
+    if (!_glewInit) {
+        _InitGLEW(err);
+    }
+    
     for(size_t i = 0; i < _programs.size(); ++i) {
         glDeleteProgram(_programs[i]);
     }
+
+    // Simple vert shader code for a quad with texture coordinates
+    static const char * vert_shader_code =  
+            "#version 120\n"
+            "attribute vec2 positionIn;\n"
+            "varying vec2 x;\n"
+            "void main()\n"
+            "{\n"
+            "      gl_Position = vec4(vec2(-1) + 2*positionIn,0, 1);\n"
+            "      x = positionIn;\n"
+            "}";
+
+    _vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+    int length = strlen(vert_shader_code);
+    glShaderSource(_vertexShaderID, 1, &vert_shader_code, &length);
+    glCompileShader(_vertexShaderID);
     
     _programs.resize(_kernels.size());
     for(size_t i = 0; i < _kernels.size(); ++i) {
@@ -157,7 +185,7 @@ bool GLSLImpl::Build(std::string * err)
         glAttachShader(_programs[i], _vertexShaderID);
         glLinkProgram(_programs[i]);
         glDeleteShader(fragShaderID);
-        if(_glCheckBuildError(_programs[i], fragShaderID, err)) {
+        if(_glCheckBuildError(_programs[i],_vertexShaderID,fragShaderID, err)) {
             return false;
         }
     }
@@ -171,12 +199,14 @@ bool GLSLImpl::Process(std::string * err)
     
     // Set the viewport to match the width and height
     glViewport(0, 0, _w, _h);
-
+    
     for(size_t i = 0; i < _kernels.size(); ++i) {
         if (!_DrawQuad(*_kernels[i].get(), _fbos[i], _programs[i], err)) {
             return false;
         }
     }
+
+    glFinish();
 
     // Reset back to the previous viewport
     glPopAttrib();
@@ -217,7 +247,7 @@ std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
         ss << "uniform float " << kernel->paramsFloat[i].name <<";\n";
     }
     ss << "varying vec2 x; // texture coordinates\n"
-       << "uniform float dx; // delta\n"
+       << "uniform float dx; // delta\n\n"
        << "void main()\n"
        << "{\n";
     for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
@@ -226,7 +256,7 @@ std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
         }
         ss << "    // gl_FragData[" << i << "] is buffer "
            << kernel->outBuffers[i].second << "\n"
-           << "    glFragData[" << i<<"] = vec4(0,0,0,1);\n";  
+           << "    gl_FragData[" << i<<"] = vec4(0,0,0,1);\n";  
     }    
     ss << "}";
     return ss.str();
@@ -371,6 +401,37 @@ GLenum _GetInternalFormat(const Buffer & b)
         }
     }
     return format;
+}
+//----------------------------------------------------------------------------//
+bool _HasGLContext()
+{
+#ifdef __APPLE__
+    //apple
+#else
+#ifdef _WIN32
+    //win
+#else
+    if (glXGetCurrentContext()) {
+        return true;
+    }
+#endif
+#endif
+    return false;
+}
+//----------------------------------------------------------------------------//
+bool _CreateGLContext(std::string * err)
+{
+    if (!glfwInit()) {
+        (*err) += "gpuip could not initiate GLFW";
+        return false;
+    }
+    GLFWwindow * window = glfwCreateWindow(1, 1, "", NULL, NULL);
+    if (!window) {
+        (*err) += "gpuip could not create window with glfw";
+        return false;
+    }
+    glfwMakeContextCurrent(window);
+    return true;
 }
 //----------------------------------------------------------------------------//
 } // end namespace gpuip
