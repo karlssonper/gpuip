@@ -3,7 +3,7 @@
 #else
 #error "No objective C found"
 #endif
-
+//----------------------------------------------------------------------------//
 bool _HasNSGLContext()
 {
     NSOpenGLContext* context = [NSOpenGLContext currentContext];
@@ -13,3 +13,4 @@ bool _HasNSGLContext()
         return false;
     }
 }
+//----------------------------------------------------------------------------//
