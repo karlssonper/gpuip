@@ -1,7 +1,7 @@
 #include "glsl.h"
 #include "glsl_error.h"
-#include <string.h>
 #include "glcontext.h"
+#include <string.h>
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//

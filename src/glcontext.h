@@ -20,40 +20,38 @@ namespace gpuip {
 //----------------------------------------------------------------------------//
 class GLContext
 {
-public:
-static bool Exists()
-{
+  public:
+    static bool Exists()
+    {
 #ifdef __APPLE__
-    //apple
-if (_HasNSGLContext()) {
-        return true;
-    }
+        if (_HasNSGLContext()) {
+            return true;
+        }
 #else
 #ifdef _WIN32
-    //win
 #else
-    if (glXGetCurrentContext()) {
+        if (glXGetCurrentContext()) {
+            return true;
+        }
+#endif
+#endif
+        return false;
+    }
+    //----------------------------------------------------------------------------//
+    static bool Create(std::string * err)
+    {
+        if (!glfwInit()) {
+            (*err) += "gpuip could not initiate GLFW";
+            return false;
+        }
+        GLFWwindow * window = glfwCreateWindow(1, 1, "", NULL, NULL);
+        if (!window) {
+            (*err) += "gpuip could not create window with glfw";
+            return false;
+        }
+        glfwMakeContextCurrent(window);
         return true;
     }
-#endif
-#endif
-    return false;
-}
-//----------------------------------------------------------------------------//
-static bool Create(std::string * err)
-{
-if (!glfwInit()) {
-(*err) += "gpuip could not initiate GLFW";
-return false;
-}
-GLFWwindow * window = glfwCreateWindow(1, 1, "", NULL, NULL);
-if (!window) {
-(*err) += "gpuip could not create window with glfw";
-return false;
-}
-glfwMakeContextCurrent(window);
-return true;
-}
 
 };
 //----------------------------------------------------------------------------//

@@ -57,7 +57,7 @@ if(GLSL)
                       ${GLFW_INCLUDE_DIRS})  
   set(SOURCE ${SOURCE} glsl)
   if (APPLE)
-	set(SOURCE ${SOURCE} glcontext.mm)
+	set(SOURCE ${SOURCE} glcontext.m)
   endif (APPLE)
   set(LIBRARIES ${LIBRARIES} ${OPENGL_LIBRARIES} 
 	${GLFW_LIBRARIES} ${GLEW_LIBRARY})
