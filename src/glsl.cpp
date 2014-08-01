@@ -39,7 +39,7 @@ bool GLSLImpl::_InitGLEW(std::string * err)
     return true;
 }
 //----------------------------------------------------------------------------//
-bool GLSLImpl::InitBuffers(std::string * err)
+bool GLSLImpl::Allocate(std::string * err)
 {
     if (!_glewInit) {
         _InitGLEW(err);

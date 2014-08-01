@@ -84,7 +84,7 @@ class Base
         return _h;
     }
     
-    virtual bool InitBuffers(std::string * err) = 0;
+    virtual bool Allocate(std::string * err) = 0;
 
     virtual bool Build(std::string * err) = 0;
 

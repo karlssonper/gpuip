@@ -295,8 +295,8 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     kernelB.SetOutBuffer("A", buffers[0])
     assert base.GetBoilerplateCode(kernelB) == boilerplateB
 
-    assert base.InitBuffers() == no_error
-    #assert base.InitBuffers() == no_error # reinit should not break things
+    assert base.Allocate() == no_error
+    assert base.Allocate() == no_error # reinit should not break things
     indata = numpy.zeros((width,height), dtype = numpy.float32)
     for i in range(width):
         for j in range(height):
@@ -304,9 +304,8 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     buffers[0].data[:] = indata
     assert base.WriteBuffer(buffers[0]) == no_error
 
-    print base.Build()
     assert base.Build() == no_error
-    #assert base.Build() == no_error # rebuilding should not break things
+    assert base.Build() == no_error # rebuilding should not break things
     assert base.Process() == no_error
 
     for b in buffers:
@@ -322,7 +321,7 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
             assert eq(b2[i][j], indata[i][j] + incB.value)
 
             assert eq(b0[i][j], b1[i][j] + b2[i][j])
-    print "Test passed!"
+    print "Test passed!\n"
 
 if __name__ == '__main__':
     if gpuip.CanCreateGpuEnvironment(gpuip.Environment.OpenCL):

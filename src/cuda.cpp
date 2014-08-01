@@ -23,7 +23,7 @@ CUDAImpl::CUDAImpl()
     cudaFree(0); //use runtime api to create a CUDA context automatically
 }
 //----------------------------------------------------------------------------//
-bool CUDAImpl::InitBuffers(std::string * err)
+bool CUDAImpl::Allocate(std::string * err)
 {
     cudaError_t c_err;
 

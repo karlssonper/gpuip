@@ -79,11 +79,48 @@ if(PYTHON)
   find_package(Boost REQUIRED COMPONENTS python)
   find_package(BoostNumpy REQUIRED)
   find_package(PythonLibs REQUIRED)
-  include_directories(${PYTHON_INCLUDE_DIR} ${Boost_INCLUDE_DIRS} ${Boost_NUMPY_INCLUDE_DIRS})
+  find_package(PNG)
+  find_package(TIFF)
+  find_package(JPEG)
+  find_package(OpenEXR)
 
-  add_library(pygpuip SHARED python.cpp)
-  target_link_libraries(pygpuip gpuip_static ${PYTHON_LIBRARIES} 
-	${Boost_PYTHON_LIBRARY} ${Boost_NUMPY_LIBRARY})
+  include_directories(
+	${PYTHON_INCLUDE_DIR} 
+	${Boost_INCLUDE_DIRS}
+	${Boost_NUMPY_INCLUDE_DIRS})
+
+  set(PY_LIBS 
+	gpuip_static 
+	${PYTHON_LIBRARIES} 
+	${Boost_PYTHON_LIBRARY} 
+	${Boost_NUMPY_LIBRARY})
+
+  if(PNG_FOUND)
+	add_definitions(-Dcimg_use_png)
+	include_directories(${PNG_INCLUDE_DIRS})
+	set(PY_LIBS ${PY_LIBS} ${PNG_LIBRARIES})
+  endif(PNG_FOUND)
+
+  if(JPEG_FOUND)
+	add_definitions(-Dcimg_use_jpeg)
+	include_directories(${JPEG_INCLUDE_DIR})
+	set(PY_LIBS ${PY_LIBS} ${JPEG_LIBRARIES})
+  endif(JPEG_FOUND)
+
+  if(TIFF_FOUND)
+	add_definitions(-Dcimg_use_tiff)
+	include_directories(${TIFF_INCLUDE_DIR})
+	set(PY_LIBS ${PY_LIBS} ${TIFF_LIBRARIES})
+  endif(TIFF_FOUND)
+
+  if(OPENEXR_FOUND)
+	add_definitions(-Dcimg_use_exr)
+	include_directories(${OPENEXR_INCLUDE_PATHS})
+	set(PY_LIBS ${PY_LIBS} ${OPENEXR_LIBRARIES})
+  endif(OPENEXR_FOUND)
+  
+  add_library(pygpuip SHARED python.cpp cimg_numpy_wrapper)
+  target_link_libraries(pygpuip ${PY_LIBS})
   
   # Rename python shared lib from libpyGpuip.{so,lib} to pyGpuip.{so,pyd}
   set_target_properties( pygpuip PROPERTIES PREFIX "")
@@ -92,7 +129,7 @@ if(PYTHON)
   else (WIN32)
 	set_target_properties( pygpuip PROPERTIES SUFFIX ".so")
   endif(WIN32)
-  
+
   # Install python bindings in the python site-packages
   execute_process(COMMAND 
 	python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" 

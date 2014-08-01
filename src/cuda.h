@@ -12,7 +12,7 @@ class CUDAImpl : public Base
   public:
     CUDAImpl();
 
-    virtual bool InitBuffers(std::string * err);
+    virtual bool Allocate(std::string * err);
     
     virtual bool Build(std::string * err);
 

@@ -39,7 +39,7 @@ class MainWindow(QtGui.QMainWindow):
             self.new()
 
         self.needsBuild = True
-        self.needsInitBuffers = True
+        self.needsAllocate = True
         self.needsImport = True
 
     def new(self):
@@ -151,35 +151,7 @@ class MainWindow(QtGui.QMainWindow):
         for i in range(self.kernelTabWidget.count()):
             self.kernelTabWidget.removeTab(0)
 
-    def initBuffers(self):
-        self.updateSettings()
-        bufferNames = ""
-        inputBuffers = []
-        clock = utils.StopWatch()
-        for b in self.settings.buffers:
-            if b.input:
-                #self.buffers[b.name].Read(b.input)
-                #self.buffers[b.name].Write(b.input)
-                inputBuffers.append(b.input)
-            bufferNames += b.name + ", "
-        self.logSuccess("IMPORT.", clock)
-        self.log("Initiating buffers [ <i> %s </i> ] ..." % bufferNames)
-        width, height, err = utils.getLargestImageSize(inputBuffers)
-        if err:
-            self.logError(err)
-            return False
 
-        self.gpuip.SetDimensions(width, height)
-        utils.allocateBufferData(self.buffers, width, height)
-        clock = utils.StopWatch()
-        err = self.gpuip.InitBuffers()
-        if err:
-            self.logError(err)
-            return False
-        else:
-            self.logSuccess("All buffers were initiated.", clock)
-            self.needsInitBuffers = False
-            return True
 
     def build(self):
         kernelNames = ""
@@ -203,11 +175,56 @@ class MainWindow(QtGui.QMainWindow):
                                       QtGui.QMessageBox.Ok)
             return False
 
+    
+    def import_from_images(self):
+        self.updateSettings()
+
+        clock = utils.StopWatch()
+        for b in self.settings.buffers:
+            if b.input:
+                self.log("Importing data from image <i>%s</i> to <i>%s</i>." \
+                         % (b.input, b.name))
+                err = self.buffers[b.name].Read(b.input)
+                if err:
+                    self.logError(err)
+                    return False
+        self.logSuccess("Image data imported", clock)
+        self.displayWidget.refreshDisplay()
+        self.needsImport = False
+        return True
+
+    def allocate(self):
+        self.updateSettings()
+
+        clock = utils.StopWatch()
+        bufferNames = [b.name for b in self.settings.buffers]
+        self.log("Allocating buffers <i> %s </i> ..." % bufferNames)
+        width, height = utils.allocateBufferData(self.buffers)
+        self.gpuip.SetDimensions(width, height)
+        err = self.gpuip.Allocate()
+        clock = utils.StopWatch()
+        if err:
+            self.logError(err)
+            return False
+        else:
+            self.logSuccess("All buffers were allocated.", clock)
+            self.needsAllocate = False
+
+        clock = utils.StopWatch()
+        for b in self.settings.buffers:
+            if b.input:
+                err = self.gpuip.WriteBuffer(self.buffers[b.name])
+                if err:
+                    self.logError(err)
+                    return False
+        self.logSuccess("Data transfered to GPU.", clock)
+        return True
+
     def interactiveProcess(self):
         if self.interactive:
             # Run previous steps if necessary. If any fails, return function
             if (self.needsBuild and not self.build()) or \
-               (self.needsInitBuffers and not self.initBuffers()) or \
+               (self.needsAllocate and not self.allocate()) or \
                (self.needsImport and not self.import_from_images()):
                 return False
             self.process()
@@ -235,31 +252,6 @@ class MainWindow(QtGui.QMainWindow):
         self.logSuccess("Data transfered from GPU.", clock)
         self.displayWidget.refreshDisplay()
 
-    def import_from_images(self):
-        self.updateSettings()
-
-        clock = utils.StopWatch()
-        for b in self.settings.buffers:
-            if b.input:
-                self.log("Importing data from image <i>%s</i> to <i>%s</i>." \
-                         % (b.input, b.name))
-                err = utils.imgToNumpy(b.input, self.buffers[b.name].data)
-                if err:
-                    self.logError(err)
-                    return False
-                err = self.gpuip.WriteBuffer(self.buffers[b.name])
-                if err:
-                    self.logError(err)
-                    return False
-        self.logSuccess("Image data transfered to all buffers.", clock)
-
-        for b in self.settings.buffers:
-            if b.input:
-                self.displayWidget.setActiveBuffer(b.name)
-                self.needsImport = False
-                return True
-        return False
-
     def export_to_images(self):
         self.updateSettings()
 
@@ -268,7 +260,7 @@ class MainWindow(QtGui.QMainWindow):
             if b.output:
                 self.log("Exporting data from buffer <i>%s</i> to <i>%s</i>." \
                          % (b.name, b.output))
-                err = utils.numpyToImage(self.buffers[b.name].data, b.output)
+                err = self.buffers[b.name].Write(b.output)
                 if err:
                     self.logError(err)
                     return False
@@ -278,7 +270,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def run_all_steps(self):
         self.build()
-        self.initBuffers()
+        self.allocate()
         self.import_from_images()
         self.process()
         self.export_to_images()
@@ -385,10 +377,10 @@ class MainWindow(QtGui.QMainWindow):
         toolBar.addSeparator()
         _addAction(icons.get("build"), "1. &Build", "Ctrl+B",
                    self.build, runMenu, toolBar),
-        _addAction(icons.get("init"), "2. &Init Buffers", "Ctrl+I",
-                   self.initBuffers, runMenu, toolBar),
-        _addAction(icons.get("import"), "3. &Import from images", "Ctrl+W",
+        _addAction(icons.get("import"), "2. &Import from images", "Ctrl+W",
                    self.import_from_images, runMenu, toolBar),
+        _addAction(icons.get("init"), "3. &Allocate", "Ctrl+I",
+                   self.allocate, runMenu, toolBar),
         _addAction(icons.get("process"), "4. &Process", "Ctrl+P",
                    self.process, runMenu, toolBar),
         _addAction(icons.get("export"), "5. &Export to images", "Ctrl+E",

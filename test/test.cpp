@@ -302,8 +302,8 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
     assert(b->GetBoilerplateCode(kernelB) == std::string(boilerplateB));
     
     std::string error;
-    assert(b->InitBuffers(&error));
-    assert(b->InitBuffers(&error)); //reiniting should not break things
+    assert(b->Allocate(&error));
+    assert(b->Allocate(&error)); //reiniting should not break things
     
     std::vector<float> data_in(N);
     for(size_t i = 0; i < data_in.size(); ++i) {

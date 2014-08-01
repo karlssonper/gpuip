@@ -11,7 +11,7 @@ class GLSLImpl : public Base
   public:
     GLSLImpl();
 
-    virtual bool InitBuffers(std::string * err);
+    virtual bool Allocate(std::string * err);
       
     virtual bool Build(std::string * err);
 

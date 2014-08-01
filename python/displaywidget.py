@@ -147,7 +147,6 @@ class GLWidget(QtOpenGL.QGLWidget):
         pass
 
     def copyDataToTexture(self, ndarray):
-        print ndarray
         # Update dimensions of widget
         self.texturedata = ndarray
         self.w = ndarray.shape[0]

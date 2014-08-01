@@ -15,7 +15,7 @@ class OpenCLImpl : public Base
   public:
     OpenCLImpl();
 
-    virtual bool InitBuffers(std::string * err);
+    virtual bool Allocate(std::string * err);
     
     virtual bool Build(std::string * err);
 

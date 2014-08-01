@@ -108,39 +108,61 @@ def runCommandLine(ipsettings, verbose):
         if err:
             terminate(err)
 
+    def log(text, stopwatch = None, time = True):
+        if verbose:
+            stopwatchStr = str(stopwatch) if stopwatch else  ""
+            timeStr = utils.getTimeStr() if time else ""
+            print timeStr + text + " " + stopwatchStr
+
+    overall_clock = utils.StopWatch()
+
     ### 0. Create gpuip items from settings
+
+    log("Creating elements from settings...")
     gpuip, buffers, kernels = ipsettings.create()
 
     ### 1. Build
+    c = utils.StopWatch()
+    log("Building kernels [%s]..." %  [k.name for k in kernels])
     check_error(gpuip.Build())
+    log("Building done.", c)
 
-    ### 2. Init Buffers
-    bufferNames = ""
-    inputBuffers = []
+    ### 2. Import data from images
+    c = utils.StopWatch()
     for b in ipsettings.buffers:
         if b.input:
-            inputBuffers.append(b.input)
-        bufferNames += b.name + ", "
-    width, height, error = utils.getLargestImageSize(inputBuffers)
-    check_error(error)
+            log("Importing data from %s to %s" %(b.input, b.name))
+            check_error(buffers[b.name].Read(b.input))
+    log("Importing data done.", c)
+            
+    ### 3. Allocate and transfer data to GPU
+    c = utils.StopWatch()
+    width, height = utils.allocateBufferData(buffers)
     gpuip.SetDimensions(width, height)
-    utils.allocateBufferData(buffers, width, height)
-    check_error(gpuip.InitBuffers())
-
-    ### 3. Import images to buffers
+    check_error(gpuip.Allocate())
+    log("Allocating done.", c)
+    c = utils.StopWatch()
     for b in ipsettings.buffers:
         if b.input:
-            check_error(utils.imgToNumpy(b.input, buffers[b.name].data))
             check_error(gpuip.WriteBuffer(buffers[b.name]))
+    log("Transfering data to GPU done.", c)
 
     ### 4. Process
+    c = utils.StopWatch()
+    log("Processing kernels ...")
     check_error(gpuip.Process())
+    log("Processing done.", c)
 
     ### 5. Export buffers to images
+    c = utils.StopWatch()
     for b in ipsettings.buffers:
         if b.output:
+            log("Exporting data from %s to %s" %(b.name, b.output))
             check_error(gpuip.ReadBuffer(buffers[b.name]))
-            check_error(utils.numpyToImage(buffers[b.name].data, b.output))
+            check_error(buffers[b.name].Write(b.output))
+    log("Exporting data done.", c)
+
+    log("\nAll steps done. Total runtime:", overall_clock, time = False)
 
 if __name__ == "__main__":
     args = getCommandLineArguments()

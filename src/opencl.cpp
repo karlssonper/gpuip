@@ -34,7 +34,7 @@ OpenCLImpl::OpenCLImpl()
 }
 //----------------------------------------------------------------------------//
 bool
-OpenCLImpl::InitBuffers(std::string * err)
+OpenCLImpl::Allocate(std::string * err)
 {
     cl_int cl_err;
     std::map<std::string,  cl_mem>::iterator itb;
