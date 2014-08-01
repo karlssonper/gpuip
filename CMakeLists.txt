@@ -12,10 +12,12 @@ option(GLSL "GLSL" ON)
 option(PYTHON "PYTHON" ON)
 option(TEST "TEST" ON)
 
-add_subdirectory(src)
 if (PYTHON)
+  add_definitions(-D_GPUIP_PYTHON_BINDINGS)
   add_subdirectory(python)
 endif(PYTHON)
+
+add_subdirectory(src)
 
 if (TEST)
   enable_testing()
