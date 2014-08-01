@@ -1,20 +1,7 @@
 #include "glsl.h"
 #include "glsl_error.h"
 #include <string.h>
-#include <memory>
-#ifdef __APPLE__
-//apple
-#else
-#ifdef _WIN32
-//win
-#else
-#include <GL/glx.h>
-#endif
-#endif
-
-
-
-
+#include "glcontext.h"
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
@@ -23,10 +10,6 @@ inline GLenum _GetType(const Buffer & b);
 inline GLenum _GetFormat(const Buffer & b);
 //----------------------------------------------------------------------------//
 inline GLenum _GetInternalFormat(const Buffer & b);
-//----------------------------------------------------------------------------//
-bool _HasGLContext();
-//----------------------------------------------------------------------------//
-bool _CreateGLContext(std::string * err);
 //----------------------------------------------------------------------------//
 Base * CreateGLSL()
 {
@@ -40,7 +23,7 @@ GLSLImpl::GLSLImpl()
 //----------------------------------------------------------------------------//
 bool GLSLImpl::_InitGLEW(std::string * err)
 {
-    if(!_HasGLContext() and !_CreateGLContext(err)) {
+    if(!GLContext::Exists() and !GLContext::Create(err)) {
         return false;
     }
     
@@ -401,37 +384,6 @@ GLenum _GetInternalFormat(const Buffer & b)
         }
     }
     return format;
-}
-//----------------------------------------------------------------------------//
-bool _HasGLContext()
-{
-#ifdef __APPLE__
-    //apple
-#else
-#ifdef _WIN32
-    //win
-#else
-    if (glXGetCurrentContext()) {
-        return true;
-    }
-#endif
-#endif
-    return false;
-}
-//----------------------------------------------------------------------------//
-bool _CreateGLContext(std::string * err)
-{
-    if (!glfwInit()) {
-        (*err) += "gpuip could not initiate GLFW";
-        return false;
-    }
-    GLFWwindow * window = glfwCreateWindow(1, 1, "", NULL, NULL);
-    if (!window) {
-        (*err) += "gpuip could not create window with glfw";
-        return false;
-    }
-    glfwMakeContextCurrent(window);
-    return true;
 }
 //----------------------------------------------------------------------------//
 } // end namespace gpuip
