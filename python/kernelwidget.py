@@ -201,6 +201,7 @@ class Highlighter(QtGui.QSyntaxHighlighter):
 
         keywords = ["char", "double", "sampler2D",
                     "vec2", "vec3", "vec4",
+                    "half", 
                     "float", "float2", "float3", "float4",
                     "uchar", "uchar2", "uchar3", "uchar4",
                     "int", "int2", "int3", "int4",  "long",

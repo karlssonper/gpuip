@@ -66,7 +66,7 @@ class NewDialog(QtGui.QDialog):
             self.buffersGroupBox.addBuffer()
             buffer = self.buffersGroupBox.buffers[-1]
             buffer.nameLineEdit.setText(b.name)
-            idx = ["float", "uchar"].index(b.type)
+            idx = ["half", "ubyte", "float"].index(b.type)
             buffer.typeComboBox.setCurrentIndex(idx)
             buffer.channelsComboBox.setCurrentIndex(b.channels-1)
 
@@ -143,9 +143,10 @@ class BufferGroupBox(QtGui.QGroupBox):
         def __init__(self, gridLayout, row, parent):
             self.nameLineEdit = QtGui.QLineEdit("buffer%i" % row, parent)
             self.typeComboBox = QtGui.QComboBox(parent)
-            self.typeComboBox.addItems(["float\t","uchar\t"])
+            self.typeComboBox.addItems(["half\t","ubyte\t","float\t"])
             self.channelsComboBox = QtGui.QComboBox(parent)
             self.channelsComboBox.addItems(["1", "2", "3", "4"])
+            self.channelsComboBox.setCurrentIndex(3)
 
             gridLayout.addWidget(self.nameLineEdit, row, 0)
             gridLayout.addWidget(self.typeComboBox, row, 1)

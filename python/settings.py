@@ -214,10 +214,17 @@ class Settings(object):
             buf.name = b.name
             buf.channels = b.channels
 
-            if b.type == "float":
-                buf.bpp = 4 * b.channels
-            elif b.type == "uchar":
-                buf.bpp = 1 * b.channels
+            # Special case and has to do with how OpenCL
+            # aligns vector types with n = 3
+            if env == pygpuip.Environment.OpenCL and buf.channels == 3:
+                buf.channels = 4;
+
+            if b.type == "half":
+                buf.type = pygpuip.BufferType.HALF
+            elif b.type == "float":
+                buf.type = pygpuip.BufferType.FLOAT
+            elif b.type == "ubyte":
+                buf.type = pygpuip.BufferType.UNSIGNED_BYTE
 
             buffers[b.name] = buf
             gpuip_obj.AddBuffer(buf)

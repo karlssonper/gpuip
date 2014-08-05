@@ -264,7 +264,7 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
         b.name = "b%i" % i
         b.data = numpy.zeros((width,height), dtype = numpy.float32)
         b.channels = 1
-        b.bpp = 4
+        b.type = gpuip.BufferType.FLOAT
         base.AddBuffer(b)
 
     kernelA = base.CreateKernel("my_kernelA")
@@ -302,14 +302,14 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
         for j in range(height):
             indata[i][j] = i + j * width
     buffers[0].data[:] = indata
-    assert base.WriteBuffer(buffers[0]) == no_error
+    assert base.WriteBufferToGPU(buffers[0]) == no_error
 
     assert base.Build() == no_error
     assert base.Build() == no_error # rebuilding should not break things
     assert base.Process() == no_error
 
     for b in buffers:
-        assert base.ReadBuffer(b) == no_error
+        assert base.ReadBufferFromGPU(b) == no_error
 
     def eq(a,b):
         return abs(a-b) < 0.0001

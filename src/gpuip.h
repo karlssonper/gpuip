@@ -19,9 +19,10 @@ enum GpuEnvironment { OpenCL, CUDA, GLSL };
 //----------------------------------------------------------------------------//
 struct Buffer {
     enum CopyOperation{ READ_DATA, WRITE_DATA };
+    enum Type{ UNSIGNED_BYTE, HALF, FLOAT };
     std::string name;
+    Type type;
     unsigned int channels;
-    unsigned int bpp; // bytes per pixel
 };
 //----------------------------------------------------------------------------//
 template<typename T>
@@ -83,7 +84,7 @@ class Base
     {
         return _h;
     }
-    
+
     virtual bool Allocate(std::string * err) = 0;
 
     virtual bool Build(std::string * err) = 0;

@@ -301,7 +301,8 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
 
     // Draw quad
     glDrawArrays(GL_QUADS, 0, 4);
-
+    glFinish();
+    
     if (_glErrorDraw(error, kernel.name)) {
         return false;
     }
@@ -319,15 +320,13 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
 //----------------------------------------------------------------------------//
 GLenum _GetType(const Buffer & b)
 {
-    switch(b.bpp / b.channels) {
-        case 1:
+    switch(b.type) {
+        case Buffer::UNSIGNED_BYTE:
             return GL_UNSIGNED_BYTE;
-        case 2:
+        case Buffer::HALF:
             return GL_HALF_FLOAT;
-        case 4:
+        case Buffer::FLOAT:
             return GL_FLOAT;
-        case 8:
-            return GL_DOUBLE;
         default:
             std::cerr << "Unknown OpenGL data type.. " << std::endl;
             return GL_FLOAT;

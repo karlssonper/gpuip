@@ -5,6 +5,7 @@ project(gpuip_src)
 if (NOT WIN32)
   add_definitions(-Wall)
   add_definitions(-fPIC)
+  add_definitions(-O3)
 endif()
 
 # Common variables for compling the library
@@ -12,7 +13,7 @@ set(SOURCE gpuip)
 set(LIBRARIES)
 
 # Build with OpenCL
-if(OpenCL)
+if(OPENCL)
   message(STATUS "Generating build with OpenCL...")
   add_definitions(-D_GPUIP_OPENCL)
   find_package(OpenCL REQUIRED)
@@ -20,9 +21,9 @@ if(OpenCL)
   message(${OPENCL_LIBRARIES})
   set(LIBRARIES ${LIBRARIES} ${OPENCL_LIBRARIES})
   set(SOURCE ${SOURCE} opencl)  
-else(OpenCL)
+else(OPENCL)
   message(STATUS "OpenCL disabled .")
-endif(OpenCL)
+endif(OPENCL)
 
 # Build with CUDA
 if(CUDA)
@@ -30,6 +31,13 @@ if(CUDA)
   add_definitions(-D_GPUIP_CUDA)
   find_package(CUDA REQUIRED)
   find_package(CUDADriver REQUIRED)
+  find_package(CUDAMath)
+  if(CUDA_HELPER_MATH_FOUND)
+	add_definitions(-DCUDA_HELPER_DIR="\\"${CUDA_HELPER_MATH_DIR}\\"")
+  else(CUDA_HELPER_MATH_FOUND)
+	message(STATUS "CUDA Helper math not included")  
+  endif(CUDA_HELPER_MATH_FOUND)
+
   include_directories(${CUDA_INCLUDE_DIRS})
 
   set(LIBRARIES ${LIBRARIES} ${CUDA_LIBRARIES} ${CUDA_DRIVER_LIBRARY})
@@ -66,9 +74,11 @@ else(GLSL)
 endif(GLSL)
 
 # Build the gpuip library
-add_library(gpuip_static ${SOURCE})
-add_library(gpuip SHARED ${SOURCE})
-target_link_libraries(gpuip_static ${LIBRARIES})
+if (BUILD_SHARED_LIB)
+  add_library(gpuip SHARED ${SOURCE})
+else (BUILD_SHARED_LIB)
+  add_library(gpuip ${SOURCE})
+endif (BUILD_SHARED_LIB)
 target_link_libraries(gpuip ${LIBRARIES})
 install(TARGETS gpuip DESTINATION lib)
 
@@ -90,7 +100,7 @@ if(PYTHON)
 	${Boost_NUMPY_INCLUDE_DIRS})
 
   set(PY_LIBS 
-	gpuip_static 
+	gpuip
 	${PYTHON_LIBRARIES} 
 	${Boost_PYTHON_LIBRARY} 
 	${Boost_NUMPY_LIBRARY})
@@ -119,7 +129,7 @@ if(PYTHON)
 	set(PY_LIBS ${PY_LIBS} ${OPENEXR_LIBRARIES})
   endif(OPENEXR_FOUND)
   
-  add_library(pygpuip SHARED python.cpp cimg_numpy_wrapper)
+  add_library(pygpuip SHARED python.cpp io_wrapper.cpp)
   target_link_libraries(pygpuip ${PY_LIBS})
   
   # Rename python shared lib from libpyGpuip.{so,lib} to pyGpuip.{so,pyd}

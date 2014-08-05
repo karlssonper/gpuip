@@ -112,14 +112,27 @@ void Base::SetDimensions(unsigned int width, unsigned int height)
 //----------------------------------------------------------------------------//
 unsigned int  Base::_GetBufferSize(const Buffer & buffer) const
 {
-    unsigned int bpp = buffer.bpp;
+    unsigned int bpp; // bytes per pixel
+    switch(buffer.type) {
+        case Buffer::UNSIGNED_BYTE:
+            bpp = buffer.channels;
+            break;
+        case Buffer::HALF:
+            bpp = 0.5*sizeof(float) * buffer.channels;
+            break;
+        case Buffer::FLOAT:
+            bpp = sizeof(float) * buffer.channels;
+            break;
+        default:
+            bpp = 0;
+    }
 
     // Special case in OpenCL since it pads with {uchar,float}4
     // even if the array is of type {uchar,float}3
     if (_env == OpenCL and buffer.channels == 3) {
         bpp = (bpp /3 ) * 4;
     }
-        
+    
     return bpp * _w * _h;
 }
 //----------------------------------------------------------------------------//

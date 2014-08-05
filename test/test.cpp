@@ -266,7 +266,7 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
     gpuip::Buffer b1;
     b1.name = "b1";
     b1.channels = 1;
-    b1.bpp = sizeof(float);
+    b1.type = gpuip::Buffer::FLOAT;
 
     gpuip::Buffer b2 = b1;
     b2.name = "b2";

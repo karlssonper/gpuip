@@ -4,6 +4,7 @@ from OpenGL import GL
 from OpenGL.GL import shaders
 from OpenGL.arrays import vbo
 from OpenGL.GL.ARB import texture_rg
+from OpenGL.GL.ARB import half_float_vertex
 from ctypes import c_void_p
 import numpy
 import math
@@ -99,7 +100,7 @@ class DisplayWidget(QtGui.QWidget):
     def onBufferSelectChange(self, value):
         ndarray = self.buffers[str(value)].data
         self.glWidget.copyDataToTexture(ndarray)
-        if ndarray.dtype == numpy.float32:
+        if ndarray.dtype == numpy.float32 or ndarray.dtype == numpy.float16:
             self.slider.setEnabled(True)
         else:
             self.slider.setEnabled(False)
@@ -191,6 +192,20 @@ class GLWidget(QtOpenGL.QGLWidget):
                 glInternalFormat = GL.GL_RGB32F
             elif channels == 4:
                 glInternalFormat = GL.GL_RGBA32F
+        elif ndarray.dtype == numpy.float16:
+            glType = GL.GL_FLOAT
+            # Need to use the exposure shader if floating point
+            self.hdr_mode = 1
+
+            # The internal format changes with floating point textures
+            if channels == 1:
+                glInternalFormat = texture_rg.GL_R16F
+            elif channels == 2:
+                glInternalFormat = texture_rg.GL_RG16F
+            elif channels == 3:
+                glInternalFormat = GL.GL_RGB16F
+            elif channels == 4:
+                glInternalFormat = GL.GL_RGBA16F
         else:
             glType = GL.GL_UNSIGNED_BYTE
             self.hdr_mode = 0

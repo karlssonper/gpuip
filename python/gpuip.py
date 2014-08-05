@@ -30,6 +30,9 @@ def getCommandLineArguments():
     parser.add_argument("-v","--verbose",
                         action="store_true",
                         help="Outputs information")
+    parser.add_argument("-ts","--timestamp",
+                        action="store_true",
+                        help="Add timestamp in log output")
     parser.add_argument("-ng", "--nogui",
                         action="store_true",
                         help="Command line version")
@@ -109,6 +112,7 @@ def runCommandLine(ipsettings, verbose):
             terminate(err)
 
     def log(text, stopwatch = None, time = True):
+        time = time and args.timestamp
         if verbose:
             stopwatchStr = str(stopwatch) if stopwatch else  ""
             timeStr = utils.getTimeStr() if time else ""
@@ -117,22 +121,20 @@ def runCommandLine(ipsettings, verbose):
     overall_clock = utils.StopWatch()
 
     ### 0. Create gpuip items from settings
-
-    log("Creating elements from settings...")
     gpuip, buffers, kernels = ipsettings.create()
+    log("Created elements from settings.", overall_clock)
 
     ### 1. Build
     c = utils.StopWatch()
-    log("Building kernels [%s]..." %  [k.name for k in kernels])
     check_error(gpuip.Build())
-    log("Building done.", c)
-
+    log("Building kernels [%s]." %  [k.name for k in kernels], c)
+    
     ### 2. Import data from images
     c = utils.StopWatch()
     for b in ipsettings.buffers:
         if b.input:
             log("Importing data from %s to %s" %(b.input, b.name))
-            check_error(buffers[b.name].Read(b.input))
+            check_error(buffers[b.name].Read(b.input, utils.getNumCores()))
     log("Importing data done.", c)
             
     ### 3. Allocate and transfer data to GPU
@@ -144,12 +146,11 @@ def runCommandLine(ipsettings, verbose):
     c = utils.StopWatch()
     for b in ipsettings.buffers:
         if b.input:
-            check_error(gpuip.WriteBuffer(buffers[b.name]))
+            check_error(gpuip.WriteBufferToGPU(buffers[b.name]))
     log("Transfering data to GPU done.", c)
 
     ### 4. Process
     c = utils.StopWatch()
-    log("Processing kernels ...")
     check_error(gpuip.Process())
     log("Processing done.", c)
 
@@ -158,8 +159,8 @@ def runCommandLine(ipsettings, verbose):
     for b in ipsettings.buffers:
         if b.output:
             log("Exporting data from %s to %s" %(b.name, b.output))
-            check_error(gpuip.ReadBuffer(buffers[b.name]))
-            check_error(buffers[b.name].Write(b.output))
+            check_error(gpuip.ReadBufferFromGPU(buffers[b.name]))
+            check_error(buffers[b.name].Write(b.output,utils.getNumCores()))
     log("Exporting data done.", c)
 
     log("\nAll steps done. Total runtime:", overall_clock, time = False)

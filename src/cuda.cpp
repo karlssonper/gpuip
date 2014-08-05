@@ -9,7 +9,8 @@ namespace gpuip {
 //----------------------------------------------------------------------------//
 inline int _cudaGetMaxGflopsDeviceId();
 //----------------------------------------------------------------------------//
-Base * CreateCUDA()
+Base *
+CreateCUDA()
 {
     return new CUDAImpl();
 }
@@ -20,10 +21,11 @@ CUDAImpl::CUDAImpl()
     if (cudaSetDevice(_cudaGetMaxGflopsDeviceId()) != cudaSuccess) {
         throw std::logic_error("gpuip::CUDAImpl() could not set device id");
     };
-    cudaFree(0); //use runtime api to create a CUDA context automatically
+    cudaFree(0); //use runtime api to create a CUDA context implicitly
 }
 //----------------------------------------------------------------------------//
-bool CUDAImpl::Allocate(std::string * err)
+bool
+CUDAImpl::Allocate(std::string * err)
 {
     cudaError_t c_err;
 
@@ -48,7 +50,8 @@ bool CUDAImpl::Allocate(std::string * err)
     return true;
 }
 //----------------------------------------------------------------------------//
-bool CUDAImpl::Build(std::string * err)
+bool
+CUDAImpl::Build(std::string * err)
 {
     CUresult c_err;
     if (_cudaBuild) {
@@ -62,6 +65,9 @@ bool CUDAImpl::Build(std::string * err)
     
     // Create temporary file to compile
     std::ofstream out(".temp.cu");
+#ifdef CUDA_HELPER_DIR
+    out << "#include <helper_math.h>\n";
+#endif
     out << "extern \"C\" { \n"; // To avoid function name mangling 
     for(size_t i = 0; i < _kernels.size(); ++i) {
         out << _kernels[i]->code << "\n";
@@ -69,8 +75,14 @@ bool CUDAImpl::Build(std::string * err)
     out << "}"; // End the extern C bracket
     out.close();
 
-    int nvcc_exit_status = system(
-        "nvcc -ptx .temp.cu -o .temp.ptx --Wno-deprecated-gpu-targets");
+    std::stringstream ss;
+    ss << "nvcc -ptx .temp.cu -o .temp.ptx --Wno-deprecated-gpu-targets";
+#ifdef CUDA_HELPER_DIR
+    // Includes vector float operations such as mult, add etc
+    ss << " -I " << CUDA_HELPER_DIR;
+#endif
+    
+    int nvcc_exit_status = system(ss.str().c_str());
 
     // Cleanup temp text file
     system("rm .temp.cu");
@@ -101,7 +113,8 @@ bool CUDAImpl::Build(std::string * err)
     return true;
 }
 //----------------------------------------------------------------------------//
-bool CUDAImpl::Process(std::string * err)
+bool
+CUDAImpl::Process(std::string * err)
 {
     for(size_t i = 0; i < _kernels.size(); ++i) {
         if (!_LaunchKernel(*_kernels[i].get(), _cudaKernels[i], err)) {
@@ -111,12 +124,13 @@ bool CUDAImpl::Process(std::string * err)
     return true;
 }
 //----------------------------------------------------------------------------//
-bool CUDAImpl::Copy(const std::string & buffer,
+bool
+CUDAImpl::Copy(const std::string & buffer,
                     Buffer::CopyOperation op,
                     void * data,
                     std::string * err)
 {
-    cudaError_t e;
+    cudaError_t e = cudaSuccess;
     const size_t size = _GetBufferSize(_buffers[buffer]);
     if (op == Buffer::READ_DATA) {
         e =cudaMemcpy(data, _cudaBuffers[buffer], size, cudaMemcpyDeviceToHost);
@@ -129,102 +143,8 @@ bool CUDAImpl::Copy(const std::string & buffer,
     return true;
 }
 //----------------------------------------------------------------------------//
-inline std::string _GetTypeStr(const Buffer & buffer)
-{
-    std::stringstream type;
-    switch(buffer.bpp/buffer.channels) {
-        case 1:
-            if (buffer.channels > 1) {
-                type << "uchar";
-            } else {
-                type << "unsigned char";
-            }
-            break;
-        case 4:
-            type << "float";
-            break;
-        case 8:
-            type << "double";
-            break;
-        default:
-            type << "float";
-    };
-    if (buffer.channels > 1) {
-        type << buffer.channels;
-    }
-    return type.str();
-}
-std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const 
-{
-   std::stringstream ss;
-
-   // Indent string
-   ss << ",\n" << std::string(kernel->name.size() + 1, ' ');
-   const std::string indent = ss.str();
-   ss.str("");
-   
-   ss << "__global__ void\n" << kernel->name << "(";
-
-   bool first = true;
-
-   for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-       ss << (first ? "" : indent);
-       first = false;
-       const std::string & bname = kernel->inBuffers[i].first.name;
-       ss << "const " << _GetTypeStr(_buffers.find(bname)->second)
-          << " * " << kernel->inBuffers[i].second;
-   }
-
-   for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-       ss << (first ? "" : indent);
-       first = false;
-       const std::string & bname = kernel->outBuffers[i].first.name;
-       ss <<  _GetTypeStr(_buffers.find(bname)->second)
-          << " * " << kernel->outBuffers[i].second;
-   }
-
-   for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
-       ss << (first ? "" : indent);
-       first = false;        
-       ss << "const int " << kernel->paramsInt[i].name;
-   }
-   for(size_t i = 0; i < kernel->paramsFloat.size(); ++i) {
-       ss << (first ? "" : indent);
-       first = false;
-       ss << "const float " << kernel->paramsFloat[i].name;
-   }
-   ss << indent << "const int width" << indent << "const int height)\n";
-  
-   ss << "{\n";
-   ss << "    const int x = blockIdx.x * blockDim.x + threadIdx.x;\n";
-   ss << "    const int y = blockIdx.y * blockDim.y + threadIdx.y;\n\n";
-   ss << "    // array index\n";
-   ss << "    const int idx = x + width * y;\n\n";
-   ss << "    // inside image bounds check\n";
-   ss << "    if (x >= width || y >= height) {\n";
-   ss << "        return;\n";
-   ss << "    }\n\n";
-   ss << "    // kernel code\n";
-
-   for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-       const Buffer & b = _buffers.find(
-           kernel->outBuffers[i].first.name)->second;
-       ss << "    " << kernel->outBuffers[i].second << "[idx] = ";
-       if (b.channels == 1) {
-           ss << "0;\n";
-       } else {
-           ss << "make_" << _GetTypeStr(b) << "(";
-           for(size_t j = 0; j < b.channels; ++j) {
-               ss << (j ==0 ? "" : ", ") << "0";
-           }
-           ss << ");\n";
-       }
-   }    
-   ss << "}";
-   return ss.str();
-}
-//----------------------------------------------------------------------------//
-bool CUDAImpl::_LaunchKernel(Kernel & kernel,
+bool
+CUDAImpl::_LaunchKernel(Kernel & kernel,
                              const CUfunction & cudaKernel,
                              std::string * err)
 {
@@ -279,6 +199,192 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
     }
         
     return true;
+}
+//----------------------------------------------------------------------------//
+inline std::string _GetTypeStr(const Buffer & buffer)
+{
+    std::stringstream type;
+    switch(buffer.type) {
+        case Buffer::UNSIGNED_BYTE:
+            if (buffer.channels > 1) {
+                type << "uchar";
+            } else {
+                type << "unsigned char";
+            }
+            break;
+        case Buffer::HALF:
+            type << "unsigned short";
+            break;
+        case Buffer::FLOAT:
+            type << "float";
+            break;
+        default:
+            type << "float";
+    };
+    if (buffer.channels > 1 and buffer.type != Buffer::HALF) {
+        type << buffer.channels;
+    }
+    return type.str();
+}
+std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const 
+{
+    std::stringstream ss;
+
+    // Indent string
+    ss << ",\n" << std::string(kernel->name.size() + 1, ' ');
+    const std::string indent = ss.str();
+    ss.str("");
+   
+    ss << "__global__ void\n" << kernel->name << "(";
+
+    bool first = true;
+
+    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
+        ss << (first ? "" : indent);
+        first = false;
+        const std::string & name = kernel->inBuffers[i].first.name;
+        ss << "const " << _GetTypeStr(_buffers.find(name)->second)
+           << " * " << kernel->inBuffers[i].second
+           << (_buffers.find(name)->second.type == Buffer::HALF ? "_half" : "");   }
+
+    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+        ss << (first ? "" : indent);
+        first = false;
+        const std::string & name = kernel->outBuffers[i].first.name;
+        ss <<  _GetTypeStr(_buffers.find(name)->second)
+           << " * " << kernel->outBuffers[i].second
+           << (_buffers.find(name)->second.type == Buffer::HALF ? "_half" : "");
+    }
+
+    for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
+        ss << (first ? "" : indent);
+        first = false;        
+        ss << "const int " << kernel->paramsInt[i].name;
+    }
+    for(size_t i = 0; i < kernel->paramsFloat.size(); ++i) {
+        ss << (first ? "" : indent);
+        first = false;
+        ss << "const float " << kernel->paramsFloat[i].name;
+    }
+    ss << indent << "const int width" << indent << "const int height)\n";
+  
+    ss << "{\n";
+    ss << "    const int x = blockIdx.x * blockDim.x + threadIdx.x;\n";
+    ss << "    const int y = blockIdx.y * blockDim.y + threadIdx.y;\n\n";
+    ss << "    // array index\n";
+    ss << "    const int idx = x + width * y;\n\n";
+    ss << "    // inside image bounds check\n";
+    ss << "    if (x >= width || y >= height) {\n";
+    ss << "        return;\n";
+    ss << "    }\n\n";
+   
+    // Do half to float conversions (if needed)
+    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
+        const std::string & bname = kernel->inBuffers[i].first.name;
+        const Buffer & buf = _buffers.find(bname)->second;
+        if (buf.type == Buffer::HALF) {
+            if (!i) {
+                ss << "    // half to float conversion\n";
+            }
+            
+            if (buf.channels == 1) {
+                ss << "    const float " << kernel->inBuffers[i].second
+                   << " = " << "__half2float(" <<  kernel->inBuffers[i].second
+                   << "_half[idx]);\n";
+                continue;
+            }
+            
+            std::stringstream subss;
+            subss << "    const float" << buf.channels << " "
+                  << kernel->inBuffers[i].second
+                  << " = make_float" << buf.channels << "(";
+            const std::string preindent = subss.str();
+            subss.str("");
+            subss << ",\n" << std::string(preindent.size(), ' ');
+            const std::string subindent = subss.str();
+            ss << preindent;
+            bool subfirst = true;
+            for (unsigned int j = 0; j < buf.channels; ++j) {
+                ss << (subfirst ? "" : subindent);
+                subfirst = false;
+                ss << "__half2float(" <<  kernel->inBuffers[i].second
+                   << "_half[" << buf.channels << " * idx + " << j << "])";
+            }
+            ss <<");\n";
+
+            if (i == kernel->inBuffers.size() - 1) {
+                ss << "\n";
+            }
+        }
+    }
+
+    ss << "    // kernel code\n";
+    for (size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+        const Buffer & b = _buffers.find(
+            kernel->outBuffers[i].first.name)->second;
+        ss << "    ";
+        if (b.type == Buffer::HALF) {
+            ss << "float" << b.channels << " ";
+        }
+        ss << kernel->outBuffers[i].second;
+        if (b.type != Buffer::HALF) {
+            ss << "[idx]";
+        }
+        ss << " = ";
+        if (b.channels == 1) {
+            ss << "0;\n";
+        } else {
+            ss << "make_";
+            if (b.type != Buffer::HALF) {
+                ss << _GetTypeStr(b);
+            } else {
+                ss << "float" << b.channels;
+            }
+            ss << "(";
+            for (size_t j = 0; j < b.channels; ++j) {
+                ss << (j ==0 ? "" : ", ") << "0";
+            }
+            ss << ");\n";
+        }
+    }
+
+    // Do half to float conversions (if needed)
+    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+        const std::string & bname = kernel->outBuffers[i].first.name;
+        const Buffer & buf = _buffers.find(bname)->second;
+        if (buf.type == Buffer::HALF) {
+            if (!i) {
+                ss << "\n    // float to half conversion\n";
+            }
+
+            for (unsigned int j = 0; j < buf.channels; ++j) {
+                ss << "    " << kernel->outBuffers[i].second << "_half[";
+                if (buf.channels > 1) {
+                    ss << buf.channels << " * ";
+                }
+                ss << "idx + " << j << "] = __float2half_rn("
+                   << kernel->outBuffers[i].second;
+                switch(j) {
+                    case 0:
+                        ss << (buf.channels > 1 ? ".x" : "");
+                        break;
+                    case 1:
+                        ss << ".y";
+                        break;
+                    case 2:
+                        ss << ".z";
+                        break;
+                    case 3:
+                        ss << ".w";
+                        break;
+                }
+                ss << ");\n";
+            }
+        }
+    }
+   
+    ss << "}";
+    return ss.str();
 }
 //----------------------------------------------------------------------------//
 int _cudaGetMaxGflopsDeviceId()

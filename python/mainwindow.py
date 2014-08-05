@@ -184,7 +184,7 @@ class MainWindow(QtGui.QMainWindow):
             if b.input:
                 self.log("Importing data from image <i>%s</i> to <i>%s</i>." \
                          % (b.input, b.name))
-                err = self.buffers[b.name].Read(b.input)
+                err = self.buffers[b.name].Read(b.input, utils.getNumCores())
                 if err:
                     self.logError(err)
                     return False
@@ -213,7 +213,7 @@ class MainWindow(QtGui.QMainWindow):
         clock = utils.StopWatch()
         for b in self.settings.buffers:
             if b.input:
-                err = self.gpuip.WriteBuffer(self.buffers[b.name])
+                err = self.gpuip.WriteBufferToGPU(self.buffers[b.name])
                 if err:
                     self.logError(err)
                     return False
@@ -245,12 +245,13 @@ class MainWindow(QtGui.QMainWindow):
 
         clock = utils.StopWatch()
         for b in self.buffers:
-            err = self.gpuip.ReadBuffer(self.buffers[b])
+            err = self.gpuip.ReadBufferFromGPU(self.buffers[b])
             if err:
                 self.logError(err)
                 return False
         self.logSuccess("Data transfered from GPU.", clock)
         self.displayWidget.refreshDisplay()
+        return True
 
     def export_to_images(self):
         self.updateSettings()
@@ -260,7 +261,7 @@ class MainWindow(QtGui.QMainWindow):
             if b.output:
                 self.log("Exporting data from buffer <i>%s</i> to <i>%s</i>." \
                          % (b.name, b.output))
-                err = self.buffers[b.name].Write(b.output)
+                err = self.buffers[b.name].Write(b.output, utils.getNumCores())
                 if err:
                     self.logError(err)
                     return False

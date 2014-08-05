@@ -1,5 +1,5 @@
 #include "gpuip.h"
-#include "cimg_numpy_wrapper.h"
+#include "io_wrapper.h"
 #include <boost/python.hpp>
 #include <boost/numpy.hpp>
 //----------------------------------------------------------------------------//
@@ -14,23 +14,25 @@ class _BufferWrapper : public gpuip::Buffer
 
     std::string Read(const std::string & filename)
     {
+        return ReadMT(filename, 0);
+    }
+    
+    std::string ReadMT(const std::string & filename, int numThreads)
+    {
         std::string err;
-        if (bpp / channels == 4) {
-            gpuip::_CImgToNumpy<float>(data,channels,filename);
-        } else if (bpp / channels == 1) {
-            gpuip::_CImgToNumpy<unsigned char>(data,channels,filename);
-        }
+        gpuip::io::ReadFromFile(&data, *this, filename, numThreads);
         return err;
     }
     
     std::string Write(const std::string & filename)
     {
+        return WriteMT(filename, 0);
+    }
+
+    std::string WriteMT(const std::string & filename, int numThreads)
+    {
         std::string err;
-        if (bpp / channels == 4) {
-            gpuip::_NumpyToCImg<float>(data,channels,filename);
-        } else if (bpp / channels == 1) {
-            gpuip::_NumpyToCImg<unsigned char>(data,channels,filename);
-        }
+        gpuip::io::WriteToFile(&data, *this, filename, numThreads);
         return err;
     }
     
@@ -136,7 +138,7 @@ class _BaseWrapper
         return err;
     }
 
-    std::string ReadBuffer(_BufferWrapper & buffer)
+    std::string ReadBufferFromGPU(_BufferWrapper & buffer)
     {
         std::string err;
         _base->Copy(buffer.name, gpuip::Buffer::READ_DATA,
@@ -144,7 +146,7 @@ class _BaseWrapper
         return err;
     }
 
-    std::string WriteBuffer(const _BufferWrapper & buffer)
+    std::string WriteBufferToGPU(const _BufferWrapper & buffer)
     {
         std::string err;
         _base->Copy(buffer.name, gpuip::Buffer::WRITE_DATA,
@@ -169,13 +171,20 @@ BOOST_PYTHON_MODULE(pygpuip)
             .value("CUDA", gpuip::CUDA)
             .value("GLSL", gpuip::GLSL);
 
+    bp::enum_<gpuip::Buffer::Type>("BufferType")
+            .value("UNSIGNED_BYTE", gpuip::Buffer::UNSIGNED_BYTE)
+            .value("HALF", gpuip::Buffer::HALF)
+            .value("FLOAT", gpuip::Buffer::FLOAT);
+
     bp::class_<_BufferWrapper, boost::shared_ptr<_BufferWrapper> >("Buffer")
             .def_readwrite("name", &_BufferWrapper::name)
             .def_readwrite("channels", &_BufferWrapper::channels)
-            .def_readwrite("bpp", &_BufferWrapper::bpp)
+            .def_readwrite("type", &_BufferWrapper::type)
             .def_readwrite("data", &_BufferWrapper::data)
             .def("Read", &_BufferWrapper::Read)
-            .def("Write", &_BufferWrapper::Write);
+            .def("Read", &_BufferWrapper::ReadMT)
+            .def("Write", &_BufferWrapper::Write)
+            .def("Write", &_BufferWrapper::WriteMT);
     
     bp::class_<gpuip::Parameter<int> >("ParamInt")
             .def_readwrite("name", &gpuip::Parameter<int>::name)
@@ -202,8 +211,8 @@ BOOST_PYTHON_MODULE(pygpuip)
             .def("Allocate", &_BaseWrapper::Allocate)
             .def("Build", &_BaseWrapper::Build)
             .def("Process", &_BaseWrapper::Process)
-            .def("ReadBuffer", &_BaseWrapper::ReadBuffer)
-            .def("WriteBuffer", &_BaseWrapper::WriteBuffer)
+            .def("ReadBufferFromGPU", &_BaseWrapper::ReadBufferFromGPU)
+            .def("WriteBufferToGPU", &_BaseWrapper::WriteBufferToGPU)
             .def("GetBoilerplateCode", &_BaseWrapper::GetBoilerplateCode);
 
     bp::def("CanCreateGpuEnvironment", &gpuip::Base::CanCreateGpuEnvironment);
