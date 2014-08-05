@@ -87,6 +87,7 @@ if(PYTHON)
   message(STATUS "Generating build with python bindings...")
   add_definitions(-D_GPUIP_PYTHON_BINDINGS)
   find_package(Boost REQUIRED COMPONENTS python)
+  find_package(NumPy REQUIRED)
   find_package(BoostNumpy REQUIRED)
   find_package(PythonLibs REQUIRED)
   find_package(PNG)
@@ -95,6 +96,7 @@ if(PYTHON)
   find_package(OpenEXR)
 
   include_directories(
+	${NUMPY_INCLUDE_DIRS}
 	${PYTHON_INCLUDE_DIR} 
 	${Boost_INCLUDE_DIRS}
 	${Boost_NUMPY_INCLUDE_DIRS})

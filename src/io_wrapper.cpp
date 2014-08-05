@@ -1,11 +1,12 @@
 #include "io_wrapper.h"
 #include "gpuip.h"
-#include "3rdparty/CImg.h"
 #include <boost/numpy.hpp>
 #include <boost/python.hpp>
 #include <numpy/arrayobject.h>
 #include <ImfRgbaFile.h>
 #include <ImfConvert.h>
+#define cimg_OS 0
+#include "3rdparty/CImg.h"
 //----------------------------------------------------------------------------//
 namespace np = boost::numpy;
 namespace bp = boost::python;
