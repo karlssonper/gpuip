@@ -1,26 +1,26 @@
 <gpuip>
-  <environment>OpenCL</environment>
+  <environment>GLSL</environment>
   <buffer>
     <name>buffer1</name>
-    <type>float</type>
+    <type>ubyte</type>
     <channels>4</channels>
-    <input>images/GoldenGate.exr</input>
+    <input>images/lena.png</input>
   </buffer>
   <buffer>
     <name>buffer2</name>
-    <type>float</type>
+    <type>ubyte</type>
     <channels>4</channels>
-    <input>images/Ocean.exr</input>
+    <input>images/baboon.png</input>
   </buffer>
   <buffer>
     <name>buffer3</name>
-    <type>float</type>
+    <type>ubyte</type>
     <channels>4</channels>
-    <output>output_images/lerp_float_opencl.exr</output>
+    <output>output_images/lerp_glsl.png</output>
   </buffer>
   <kernel>
     <name>lerp</name>
-    <code_file>kernels/lerp_float.cl</code_file>
+    <code_file>kernels/lerp.glsl</code_file>
     <inbuffer>
       <name>a</name>
       <targetbuffer>buffer1</targetbuffer>
@@ -36,7 +36,7 @@
     <param>
       <name>alpha</name>
       <type>float</type>
-      <value>0.84</value>
+      <value>0.35</value>
       <default>0.0</default>
       <min>0.0</min>
       <max>1.0</max>

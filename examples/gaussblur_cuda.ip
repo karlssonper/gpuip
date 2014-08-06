@@ -1,0 +1,35 @@
+<gpuip>
+  <environment>CUDA</environment>
+  <buffer>
+    <name>buffer1</name>
+    <type>half</type>
+    <channels>4</channels>
+    <input>images/GoldenGate.exr</input>
+  </buffer>
+  <buffer>
+    <name>buffer2</name>
+    <type>half</type>
+    <channels>4</channels>
+    <output>/home/per/dev/gpuip/examples/output_images/gaussblur_cuda.exr</output>
+  </buffer>
+  <kernel>
+    <name>gaussian_blur</name>
+    <code_file>/home/per/dev/gpuip/examples/kernels/gaussian_blur.cu</code_file>
+    <inbuffer>
+      <name>in</name>
+      <targetbuffer>buffer1</targetbuffer>
+    </inbuffer>
+    <outbuffer>
+      <name>out</name>
+      <targetbuffer>buffer2</targetbuffer>
+    </outbuffer>
+    <param>
+      <name>n</name>
+      <type>int</type>
+      <value>1</value>
+      <default>1</default>
+      <min>1</min>
+      <max>16</max>
+    </param>
+  </kernel>
+</gpuip>

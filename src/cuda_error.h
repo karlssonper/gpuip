@@ -1,6 +1,8 @@
 #ifndef GPUIP_CUDA_ERROR_H_
 #define GPUIP_CUDA_ERROR_H_
 //----------------------------------------------------------------------------//
+#include <sstream>
+//----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
 inline bool _cudaErrorGetFunction(CUresult c_err, std::string * err,
@@ -57,9 +59,25 @@ inline bool _cudaErrorCopy(cudaError_t c_err, std::string * err,
         (*err) += " buffer ";
         (*err) += buffer;
         switch(c_err) {
-            //TODO: add cases here
-            default:
+            case cudaErrorInvalidValue:
+                (*err) += ". Invalid value.\n";
                 break;
+            case cudaErrorInvalidDevicePointer:
+                (*err) += ". Invalid device pointer.\n";
+                break;
+            case cudaErrorInvalidMemcpyDirection:
+                (*err) += ". Invalid Memcpy direction.\n";
+                break;
+            case cudaErrorIllegalAddress:
+                (*err) += ". Illegal address.\n";
+                break;
+            //TODO: add cases here
+            default: {
+                (*err) += ". Unknown error enum: ";
+                std::stringstream ss;
+                ss << c_err << std::endl;
+                (*err) += ss.str();
+            }
         }
         return true;
     }

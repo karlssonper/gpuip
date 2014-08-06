@@ -113,7 +113,7 @@ class NewDialog(QtGui.QDialog):
         # Kernels
         for k in self.kernels:
             sk = settings.Settings.Kernel(
-                str(k.nameLineEdit.text()).replace(" ", "/"),
+                str(k.nameLineEdit.text()).replace(" ", "_"),
                 str(k.codeFileLineEdit.text()))
 
             # In Buffers

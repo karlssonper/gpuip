@@ -4,23 +4,23 @@
     <name>buffer1</name>
     <type>ubyte</type>
     <channels>4</channels>
-    <input>/home/per/dev/gpuip/examples/images/lena.png</input>
+    <input>images/lena.png</input>
   </buffer>
   <buffer>
     <name>buffer2</name>
     <type>ubyte</type>
     <channels>4</channels>
-    <input>/home/per/dev/gpuip/examples/images/baboon.png</input>
+    <input>images/baboon.png</input>
   </buffer>
   <buffer>
     <name>buffer3</name>
     <type>ubyte</type>
     <channels>4</channels>
-    <output>/home/per/dev/gpuip/examples/output_images/lerp_ubyte_cuda.png</output>
+    <output>output_images/lerp_ubyte_cuda.png</output>
   </buffer>
   <kernel>
     <name>lerp</name>
-    <code_file>/home/per/dev/gpuip/examples/kernels/lerp_ubyte.cu</code_file>
+    <code_file>kernels/lerp_ubyte.cu</code_file>
     <inbuffer>
       <name>a</name>
       <targetbuffer>buffer1</targetbuffer>

@@ -3,10 +3,16 @@ cmake_minimum_required(VERSION 2.8)
 
 project(gpuip)
 
+# Set default build type to release (if not specified)
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RELEASE)
+endif()
+
 # Local cmake find modules can be found in the cmake folder
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-option(OpenCL "OpenCL" ON)
+option(BUILD_SHARED_LIB "Build shared lib" OFF)
+option(OPENCL "OpenCL" ON)
 option(CUDA "CUDA" ON)
 option(GLSL "GLSL" ON)
 option(PYTHON "PYTHON" ON)
@@ -25,13 +31,13 @@ if (TEST)
 
   # Add C++ test
   add_executable(test_cpp test/test)
-  target_link_libraries(test_cpp gpuip_static)
+  target_link_libraries(test_cpp gpuip)
   add_test(NAME test_cpp COMMAND test_cpp)
 
   # Add python test
   if (PYTHON)
 	find_package(PythonInterp REQUIRED)
-	configure_file(test/test.py test.py COPYONLY)
-	add_test(NAME test_py COMMAND ${PYTHON_EXECUTABLE} test.py)
+	configure_file(test/test.py src/test.py COPYONLY)
+	add_test(NAME test_py COMMAND ${PYTHON_EXECUTABLE} src/test.py)
   endif(PYTHON)
 endif(TEST)

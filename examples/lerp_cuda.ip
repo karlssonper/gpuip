@@ -4,23 +4,23 @@
     <name>buffer1</name>
     <type>half</type>
     <channels>4</channels>
-    <input>/home/per/dev/gpuip/examples/images/GoldenGate.exr</input>
+    <input>images/GoldenGate.exr</input>
   </buffer>
   <buffer>
     <name>buffer2</name>
     <type>half</type>
     <channels>4</channels>
-    <input>/home/per/dev/gpuip/examples/images/Ocean.exr</input>
+    <input>images/Ocean.exr</input>
   </buffer>
   <buffer>
     <name>buffer3</name>
     <type>half</type>
     <channels>4</channels>
-    <output>/home/per/dev/gpuip/examples/output_images/lerp_cuda.exr</output>
+    <output>output_images/lerp_cuda.exr</output>
   </buffer>
   <kernel>
     <name>lerp</name>
-    <code_file>/home/per/dev/gpuip/examples/kernels/lerp.cu</code_file>
+    <code_file>kernels/lerp.cu</code_file>
     <inbuffer>
       <name>a</name>
       <targetbuffer>buffer1</targetbuffer>

@@ -144,14 +144,16 @@ class MainWindow(QtGui.QMainWindow):
         self.kernelWidgets = {}
 
         # Re-add GUI components for buffers widget
-        self.buffersWidget = bufferswidget.BuffersWidget(self)
-        self.dockBuffers.setWidget(self.buffersWidget)
+        scroll = QtGui.QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        self.buffersWidget = bufferswidget.BuffersWidget(scroll)
+        scroll.setWidget(self.buffersWidget)
+        self.dockBuffers.setWidget(scroll)
+        self.buffersWidget.show()
 
         # Remove all kernel widgets from the kernel tab widget
         for i in range(self.kernelTabWidget.count()):
             self.kernelTabWidget.removeTab(0)
-
-
 
     def build(self):
         kernelNames = ""
@@ -270,11 +272,10 @@ class MainWindow(QtGui.QMainWindow):
         return True
 
     def run_all_steps(self):
-        self.build()
-        self.allocate()
-        self.import_from_images()
-        self.process()
-        self.export_to_images()
+        for f in ["build","import_from_images","allocate","process","export_to_images"]:
+            getattr(self,f)() # run func
+            QtGui.QApplication.instance().processEvents() # update gui
+        return True
 
     def log(self, msg):
         self.logBrowser.append(utils.getTimeStr() + msg)

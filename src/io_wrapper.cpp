@@ -1,12 +1,14 @@
 #include "io_wrapper.h"
 #include "gpuip.h"
+#ifdef __APPLE__
+#define cimg_OS 0
+#endif
+#include "3rdparty/CImg.h"
 #include <boost/numpy.hpp>
 #include <boost/python.hpp>
 #include <numpy/arrayobject.h>
 #include <ImfRgbaFile.h>
 #include <ImfConvert.h>
-#define cimg_OS 0
-#include "3rdparty/CImg.h"
 //----------------------------------------------------------------------------//
 namespace np = boost::numpy;
 namespace bp = boost::python;
@@ -53,7 +55,7 @@ void _CImgToNumpy(np::ndarray & data,
     } else {
         for(unsigned int i = 0; i < w; ++i) {
             for(unsigned int j = 0; j < h; ++j) {
-                for(unsigned int k = 0; k < channels; ++k) {
+                for(unsigned int k = 0; k < (c<channels ? c : channels); ++k) {
                     to[channels*(i + w * j)+k] = from[stride*k+ i + w*j];
                 }
             }

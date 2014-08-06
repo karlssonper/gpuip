@@ -1,0 +1,35 @@
+<gpuip>
+  <environment>GLSL</environment>
+  <buffer>
+    <name>buffer1</name>
+    <type>half</type>
+    <channels>4</channels>
+    <input>images/GoldenGate.exr</input>
+  </buffer>
+  <buffer>
+    <name>buffer2</name>
+    <type>half</type>
+    <channels>4</channels>
+    <output>/home/per/dev/gpuip/examples/output_images/boxblur_glsl.exr</output>
+  </buffer>
+  <kernel>
+    <name>box_blur</name>
+    <code_file>kernels/box_blur.glsl</code_file>
+    <inbuffer>
+      <name>input</name>
+      <targetbuffer>buffer1</targetbuffer>
+    </inbuffer>
+    <outbuffer>
+      <name>output</name>
+      <targetbuffer>buffer2</targetbuffer>
+    </outbuffer>
+    <param>
+      <name>n</name>
+      <type>int</type>
+      <value>9</value>
+      <default>1</default>
+      <min>1</min>
+      <max>15</max>
+    </param>
+  </kernel>
+</gpuip>

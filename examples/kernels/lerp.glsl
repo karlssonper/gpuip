@@ -8,5 +8,7 @@ uniform float dx; // delta
 void main()
 {
     // gl_FragData[0] is buffer out
-    gl_FragData[0] = texture2D(a,x);
+    vec4 c = (1-alpha)*texture2D(a,x) + alpha*texture2D(b,x);
+    c.w = 1;
+    gl_FragData[0] = c;
 }
