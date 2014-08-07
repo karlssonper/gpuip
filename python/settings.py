@@ -1,6 +1,7 @@
 from xml.dom import minidom
 import pygpuip
 import numpy
+import utils
 
 class Settings(object):
     class Buffer(object):
@@ -71,7 +72,7 @@ class Settings(object):
         for b in xmldom.getElementsByTagName("buffer"):
             buffer = Settings.Buffer(self.data(b, "name"),
                                      self.data(b, "type"),
-                                     eval(self.data(b, "channels")))
+                                     utils.safeEval(self.data(b, "channels")))
             if b.getElementsByTagName("input"):
                 buffer.input = self.data(b, "input")
             if b.getElementsByTagName("output"):
@@ -101,12 +102,13 @@ class Settings(object):
 
             # Params
             for p in k.getElementsByTagName("param"):
-                param = Settings.Param(self.data(p, "name"),
-                                       self.data(p, "type"),
-                                       eval(self.data(p, "default")),
-                                       eval(self.data(p, "min")),
-                                       eval(self.data(p, "max")))
-                param.value = eval(self.data(p, "value"))
+                type = self.data(p, "type")
+                param = Settings.Param(
+                    self.data(p, "name"), type,
+                    utils.safeEval(self.data(p, "default"),type),
+                    utils.safeEval(self.data(p, "min"),type),
+                    utils.safeEval(self.data(p, "max"),type))
+                param.value = utils.safeEval(self.data(p, "value"),type)
                 kernel.params.append(param)
             self.kernels.append(kernel)
 

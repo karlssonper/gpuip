@@ -100,7 +100,7 @@ class MainWindow(QtGui.QMainWindow):
                 outb.buffer = str(kw.outBuffers[outb.name].cbox.currentText())
             for p in k.params:
                 kernelParam = kw.params[p.name]
-                p.value = eval(kernelParam.lineEdit.text())
+                p.value = utils.safeEval(kernelParam.lineEdit.text())
 
     def initFromSettings(self):
         self.reset()

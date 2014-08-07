@@ -38,3 +38,10 @@ def getNumCores():
 def getTimeStr():
     return str(strftime("[%Y-%m-%d %H:%M:%S] ", gmtime()))
 
+def safeEval(text, fallback = 0.0, type = "float"):
+    try:
+        val = eval(text)
+        return int(val) if type == "int" else val
+    except SyntaxError:
+        return int(fallback) if type == "int" else fallback
+

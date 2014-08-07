@@ -1,5 +1,6 @@
 from PySide import QtGui, QtCore
 import settings
+import utils
 
 class NewDialog(QtGui.QDialog):
     def __init__(self, parent=None):
@@ -105,10 +106,11 @@ class NewDialog(QtGui.QDialog):
 
         # Buffers
         for b in self.buffersGroupBox.buffers:
-            s.buffers.append(settings.Settings.Buffer(
+            s.buffers.append(
+                settings.Settings.Buffer(
                     str(b.nameLineEdit.text()),
                     str(b.typeComboBox.currentText()).strip(),
-                    eval(str(b.channelsComboBox.currentText()))))
+                    utils.safeEval(str(b.channelsComboBox.currentText()))))
 
         # Kernels
         for k in self.kernels:
@@ -131,9 +133,10 @@ class NewDialog(QtGui.QDialog):
                 sk.params.append(settings.Settings.Param(
                         str(p.nameLineEdit.text()),
                         str(p.typeComboBox.currentText()).strip(),
-                        eval(p.defaultLineEdit.text()),
-                        eval(p.minLineEdit.text()),
-                        eval(p.maxLineEdit.text())))
+                        utils.safeEval(p.defaultLineEdit.text()),
+                        utils.safeEval(p.minLineEdit.text()),
+                        utils.safeEval(p.maxLineEdit.text()))
+                        
             s.kernels.append(sk)
 
         return s
@@ -201,9 +204,9 @@ class KernelGroupBox(QtGui.QGroupBox):
             maxVal = self.maxLineEdit.text()
 
             if type == "int":
-                defaultVal = str(int(eval(defaultVal)))
-                minVal = str(int(eval(minVal)))
-                maxVal = str(int(eval(maxVal)))
+                defaultVal = str(utils.safeEval(defaultVal,"int"))
+                minVal = str(utils.safeEval(minVal,"int"))
+                maxVal = str(utils.safeEval(maxVal,"int"))
 
             return name, type, defaultVal, minVal, maxVal
 

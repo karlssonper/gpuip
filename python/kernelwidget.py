@@ -1,5 +1,6 @@
 from PySide import QtGui, QtCore
 import sys
+import utils
 
 class KernelWidget(QtGui.QSplitter):
     def __init__(self, parent = None, callbackFunc = None):
@@ -119,14 +120,10 @@ class Parameter(object):
             return
 
         # Evaluate the line edit text to get the number
-        try:
-            val = eval(self.lineEdit.text())
-            if self.typename == "int":
-                # If the parameter is of int, format line edit to be int too.
-                self.lineEdit.setText(str(int(val)))
-        except SyntaxError:
-            # If error, fallback on the default value
-            val = self.defaultVal
+        val = utils.safeEval(self.lineEdit.text(),self.defaultVal,self.typename)
+        if self.typename == "int":
+            # If the parameter is of int, format line edit to be int too.
+            self.lineEdit.setText(str(val))
 
         # Don't run the onSliderChange  function
         self.updateSlider = False
@@ -271,7 +268,8 @@ class Highlighter(QtGui.QSyntaxHighlighter):
                 self.setCurrentBlockState(1)
                 commentLength = len(text) - startIndex
             else:
-                commentLength = endIndex - startIndex + self.commentEndExpression.matchedLength()
+                commentLength = endIndex - startIndex + \
+                    self.commentEndExpression.matchedLength()
 
             self.setFormat(startIndex, commentLength,
                     self.multiLineCommentFormat)
