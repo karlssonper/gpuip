@@ -4,3 +4,6 @@
 [submodule "3rdparty/openexr"]
 	path = 3rdparty/openexr
 	url = https://github.com/karlssonper/openexr.git
+[submodule "3rdparty/zlib"]
+	path = 3rdparty/zlib
+	url = https://github.com/madler/zlib.git
