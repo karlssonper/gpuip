@@ -6,7 +6,6 @@
 #include "3rdparty/CImg.h"
 #include <boost/numpy.hpp>
 #include <boost/python.hpp>
-#include <numpy/arrayobject.h>
 #include <ImfRgbaFile.h>
 #include <ImfConvert.h>
 //----------------------------------------------------------------------------//

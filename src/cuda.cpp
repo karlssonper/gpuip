@@ -220,7 +220,7 @@ inline std::string _GetTypeStr(const Buffer & buffer)
         default:
             type << "float";
     };
-    if (buffer.channels > 1 and buffer.type != Buffer::HALF) {
+    if (buffer.channels > 1 && buffer.type != Buffer::HALF) {
         type << buffer.channels;
     }
     return type.str();

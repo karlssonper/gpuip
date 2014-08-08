@@ -23,7 +23,7 @@ GLSLImpl::GLSLImpl()
 //----------------------------------------------------------------------------//
 bool GLSLImpl::_InitGLEW(std::string * err)
 {
-    if(!GLContext::Exists() and !GLContext::Create(err)) {
+    if(!GLContext::Exists() && !GLContext::Create(err)) {
         return false;
     }
     

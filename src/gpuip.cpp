@@ -118,7 +118,7 @@ unsigned int  Base::_GetBufferSize(const Buffer & buffer) const
             bpp = buffer.channels;
             break;
         case Buffer::HALF:
-            bpp = 0.5*sizeof(float) * buffer.channels;
+            bpp = sizeof(float)/2 * buffer.channels;
             break;
         case Buffer::FLOAT:
             bpp = sizeof(float) * buffer.channels;

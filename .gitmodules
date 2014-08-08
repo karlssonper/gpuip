@@ -1,3 +1,6 @@
 [submodule "3rdparty/Boost.NumPy"]
 	path = 3rdparty/Boost.NumPy
 	url = https://github.com/ndarray/Boost.NumPy.git
+[submodule "3rdparty/openexr"]
+	path = 3rdparty/openexr
+	url = https://github.com/karlssonper/openexr.git
