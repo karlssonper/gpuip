@@ -20,10 +20,17 @@ macro(_build_from_submodule submodule_name cmake_dir cmake_args)
 	WORKING_DIRECTORY ${GPUIP_ROOT_DIR})
   set(BUILD_DIR ${GPUIP_ROOT_DIR}/3rdparty/${submodule_name}/${cmake_dir}/build)
   file(MAKE_DIRECTORY ${BUILD_DIR})
-  execute_process(COMMAND cmake ${cmake_args} .. 
+  find_program(cmake_bin NAMES cmake)
+  message("command " "${cmake_bin}" "${cmake_args}" "..")
+  add_custom_target(
+	generate_${submodule_name}_${cmake_dir} 
+	COMMAND "${cmake_bin}"  "${cmake_args}" ".."  VERBATIM
 	WORKING_DIRECTORY ${BUILD_DIR})
-  execute_process(COMMAND cmake --build . --config Release
+  add_custom_target(
+	build_${submodule_name}_${cmake_dir} 
+	COMMAND "${cmake_bin} " --build . --config Release --target INSTALL
 	WORKING_DIRECTORY ${BUILD_DIR})
+  add_dependencies(build_${submodule_name}_${cmake_dir} generate_${submodule_name}_${cmake_dir})
 endmacro()
 
 # Set default build type to release (if not specified)
@@ -66,13 +73,6 @@ if (PYTHON)
   if(NOT OPENEXR_FOUND)
 	message(STATUS "Building openexr from source")
 	find_package(ZLIB)
-	if (NOT ZLIB_FOUND)
-	  _build_from_submodule(zlib "" "")
-	  #set(ZLIB_ROOT  ${GPUIP_ROOT_DIR}/3rdparty/zlib)
-	  configure_file(${GPUIP_ROOT_DIR}/3rdparty/zlib/zlib.h 
-	    ${GPUIP_ROOT_DIR}/3rdparty/zlib/include/zlib.h)
-	  write_file(${GPUIP_ROOT_DIR}/3rdparty/zlib/lib/zlib.dll "tmp")
-	endif(NOT ZLIB_FOUND)
 	#if (WIN32)
 	#  add_definitions(-DPLATFORM_WINDOWS)
 	#endif(WIN32)
@@ -91,8 +91,18 @@ if (PYTHON)
 	#configure_file(${ILM_BASE_BUILD_DIR}/Half/Release/Half.dll ${CMAKE_SOURCE_DIR}/IlmImf/Half.dll)
 	#configure_file(${ILM_BASE_BUILD_DIR}/Iex/Release/Iex-2_1.dll ${CMAKE_SOURCE_DIR}/IlmImf/Iex-2_1.dll)
 	#configure_file(${ILM_BASE_BUILD_DIR}/IlmThread/Release/IlmThread-2_1.dll ${CMAKE_SOURCE_DIR}/IlmImf/IlmThread-2_1.dll)
-	set(OPENEXR_ARGS -DBUILD_SHARED_LIBS=OFF -DZLIB_ROOT=${GPUIP_ROOT_DIR}/3rdparty/zlib)
-	_build_from_submodule(openexr OpenExr ${OPENEXR_ARGS})
+	set(OPENEXR_ARGS "-DZLIB_ROOT=${GPUIP_ROOT_DIR}/3rdparty/zlib")
+	_build_from_submodule(openexr OpenEXR ${OPENEXR_ARGS})
+
+	if (NOT ZLIB_FOUND)
+	  _build_from_submodule(zlib "" "")
+	  add_dependencies(build_openexr_OpenEXR build_zlib_ build_openexr_IlmBase)
+	  #set(ZLIB_ROOT  ${GPUIP_ROOT_DIR}/3rdparty/zlib)
+	  configure_file(${GPUIP_ROOT_DIR}/3rdparty/zlib/zlib.h 
+	    ${GPUIP_ROOT_DIR}/3rdparty/zlib/include/zlib.h)
+	  write_file(${GPUIP_ROOT_DIR}/3rdparty/zlib/lib/zlib.lib "tmp")
+	endif(NOT ZLIB_FOUND)
+
   endif(NOT OPENEXR_FOUND)
 
   add_subdirectory(python)
