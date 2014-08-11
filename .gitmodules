@@ -7,3 +7,15 @@
 [submodule "3rdparty/openexr"]
 	path = 3rdparty/openexr
 	url = https://github.com/nyue/openexr.git
+[submodule "3rdparty/glfw"]
+	path = 3rdparty/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "3rdparty/CImg"]
+	path = 3rdparty/CImg
+	url = https://github.com/hassemlal/CImg.git
+[submodule "3rdparty/libpng"]
+	path = 3rdparty/libpng
+	url = https://github.com/coapp-packages/libpng.git
+[submodule "3rdparty/boost"]
+	path = 3rdparty/boost
+	url = https://github.com/boostorg/boost
