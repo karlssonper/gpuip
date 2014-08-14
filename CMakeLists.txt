@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(gpuip)
 
-option(BUILD_THIRD_PARTY_LIBS "Build needed dependencies if missing", TRUE)
+option(BUILD_THIRD_PARTY_LIBS "Build needed dependencies if missing" ON)
 option(BUILD_SHARED_LIB "Build shared lib" OFF)
 option(OPENCL "OpenCL" ON)
 option(CUDA "CUDA" ON)
@@ -22,35 +22,202 @@ endif()
 # Local cmake find modules can be found in the cmake folder
 set(CMAKE_MODULE_PATH ${GPUIP_ROOT_DIR}/cmake)
 
+set(GPUIP_LIBRARIES)
+set(GPUIP_PYTHON_LIBRARIES)
+set(MISSING_THIRD_PARTY)
+
 if(OPENCL)
   find_package(OpenCL REQUIRED)
+  include_directories(${OPENCL_INCLUDE_DIRS})
+  list(APPEND GPUIP_LIBRARIES ${OPENCL_LIBRARIES})
 endif(OPENCL)
 
 if(CUDA)
   find_package(CUDA REQUIRED)
   find_package(CUDADriver REQUIRED)
+  include_directories(${CUDA_INCLUDE_DIRS})
+  list(APPEND GPUIP_LIBRARIES ${CUDA_LIBRARIES} ${CUDA_DRIVER_LIBRARY})
   find_package(CUDAMath)
 endif(CUDA)
 
 if(GLSL)
-  find_package(OpenGL REQUIRED)   
-  find_package(GLFW REQUIRED)
-  if (NOT WIN32)
-	find_package(GLEW REQUIRED)
-  endif()
+  # OpenGL Core
+  find_package(OpenGL REQUIRED)
+  include_directories(${OPENGL_INCLUDE_DIRS})
+  list(APPEND GPUIP_LIBRARIES ${OPENGL_LIBRARIES})
 
+  # GLFW
+  find_package(GLFW)
+  if (GLFW_FOUND)
+	include_directories(${GLFW_INCLUDE_DIRS})
+	list(APPEND GPUIP_LIBRARIES ${GLFW_LIBRARIES})
+  else (GLFW_FOUND)
+	list(APPEND MISSING_THIRD_PARTY glfw)
+  endif (GLFW_FOUND)
+  if (APPLE)
+	list(APPEND GPUIP_LIBRARIES  
+	  "-framework Cocoa" "-framework CoreVideo" "-framework IOKit")
+  endif (APPLE)
+
+  # GLEW
+  find_package(GLEW)
+  if (GLEW_FOUND)
+	include_directories(${GLEW_INCLUDE_DIRS})
+	list(APPEND GPUIP_LIBRARIES ${GLEW_LIBRARY})
+  else (GLEW_FOUND)
+	list(APPEND MISSING_THIRD_PARTY glew)
+  endif (GLEW_FOUND)
 endif(GLSL)
 
 if (PYTHON)
   add_definitions(-D_GPUIP_PYTHON_BINDINGS)
-  find_package(Boost REQUIRED COMPONENTS python)
-  find_package(BoostNumpy REQUIRED)
+  
+  # Python
   find_package(PythonLibs REQUIRED)
+  include_directories(${PYTHON_INCLUDE_DIR})
+  list(APPEND GPUIP_PYTHON_LIBRARIES ${PYTHON_LIBRARIES})
+
+  # Boost python
+  find_package(Boost COMPONENTS python)
+  if (Boost_FOUND)
+	include_directories(${Boost_INCLUDE_DIRS})
+	list(APPEND GPUIP_PYTHON_LIBRARIES ${Boost_PYTHON_LIBRARY})
+  else (Boost_FOUND)
+	list(APPEND MISSING_THIRD_PARTY boost_python)
+  endif (Boost_FOUND)
+
+  # Boost numpy
+  find_package(BoostNumpy)
+  if (Boost_NUMPY_FOUND)
+	include_directories(${Boost_NUMPY_INCLUDE_DIRS})
+	list(APPEND GPUIP_PYTHON_LIBRARIES ${Boost_NUMPY_LIBRARY})
+  else (Boost_NUMPY_FOUND)
+	list(APPEND MISSING_THIRD_PARTY boost_numpy)
+  endif (Boost_NUMPY_FOUND)
+	
+  # PNG
   find_package(PNG)
+  if (PNG_FOUND)
+	add_definitions(-Dcimg_use_png)
+	include_directories(${PNG_INCLUDE_DIR})
+	list(APPEND GPUIP_PYTHON_LIBRARIES ${PNG_LIBRARIES})
+  else (PNG_FOUND)
+	list(APPEND MISSING_THIRD_PARTY png)
+  endif (PNG_FOUND)
+
+  # JPEG
+  find_package(JPEG)
+  if(JPEG_FOUND)
+	add_definitions(-Dcimg_use_jpeg)
+	include_directories(${JPEG_INCLUDE_DIR})
+	list(APPEND GPUIP_PYTHON_LIBRARIES ${JPEG_LIBRARIES})
+  endif(JPEG_FOUND)
+
+  # TIFF
+  find_package(TIFF)
+  if(TIFF_FOUND)
+	add_definitions(-Dcimg_use_tiff)
+	include_directories(${TIFF_INCLUDE_DIR})
+	list(APPEND GPUIP_PYTHON_LIBRARIES ${TIFF_LIBRARIES})
+  endif(TIFF_FOUND)
+
+  # OpenEXR
   find_package(OpenEXR)
+  if (OPENEXR_FOUND)
+	include_directories(${OPENEXR_INCLUDE_PATHS})
+	list(APPEND GPUIP_PYTHON_LIBRARIES ${OPENEXR_LIBRARIES})
+  else (OPENEXR_FOUND)
+	find_package(ZLIB)
+	if (NOT ZLIB_FOUND)
+	  list(APPEND MISSING_THIRD_PARTY zlib)
+	endif(NOT ZLIB_FOUND)
+	list(APPEND MISSING_THIRD_PARTY openexr)
+  endif (OPENEXR_FOUND)
 endif(PYTHON)
 
-#add_subdirectory(src)
+include(ExternalProject)
+ExternalProject_Add(glew
+  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  GIT_REPOSITORY https://github.com/karlssonper/glew-cmake
+  CMAKE_ARGS 
+  -DONLY_LIBS=TRUE 
+  -Dglew-cmake_BUILD_SHARED=OFF
+  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+
+ExternalProject_Add(glfw
+  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  GIT_REPOSITORY https://github.com/glfw/glfw.git
+  CMAKE_ARGS 
+  -DGLFW_BUILD_EXAMPLES=OFF
+  -DGLFW_BUILD_TESTS=OFF
+  -DGLFW_BUILD_DOCS=OFF
+  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+
+ExternalProject_Add(zlib
+  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  GIT_REPOSITORY https://github.com/madler/zlib.git
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+
+ExternalProject_Add(png
+  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  GIT_REPOSITORY https://github.com/coapp-packages/libpng.git
+  CMAKE_ARGS 
+  -DPNG_SHARED=OFF
+  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+
+ExternalProject_Add(openexr
+  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  GIT_REPOSITORY https://github.com/karlssonper/openexr
+  CMAKE_ARGS
+  -DZLIB_ROOT=${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+  -DBUILD_SHARED_LIBS=OFF
+  -DBUILD_BIN=OFF
+  -DBUILD_TESTS=OFF)
+
+ExternalProject_Add(boost_python
+  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  GIT_REPOSITORY https://github.com/boostorg/boost)
+
+if (BUILD_THIRD_PARTY_LIBS AND MISSING_THIRD_PARTY)
+  set(TEMP_INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install)
+  include_directories(${TEMP_INSTALL_DIR}/include)
+  #add_custom_target(third_party 
+  #COMMAND python build_3rdparty.py 
+  #--install-prefix ${TEMP_INSTALL_DIR}
+  #${MISSING_THIRD_PARTY}
+  #WORKING_DIRECTORY ${GPUIP_ROOT_DIR})
+
+  if (GLSL)
+	if (NOT GLFW_FOUND)
+	  find_library(GLFW_LIBRARY NAMES glfw3 PATHS ${TEMP_INSTALL_DIR}/lib)
+	  list(APPEND GPUIP_LIBRARIES ${GLFW_LIBRARY})
+	endif (NOT GLFW_FOUND)
+	if (NOT GLEW_FOUND)
+	  find_library(GLEW_LIBRARY NAMES glew PATHS ${TEMP_INSTALL_DIR}/lib)
+	  list(APPEND GPUIP_LIBRARIES ${GLEW_LIBRARY})
+	endif (NOT GLEW_FOUND)
+  endif (GLSL)
+
+  if (PYTHON)
+	if (NOT Boost_FOUND)
+	  find_library(BP_LIBRARY NAMES boost_python PATHS ${TEMP_INSTALL_DIR}/lib)
+	  list(APPEND GPUIP_PYTHON_LIBRARIES ${BP})
+	endif (NOT Boost_FOUND)
+	if (NOT Boost_NUMPY_FOUND)
+	  find_library(BPN_LIBRARY NAMES boost_numpy PATHS ${TEMP_INSTALL_DIR}/lib)
+	  list(APPEND GPUIP_PYTHON_LIBRARIES ${BPN})
+	endif (NOT Boost_NUMPY_FOUND)
+	
+  endif (PYTHON)
+
+  install(CODE "execute_process(COMMAND python build_3rdparty.py 
+	--install-prefix ${CMAKE_INSTALL_PREFIX}
+	${MISSING_THIRD_PARTY}
+	WORKING_DIRECTORY ${GPUIP_ROOT_DIR})")
+endif (BUILD_THIRD_PARTY_LIBS AND MISSING_THIRD_PARTY)
+
+add_subdirectory(src)
 
 if (TEST)
   enable_testing()

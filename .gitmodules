@@ -19,3 +19,6 @@
 [submodule "3rdparty/boost"]
 	path = 3rdparty/boost
 	url = https://github.com/boostorg/boost
+[submodule "3rdparty/glew"]
+	path = 3rdparty/glew
+	url = https://github.com/karlssonper/glew-cmake
