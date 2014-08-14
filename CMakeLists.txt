@@ -175,17 +175,37 @@ ExternalProject_Add(openexr
   -DBUILD_BIN=OFF
   -DBUILD_TESTS=OFF)
 
+
+
+set(BOOST_GIT_SUBMODULES
+  libs/array libs/assert libs/bind libs/concept_check libs/config 
+  libs/container libs/conversion libs/core libs/detail libs/foreach 
+  libs/function libs/functional libs/graph libs/integer libs/iterator 
+  libs/lexical_cast libs/math libs/move libs/mpl libs/multi_index 
+  libs/numeric/conversion libs/optional libs/parameter libs/predef 
+  libs/preprocessor libs/property_map libs/python libs/range libs/serialization 
+  libs/smart_ptr libs/static_assert libs/throw_exception libs/tuple 
+  libs/type_traits libs/typeof libs/unordered libs/utility libs/wave 
+  tools/build tools/inspect)
 if (WIN32)
-  set(BOOST_CONFIG "./bootstrap.bat")
-else (WIN32)
-  set(BOOST_CONFIG "./bootstrap.sh")
-endif (WIN32)
-ExternalProject_Add(boost_python
+  ExternalProject_Add(boost_python
   BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND ${BOOST_CONFIG}
-  BUILD_COMMAND ./b2 headers && ./b2 --with-python
-  INSTALL_COMMAND ./b2 install --with-python --prefix=${GPUIP_ROOT_DIR}/3rdparty/temp_install
-  GIT_REPOSITORY https://github.com/boostorg/boost)
+  CONFIGURE_COMMAND bootstrap.bat
+  BUILD_COMMAND b2 headers
+  INSTALL_COMMAND b2 install --with-python --variant=release --prefix=${GPUIP_ROOT_DIR}/3rdparty/temp_install 
+  GIT_REPOSITORY https://github.com/boostorg/boost
+  GIT_SUBMODULES ${BOOST_GIT_SUBMODULES})
+else (WIN32)
+  ExternalProject_Add(boost_python
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND ./bootstrap.sh
+  BUILD_COMMAND ./b2 headers
+  INSTALL_COMMAND ./b2 install --with-python --variant=release --prefix=${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  GIT_REPOSITORY https://github.com/boostorg/boost
+  GIT_SUBMODULES ${BOOST_GIT_SUBMODULES})
+endif (WIN32)
+
+
 
 ExternalProject_Add(boost_numpy
   DEPENDS boost_python
