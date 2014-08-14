@@ -175,9 +175,26 @@ ExternalProject_Add(openexr
   -DBUILD_BIN=OFF
   -DBUILD_TESTS=OFF)
 
+if (WIN32)
+  set(BOOST_CONFIG "./bootstrap.bat")
+else (WIN32)
+  set(BOOST_CONFIG "./bootstrap.sh")
+endif (WIN32)
 ExternalProject_Add(boost_python
-  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND ${BOOST_CONFIG}
+  BUILD_COMMAND ./b2 headers && ./b2 --with-python
+  INSTALL_COMMAND ./b2 install --with-python --prefix=${GPUIP_ROOT_DIR}/3rdparty/temp_install
   GIT_REPOSITORY https://github.com/boostorg/boost)
+
+ExternalProject_Add(boost_numpy
+  DEPENDS boost_python
+  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  GIT_REPOSITORY https://github.com/ndarray/Boost.NumPy.git
+  CMAKE_ARGS
+  -DLIBRARY_TYPE=STATIC
+  -DBOOST_ROOT=${GPUIP_ROOT_DIR}/3rdparty/temp_install
+  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
 
 if (BUILD_THIRD_PARTY_LIBS AND MISSING_THIRD_PARTY)
   set(TEMP_INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install)
