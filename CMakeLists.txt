@@ -54,7 +54,7 @@ set(GPUIP_LIBRARIES)
 set(GPUIP_PYTHON_LIBRARIES)
 
 # All third party libraries will be statically built to this dir
-set(THIRD_PARTY_DIR ${GPUIP_ROOT_DIR}/3rdparty)
+set(THIRD_PARTY_DIR ${GPUIP_ROOT_DIR}/thirdparty)
 
 # The gpuip library will depend on these targets
 set(THIRD_PARTY_TARGETS)
