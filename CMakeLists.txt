@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 2.8)
 
 project(gpuip)
 
+# Specific versions used
+set(BOOST_VERSION 1.56)
+set(OPENEXR_VERSION 2.1)
+
 if(WIN32)
   set(BUILD_LIB_DEFAULT ON)
 else()
@@ -160,34 +164,44 @@ if(BUILD_PYTHON_BINDINGS)
       libs/function libs/functional libs/graph libs/integer libs/iterator
       libs/lexical_cast libs/math libs/move libs/mpl libs/multi_index
       libs/numeric/conversion libs/optional libs/parameter libs/predef
-      libs/preprocessor libs/property_map libs/python libs/range 
-	  libs/serialization libs/smart_ptr libs/static_assert libs/throw_exception
-	  libs/tuple libs/type_traits libs/typeof libs/unordered libs/utility 
-	  libs/wave tools/build tools/inspect)
+      libs/preprocessor libs/property_map libs/python libs/range
+      libs/serialization libs/smart_ptr libs/static_assert libs/throw_exception
+      libs/tuple libs/type_traits libs/typeof libs/unordered libs/utility
+      libs/wave tools/build tools/inspect)
+    set(BOOST_INSTALL_ARGS --with-python
+      link=static runtime-link=static
+      variant=release --prefix=${THIRD_PARTY_DIR})
     if(WIN32)
-      ExternalProject_Add(boost_python
-        GIT_REPOSITORY ${GIT_REPO_BOOST}
-        #GIT_SUBMODULES ${BOOST_GIT_SUBMODULES}
-        BUILD_IN_SOURCE 1
-        CONFIGURE_COMMAND bootstrap.bat
-        BUILD_COMMAND b2 headers
-        INSTALL_COMMAND b2 install --with-python
-        link=static runtime-link=static
-        variant=release --prefix=${THIRD_PARTY_DIR})
-      include_directories(${THIRD_PARTY_DIR}/include/boost-1.57)
-      list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}boost_python-mt${LIB_SUFFIX})
+      set(BOOST_CONFIGURE_COMMAND bootstrap.bat)
+      set(BOOST_BUILD_COMMAND b2 headers)
+      set(BOOST_INSTALL_COMMAND b2 ${BOOST_INSTALL_ARGS})
+      include_directories(${THIRD_PARTY_DIR}/include/boost-${BOOST_VERSION})
+      string(REPLACE "." "_" BOOST_VERSION_UNDERSCORE BOOST_VERSION)
+      if(MSVC8)
+        set(BOOST_TOOLSET vc80)
+      elseif(MSVC6)
+        set(BOOST_TOOLSET vc60)
+      elseif(MSVC10)
+        set(BOOST_TOOLSET vc100)
+      elseif (MSVC12)
+        set(BOOST_TOOLSET vc120)
+      endif()
+      list(APPEND GPUIP_PYTHON_LIBRARIES
+        libboost_python-${BOOST_TOOLSET}-mt-s-${BOOST_VERSION_UNDERSCORE}.lib)
     else()
-      ExternalProject_Add(boost_python
-        GIT_REPOSITORY ${GIT_REPO_BOOST}
-        #GIT_SUBMODULES ${BOOST_GIT_SUBMODULES}
-        BUILD_IN_SOURCE 1
-        CONFIGURE_COMMAND ./bootstrap.sh
-        BUILD_COMMAND ./b2 headers
-        INSTALL_COMMAND ./b2 install --with-python
-        link=static runtime-link=static
-        variant=release --prefix=${THIRD_PARTY_DIR})
+      set(BOOST_CONFIGURE_COMMAND ./bootstrap.sh)
+      set(BOOST_BUILD_COMMAND ./b2 headers)
+      set(BOOST_INSTALL_COMMAND ./b2 ${BOOST_INSTALL_ARGS})
       list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}boost_python${LIB_SUFFIX})
     endif()
+    ExternalProject_Add(boost_python
+      GIT_REPOSITORY ${GIT_REPO_BOOST}
+      GIT_TAG boost_${BOOST_VERSION}.0
+      #GIT_SUBMODULES ${BOOST_GIT_SUBMODULES}
+      BUILD_IN_SOURCE 1
+      CONFIGURE_COMMAND ${BOOST_CONFIGURE_COMMAND}
+      BUILD_COMMAND ${BOOST_BUILD_COMMAND}
+      INSTALL_COMMAND ${BOOST_INSTALL_COMMAND})
     list(APPEND THIRD_PARTY_TARGETS boost_python)
   endif()
 
@@ -231,23 +245,23 @@ if(BUILD_PYTHON_BINDINGS)
   endif()
 
   # CImg
-  find_path(CIMG_INCLUDE_DIR NAMES CImg.h 
-	PATHS ${CIMG_INCLUDE_DIR} $ENV{CIMG_INCLUDE_DIR})
+  find_path(CIMG_INCLUDE_DIR NAMES CImg.h
+    PATHS ${CIMG_INCLUDE_DIR} $ENV{CIMG_INCLUDE_DIR})
   if(CIMG_INCLUDE_DIR)
-	include_directories(${CIMG_INCLUDE_DIR})
+    include_directories(${CIMG_INCLUDE_DIR})
   else()
-	message(STATUS "${Cyan}Adding third party target cimg${ColorReset}")
-	if(WIN32)
-	  set(COPY_CMD copy)
-	else()
-	  set(COPY_CMD cp)
-	endif()
+    message(STATUS "${Cyan}Adding third party target cimg${ColorReset}")
+    if(WIN32)
+      set(COPY_CMD copy)
+    else()
+      set(COPY_CMD cp)
+    endif()
     ExternalProject_Add(cimg
       INSTALL_DIR ${THIRD_PARTY_DIR}
       GIT_REPOSITORY ${GIT_REPO_CIMG}
       BUILD_IN_SOURCE 1
-	  CONFIGURE_COMMAND "" BUILD_COMMAND "" 
-	  INSTALL_COMMAND ${COPY_CMD} CImg.h ${THIRD_PARTY_DIR}/include)
+      CONFIGURE_COMMAND "" BUILD_COMMAND ""
+      INSTALL_COMMAND ${COPY_CMD} CImg.h ${THIRD_PARTY_DIR}/include)
   endif()
 
   # PNG
@@ -296,6 +310,7 @@ if(BUILD_PYTHON_BINDINGS)
     ExternalProject_Add(openexr
       INSTALL_DIR ${THIRD_PARTY_DIR}
       GIT_REPOSITORY ${GIT_REPO_OPENEXR}
+      #GIT_TAG v${OPENEXR_VERSION}.0 TODO: Once offical tag builds w/ cmake
       ${ZLIB_DEPENDS}
       CMAKE_ARGS
       -DCMAKE_BUILD_TYPE=Release
@@ -306,7 +321,8 @@ if(BUILD_PYTHON_BINDINGS)
       -DBUILD_TESTS=OFF)
     list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}Half${LIB_SUFFIX})
     set(OPENEXR_LIBS Iex IexMath IlmImf IlmThread Imath)
-    set(VER -2_1)
+    string(REPLACE "." "_" OPENEXR_VERSION_UNDERSCORE ${OPENEXR_VERSION})
+    set(VER -${OPENEXR_VERSION_UNDERSCORE})
     foreach(_L ${OPENEXR_LIBS})
       list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}${_L}${VER}${LIB_SUFFIX})
     endforeach()
@@ -344,6 +360,4 @@ endif()
 if(BUILD_DOCS)
   add_subdirectory(doc)
 endif()
-
-
 
