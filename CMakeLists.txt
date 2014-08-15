@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 
 project(gpuip)
 
+include(ExternalProject)
+
 option(BUILD_THIRD_PARTY_LIBS "Build needed dependencies if missing" ON)
 option(BUILD_SHARED_LIB "Build shared lib" OFF)
 option(OPENCL "OpenCL" ON)
@@ -24,7 +26,7 @@ set(CMAKE_MODULE_PATH ${GPUIP_ROOT_DIR}/cmake)
 
 set(GPUIP_LIBRARIES)
 set(GPUIP_PYTHON_LIBRARIES)
-set(MISSING_THIRD_PARTY)
+set(THIRD_PARTY_TARGETS)
 
 if(OPENCL)
   find_package(OpenCL REQUIRED)
@@ -52,7 +54,15 @@ if(GLSL)
 	include_directories(${GLFW_INCLUDE_DIRS})
 	list(APPEND GPUIP_LIBRARIES ${GLFW_LIBRARIES})
   else (GLFW_FOUND)
-	list(APPEND MISSING_THIRD_PARTY glfw)
+	ExternalProject_Add(glfw
+	  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+	  GIT_REPOSITORY https://github.com/glfw/glfw.git
+	  CMAKE_ARGS 
+	  -DGLFW_BUILD_EXAMPLES=OFF
+	  -DGLFW_BUILD_TESTS=OFF
+	  -DGLFW_BUILD_DOCS=OFF
+	  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+	list(APPEND THIRD_PARTY_TARGETS glfw)
   endif (GLFW_FOUND)
   if (APPLE)
 	list(APPEND GPUIP_LIBRARIES  
@@ -65,7 +75,14 @@ if(GLSL)
 	include_directories(${GLEW_INCLUDE_DIRS})
 	list(APPEND GPUIP_LIBRARIES ${GLEW_LIBRARY})
   else (GLEW_FOUND)
-	list(APPEND MISSING_THIRD_PARTY glew)
+ 	ExternalProject_Add(glew
+	  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
+	  GIT_REPOSITORY https://github.com/karlssonper/glew-cmake
+	  CMAKE_ARGS 
+	  -DONLY_LIBS=TRUE 
+	  -Dglew-cmake_BUILD_SHARED=OFF
+	  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+	list(APPEND THIRD_PARTY_TARGETS glew)
   endif (GLEW_FOUND)
 endif(GLSL)
 
@@ -135,23 +152,7 @@ if (PYTHON)
   endif (OPENEXR_FOUND)
 endif(PYTHON)
 
-include(ExternalProject)
-ExternalProject_Add(glew
-  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
-  GIT_REPOSITORY https://github.com/karlssonper/glew-cmake
-  CMAKE_ARGS 
-  -DONLY_LIBS=TRUE 
-  -Dglew-cmake_BUILD_SHARED=OFF
-  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
 
-ExternalProject_Add(glfw
-  INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
-  GIT_REPOSITORY https://github.com/glfw/glfw.git
-  CMAKE_ARGS 
-  -DGLFW_BUILD_EXAMPLES=OFF
-  -DGLFW_BUILD_TESTS=OFF
-  -DGLFW_BUILD_DOCS=OFF
-  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
 
 ExternalProject_Add(zlib
   INSTALL_DIR ${GPUIP_ROOT_DIR}/3rdparty/temp_install
@@ -174,8 +175,6 @@ ExternalProject_Add(openexr
   -DBUILD_SHARED_LIBS=OFF
   -DBUILD_BIN=OFF
   -DBUILD_TESTS=OFF)
-
-
 
 set(BOOST_GIT_SUBMODULES
   libs/array libs/assert libs/bind libs/concept_check libs/config 
