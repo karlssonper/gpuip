@@ -196,7 +196,7 @@ if(BUILD_PYTHON_BINDINGS)
     endif()
     ExternalProject_Add(boost_python
       GIT_REPOSITORY ${GIT_REPO_BOOST}
-      GIT_TAG boost_${BOOST_VERSION}.0
+      GIT_TAG boost-${BOOST_VERSION}.0
       #GIT_SUBMODULES ${BOOST_GIT_SUBMODULES}
       BUILD_IN_SOURCE 1
       CONFIGURE_COMMAND ${BOOST_CONFIGURE_COMMAND}
@@ -214,6 +214,9 @@ if(BUILD_PYTHON_BINDINGS)
     message(STATUS "${Cyan}Adding third party target boost_numpy${ColorReset}")
     if (NOT Boost_FOUND)
       set(BOOST_NUMPY_DEPENDS DEPENDS boost_python)
+      set(BOOST_ROOT ${THIRD_PARTY_DIR}/include/boost-${BOOST_VERSION})
+    else()
+       set(BOOST_ROOT ${THIRD_PARTY_DIR})
     endif()
     ExternalProject_Add(boost_numpy
       ${BOOST_NUMPY_DEPENDS}
@@ -222,7 +225,7 @@ if(BUILD_PYTHON_BINDINGS)
       CMAKE_ARGS
       -DCMAKE_BUILD_TYPE=Release
       -DLIBRARY_TYPE=STATIC
-      -DBOOST_ROOT=${THIRD_PARTY_DIR}
+      -DBOOST_ROOT=${BOOST_ROOT}
       -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
     list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}boost_numpy${LIB_SUFFIX})
     list(APPEND THIRD_PARTY_TARGETS boost_numpy)
