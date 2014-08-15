@@ -230,6 +230,26 @@ if(BUILD_PYTHON_BINDINGS)
     list(APPEND GPUIP_PYTHON_LIBRARIES ${ZLIB_LIBRARIES})
   endif()
 
+  # CImg
+  find_path(CIMG_INCLUDE_DIR NAMES CImg.h 
+	PATHS ${CIMG_INCLUDE_DIR} $ENV{CIMG_INCLUDE_DIR})
+  if(CIMG_INCLUDE_DIR)
+	include_directories(${CIMG_INCLUDE_DIR})
+  else()
+	message(STATUS "${Cyan}Adding third party target cimg${ColorReset}")
+	if(WIN32)
+	  set(COPY_CMD copy)
+	else()
+	  set(COPY_CMD cp)
+	endif()
+    ExternalProject_Add(cimg
+      INSTALL_DIR ${THIRD_PARTY_DIR}
+      GIT_REPOSITORY ${GIT_REPO_CIMG}
+      BUILD_IN_SOURCE 1
+	  CONFIGURE_COMMAND "" BUILD_COMMAND "" 
+	  INSTALL_COMMAND ${COPY_CMD} CImg.h ${THIRD_PARTY_DIR}/include)
+  endif()
+
   # PNG
   find_package(PNG)
   if(PNG_FOUND)
