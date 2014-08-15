@@ -19,8 +19,7 @@ IF(ZLIB_FOUND)
 		/opt/local/lib
 		$ENV{PROGRAM_FILES}/OpenEXR/lib/static)
 
-	FIND_PATH(OPENEXR_INCLUDE_PATH ImfRgbaFile.h
-		PATH_SUFFIXES OpenEXR
+	FIND_PATH(OPENEXR_INCLUDE_PATH OpenEXR/ImfRgbaFile.h
 		/usr/include
 		/usr/local/include
 		/sw/include

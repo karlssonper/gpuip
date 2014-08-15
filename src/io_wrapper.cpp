@@ -6,8 +6,8 @@
 #include "3rdparty/CImg.h"
 #include <boost/numpy.hpp>
 #include <boost/python.hpp>
-#include <ImfRgbaFile.h>
-#include <ImfConvert.h>
+#include <OpenEXR/ImfRgbaFile.h>
+#include <OpenEXR/ImfConvert.h>
 //----------------------------------------------------------------------------//
 namespace np = boost::numpy;
 namespace bp = boost::python;
