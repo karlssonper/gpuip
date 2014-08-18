@@ -156,7 +156,10 @@ class GLWidget(QtOpenGL.QGLWidget):
 
         # Generate new texture
         if not self.texture:
-            self.texture = GL.glGenTextures(1)
+            try:
+                self.texture = GL.glGenTextures(1)
+            except Exception:
+                return
         target = GL.GL_TEXTURE_2D
         GL.glBindTexture(target, self.texture)
         GL.glTexParameterf(target, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)

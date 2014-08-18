@@ -1,16 +1,22 @@
 #!/usr/bin/env python
 import settings
 import utils
-import argparse
 import sys
 import signal
 import os
+try:
+    import argparse
+    parsermodule = argparse.ArgumentParser
+except Exception:
+    import optparse
+    parsermodule = optparse.OptionParser
+    parsermodule.add_argument = parsermodule.add_option
 
 def getCommandLineArguments():
     # Command line arguments
     desc = "Framework for Image Processing on the GPU"
-    parser = argparse.ArgumentParser(desc)
-    parser.add_argument("file",
+    parser = parsermodule(desc)
+    parser.add_argument("--file",
                         help="Image Processing file *.ip")
     parser.add_argument("-p", "--param",
                         action="append",
@@ -30,19 +36,21 @@ def getCommandLineArguments():
     parser.add_argument("-v","--verbose",
                         action="store_true",
                         help="Outputs information")
-    parser.add_argument("-ts","--timestamp",
+    parser.add_argument("-t","--timestamp",
                         action="store_true",
                         help="Add timestamp in log output")
-    parser.add_argument("-ng", "--nogui",
+    parser.add_argument("-n", "--nogui",
                         action="store_true",
                         help="Command line version")
-    return parser.parse_args()
+    return parser.parse_args()[0]
 
 def terminate(msg):
     print msg
     sys.exit(1)
 
 def getSettings(args):
+    if not args.file:
+        terminate("error: must specify .ip file")
     if not os.path.isfile(args.file):
         return None
 

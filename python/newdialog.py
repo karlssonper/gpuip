@@ -99,6 +99,7 @@ class NewDialog(QtGui.QDialog):
                 param.maxLineEdit.setText(str(p.max))
 
     def getSettings(self):
+       
         s = settings.Settings()
 
         # Environment
@@ -111,7 +112,7 @@ class NewDialog(QtGui.QDialog):
                     str(b.nameLineEdit.text()),
                     str(b.typeComboBox.currentText()).strip(),
                     utils.safeEval(str(b.channelsComboBox.currentText()))))
-
+       
         # Kernels
         for k in self.kernels:
             sk = settings.Settings.Kernel(
@@ -127,16 +128,17 @@ class NewDialog(QtGui.QDialog):
             for le in k.outBufferLineEdits:
                 sk.outBuffers.append(
                     settings.Settings.Kernel.KernelBuffer(str(le.text()),""))
-
+       
             # Params
             for p in k.params:
-                sk.params.append(settings.Settings.Param(
-                        str(p.nameLineEdit.text()),
-                        str(p.typeComboBox.currentText()).strip(),
-                        utils.safeEval(p.defaultLineEdit.text()),
-                        utils.safeEval(p.minLineEdit.text()),
-                        utils.safeEval(p.maxLineEdit.text()))
-                        
+                param = settings.Settings.Param(
+                    str(p.nameLineEdit.text()),
+                    str(p.typeComboBox.currentText()).strip(),
+                    utils.safeEval(p.defaultLineEdit.text()),
+                    utils.safeEval(p.minLineEdit.text()),
+                    utils.safeEval(p.maxLineEdit.text()))
+                sk.params.append(param)
+
             s.kernels.append(sk)
 
         return s

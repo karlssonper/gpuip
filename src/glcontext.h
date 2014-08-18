@@ -7,7 +7,8 @@ extern "C" {
 }
 #else
 #ifdef _WIN32
-//win
+#include <windows.h>
+#include<Wingdi.h>
 #else
 #include <GL/glx.h>
 #endif
@@ -29,6 +30,9 @@ class GLContext
         }
 #else
 #ifdef _WIN32
+        if (wglGetCurrentContext()) {
+            return true;
+        }
 #else
         if (glXGetCurrentContext()) {
             return true;

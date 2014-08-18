@@ -43,7 +43,7 @@ void _CImgToNumpy(np::ndarray & data,
                 to[(i + w * j)] = from[i + w*j];
             }
         }
-    } else if (channels == 3 and c == 3) {
+    } else if (channels == 3 && c == 3) {
         for(unsigned int i = 0; i < w; ++i) {
             for(unsigned int j = 0; j < h; ++j) {
                 to[3*(i+w*j)  ] = from[i + w*j           ];
@@ -81,7 +81,7 @@ void _NumpyToCImg(const np::ndarray & data,
                 to[(i + w * j)] = from[i + w*j];
             }
         }
-    } else if (channels == 3 and c == 3) {
+    } else if (channels == 3 && c == 3) {
         for(int i = 0; i < w; ++i) {
             for(int j = 0; j < h; ++j) {
                 to[i + w*j           ] = from[3*(i+w*j)  ];
@@ -174,7 +174,7 @@ void _NumpyToHalfExr(const boost::numpy::ndarray & data,
     Rgba * data_ptr;
     std::vector<Rgba> halfdata;
     RgbaChannels format = WRITE_RGBA;
-    if (channels==4 and data.get_dtype() == np::detail::get_float_dtype<16>()) {
+    if (channels==4 && data.get_dtype() == np::detail::get_float_dtype<16>()) {
         data_ptr = reinterpret_cast<Rgba*>(data.get_data());
     } else {
         halfdata.reserve(width*height);
