@@ -216,6 +216,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         # Copy data to texture
         GL.glTexImage2D(target, 0, glInternalFormat, self.w, self.h,
                         0, glFormat, glType, ndarray)
+        GL.glBindTexture(target, 0)
           
     def resizeGL(self, width, height):
         GL.glViewport(0,0,width,height)
@@ -246,15 +247,17 @@ class GLWidget(QtOpenGL.QGLWidget):
             self.vbo = GL.glGenBuffers(1)
 
         shaders.glUseProgram(self.shader)
+               
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.vbo)
         vertices = numpy.array(
-            [-self.scale + self.cx, -self.scale + self.cy,
+            [-self.scale + self.cx, -self.scale + self.cy ,
              self.scale + self.cx, -self.scale + self.cy,
              self.scale + self.cx, self.scale + self.cy,
              -self.scale + self.cx, self.scale + self.cy,
-             0,0,1,0,1,1,0,1], dtype = numpy.float32)
-        
+            0,0,1,0,1,1,0,1], dtype = numpy.float32)
+      
         GL.glBufferData(GL.GL_ARRAY_BUFFER, 64, vertices, GL.GL_STATIC_DRAW)
+        
         loc = GL.glGetAttribLocation(self.shader, "positionIn")
         GL.glEnableVertexAttribArray(loc)
         GL.glVertexAttribPointer(loc, 2, GL.GL_FLOAT, 0, 8, c_void_p(0))
@@ -262,7 +265,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         loc = GL.glGetAttribLocation(self.shader, "texIn")
         GL.glEnableVertexAttribArray(loc)
         GL.glVertexAttribPointer(loc, 2, GL.GL_FLOAT, 0, 8, c_void_p(32))
-        
+              
         def _uniformLoc(name):
             return GL.glGetUniformLocation(self.shader,name)
         GL.glUniform1f(_uniformLoc("g"), self.gamma);
@@ -272,12 +275,17 @@ class GLWidget(QtOpenGL.QGLWidget):
         GL.glUniform1i(_uniformLoc("texture"), 0);
         GL.glActiveTexture(GL.GL_TEXTURE0);
         GL.glBindTexture(GL.GL_TEXTURE_2D, self.texture)
-            
+
         GL.glDrawArrays(GL.GL_QUADS, 0, 4);
 
+        GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
+        loc = GL.glGetAttribLocation(self.shader, "positionIn")
+        GL.glDisableVertexAttribArray(loc)
+        loc = GL.glGetAttribLocation(self.shader, "texIn")
+        GL.glDisableVertexAttribArray(loc)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
         shaders.glUseProgram(0)
-
+        
         if self.rightBtnDown:
             self.renderPixelInfo()
 
@@ -352,10 +360,10 @@ class GLWidget(QtOpenGL.QGLWidget):
                  "B:%f" % val[2] if val[2] else "n/a"]
         font = QtGui.QFont()
         font.setFamily("Monospace")
-        font.setFixedPitch(True);
+        #font.setFixedPitch(True);
         metrics = QtGui.QFontMetrics(font)
         sx = 20 # spacing variable
-        w,h = metrics.width(texts[0]), metrics.height()
+        w,h = metrics.width(texts[1]), metrics.height()
         metrics.width(" ")
         x,y  = self.lastPos.x(), self.height() - self.lastPos.y() - sx
         dx,dy = 1.0/self.width(), 1.0/self.height()
@@ -393,6 +401,6 @@ class GLWidget(QtOpenGL.QGLWidget):
         GL.glColor4f(1,1,1,1)
         for i,text in enumerate(texts):
             self.renderText(tx, ty + i*h, text, font)
-        
+              
 
     
