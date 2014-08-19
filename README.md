@@ -1,7 +1,7 @@
 gpuip
 =====
 
-Gpuip is a C++ cross-platform framework for Image Processing on the GPU architechure. It tries to simplify the image processing pipeline on the GPU and make it more generic across the thre most common environments: OpenCL, CUDA and OpenGL GLSL. It provides a simply interface to copy data from and to the GPU and makes it easy to compile and run GPU kernel code. 
+Gpuip is a C++ cross-platform framework for Image Processing on the GPU architechure. It tries to simplify the image processing pipeline on the GPU and make it more generic across the thre most common environments: OpenCL, CUDA and OpenGL GLSL. It provides a simple interface to copy data from and to the GPU and makes it easy to compile and run GPU kernel code. 
 
 ### API
 The online API documentation [can be found here.] (http://karlssonper.github.io/gpuip/)
@@ -11,6 +11,27 @@ The gpuip library comes with optional python bindings to the C++ code. The pytho
 
 ### bin/gpuip
 If python bindings are available, gpuip comes with an executable program that has both a GUI version for debugging and development of GPU kernels and a command line version to plug into existing pipelines. The progam uses the gpuip specific XML-based file format *.ip to store settings.
+```
+usage: Framework for Image Processing on the GPU [-h] [-f FILE]
+                                                 [-p kernel param value]
+                                                 [-i buffer path]
+                                                 [-o buffer path] [-v]
+                                                 [--timestamp] [--nogui]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f FILE, --file FILE  Image Processing file *.ip
+  -p kernel param value, --param kernel param value
+                        Change value of a parameter.
+  -i buffer path, --inbuffer buffer path
+                        Set input image to a buffer
+  -o buffer path, --outbuffer buffer path
+                        Set output image to a buffer
+  -v, --verbose         Outputs information
+  --timestamp           Add timestamp in log output
+  --nogui               Command line version
+
+```
 
 ### Dependencies
 * gpuip:
@@ -25,12 +46,12 @@ If python bindings are available, gpuip comes with an executable program that ha
   * [`Boost Numpy`] (https://github.com/ndarray/Boost.NumPy) *numpy python bindings*
   * [`OpenEXR`] (http://www.openexr.com/) *exr i/o*
   * [`CImg`] (http://cimg.sourceforge.net/) *png, jpeg,t iff, tga i/o*
-  * [`libpng`] (http://www.libpng.org/pub/png/libpng.html) *png*
+  * [`libpng`] (http://www.libpng.org/pub/png/libpng.html) *png format*
   * [`zlib`] (http://www.zlib.net) *compression used by OpenEXR and libpng*
   
 * bin/gpuip
-  * [Qt] (http://qt-project.org/) *GUI*
-  * [PySide] (http://qt-project.org/wiki/PySide) *Qt python bindings*
+  * [`Qt`] (http://qt-project.org/) *GUI (optional)*
+  * [`PySide`] (http://qt-project.org/wiki/PySide) *Qt python bindings*
   
 
 ### Build/Install ###
