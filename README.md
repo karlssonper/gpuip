@@ -120,6 +120,5 @@ To run all tests, run `ctest` from the `build` directory.
 ```
 test_cpp          // Test C++ api
 test_py           // Test Python bindings
-test_performance  // Tests the performance against CPU 
-                  // Both single and multi core (using OpenMP)
+test_performance  // Tests the performance, compare against CPU 
 ```
