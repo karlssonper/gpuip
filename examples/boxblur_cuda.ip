@@ -10,7 +10,7 @@
     <name>buffer2</name>
     <type>half</type>
     <channels>4</channels>
-    <output>/home/per/dev/gpuip/examples/output_images/boxblur_cuda.exr</output>
+    <output>output_images/boxblur_cuda.exr</output>
   </buffer>
   <kernel>
     <name>box_blur</name>

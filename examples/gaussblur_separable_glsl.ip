@@ -5,7 +5,7 @@
     <type>half</type>
     <channels>4</channels>
     <input>images/GoldenGate.exr</input>
-    <output>/home/per/dev/gpuip/examples/output_images/gaussblur_separable_glsl.exr</output>
+    <output>output_images/gaussblur_separable_glsl.exr</output>
   </buffer>
   <buffer>
     <name>buffer2</name>

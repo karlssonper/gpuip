@@ -107,6 +107,7 @@ if(OPENGL_FOUND AND BUILD_WITH_GLSL)
 			INSTALL_DIR ${THIRD_PARTY_DIR}
 			GIT_REPOSITORY ${GIT_REPO_GLFW}
 			CMAKE_ARGS
+			-DCMAKE_C_FLAGS=-fPIC
 			-DCMAKE_BUILD_TYPE=Release
 			-DGLFW_BUILD_EXAMPLES=OFF
 			-DGLFW_BUILD_TESTS=OFF
@@ -114,6 +115,9 @@ if(OPENGL_FOUND AND BUILD_WITH_GLSL)
 			-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
 		list(APPEND THIRD_PARTY_TARGETS glfw)
 		list(APPEND GPUIP_LIBRARIES ${LIB_PREFIX}glfw3${LIB_SUFFIX})
+		if(UNIX)
+		  list(APPEND GPUIP_LIBRARIES X11 Xrandr Xxf86vm Xcursor)
+		endif()
 	endif()
 	if(APPLE)
 		list(APPEND GPUIP_LIBRARIES
@@ -261,13 +265,18 @@ if(BUILD_PYTHON_BINDINGS)
 		include_directories(${CIMG_INCLUDE_DIR})
 	else()
 		message(STATUS "${Cyan}Adding third party target cimg${ColorReset}")
+		if(WIN32)
+		  set(CIMG_INSTALL_TARGET INSTALL)
+		else()
+		  set(CIMG_INSTALL_TARGEt install)
+		endif()
+		find_program(cmake_bin NAMES cmake)
 		ExternalProject_Add(cimg
 			GIT_REPOSITORY ${GIT_REPO_CIMG}
 			BUILD_IN_SOURCE 1
 			PREFIX ${CMAKE_BINARY_DIR}/cimg
 			CONFIGURE_COMMAND "" 
-			BUILD_COMMAND cmake . -DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_DIR}
-			INSTALL_COMMAND cmake --build . --target INSTALL)
+			BUILD_COMMAND ${cmake_bin} . -DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_DIR})
 		# Not too happy about this extra step. Much simpler would just be empty
 		# Configure/Build commands and a 'cp CImg.h ${THIRD_PARTY_DIR}/include'
 		# as install command. Worked fine in unix/mac but could'nt get the 'copy' 
