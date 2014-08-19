@@ -14,12 +14,12 @@ if(GPUIP_TEST_LIBRARIES)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   endif()
-  add_executable(test_speed speed)
-  target_link_libraries(test_speed gpuip ${GPUIP_TEST_LIBRARIES})
+  add_executable(test_performance performance)
+  target_link_libraries(test_performance gpuip ${GPUIP_TEST_LIBRARIES})
   set(GPUIP_TEST_IMAGE ${GPUIP_ROOT_DIR}/examples/images/GoldenGate.exr)
   set(GPUIP_TEST_KERNEL_DIR ${GPUIP_ROOT_DIR}/examples/kernels)
-  add_test(NAME test_speed 
-	COMMAND test_speed ${GPUIP_TEST_IMAGE} ${GPUIP_TEST_KERNEL_DIR})
+  add_test(NAME test_performance 
+	COMMAND test_performance ${GPUIP_TEST_IMAGE} ${GPUIP_TEST_KERNEL_DIR})
 endif()
 
 # Add python test
