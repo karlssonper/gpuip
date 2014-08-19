@@ -6,12 +6,30 @@
 namespace bp = boost::python;
 namespace np = boost::numpy;
 //----------------------------------------------------------------------------//
-class _BufferWrapper : public gpuip::Buffer
+class _BufferWrapper
 {
   public:
-    _BufferWrapper() : data(np::empty(
-        bp::make_tuple(0,0), np::dtype::get_builtin<unsigned char>())){}
+    _BufferWrapper(gpuip::Buffer::Ptr b)
+            : buffer(b),
+              data(np::empty(
+                  bp::make_tuple(0,0),
+                  np::dtype::get_builtin<unsigned char>())) {}
+              
+    std::string name() const
+    {
+        return buffer->name;
+    }
 
+    gpuip::Buffer::Type type() const
+    {
+        return buffer->type;
+    }
+
+    unsigned int channels() const
+    {
+        return buffer->channels;
+    }
+    
     std::string Read(const std::string & filename)
     {
         return ReadMT(filename, 0);
@@ -20,7 +38,7 @@ class _BufferWrapper : public gpuip::Buffer
     std::string ReadMT(const std::string & filename, int numThreads)
     {
         std::string err;
-        gpuip::io::ReadFromFile(&data, *this, filename, numThreads);
+        gpuip::io::ReadFromFile(&data, *buffer.get(), filename, numThreads);
         return err;
     }
     
@@ -32,10 +50,11 @@ class _BufferWrapper : public gpuip::Buffer
     std::string WriteMT(const std::string & filename, int numThreads)
     {
         std::string err;
-        gpuip::io::WriteToFile(&data, *this, filename, numThreads);
+        gpuip::io::WriteToFile(&data, *buffer.get(), filename, numThreads);
         return err;
     }
     
+    gpuip::Buffer::Ptr buffer;
     np::ndarray data;
 };
 //----------------------------------------------------------------------------//
@@ -43,27 +62,27 @@ class _KernelWrapper : public gpuip::Kernel
 {
   public:
     void SetInBuffer(const std::string & kernelBufferName,
-                     const _BufferWrapper & buffer)
+                     boost::shared_ptr<_BufferWrapper> buffer)
     {
         for(size_t i = 0; i < this->inBuffers.size(); ++i) {
             if (this->inBuffers[i].second == kernelBufferName) {
-                this->inBuffers[i].first = buffer;
+                this->inBuffers[i].first = buffer->buffer;
                 return;
             }
         }
-        this->inBuffers.push_back(make_pair(buffer, kernelBufferName));
+        this->inBuffers.push_back(make_pair(buffer->buffer, kernelBufferName));
     }
 
     void SetOutBuffer(const std::string & kernelBufferName,
-                      const _BufferWrapper & buffer)
+                      boost::shared_ptr<_BufferWrapper> buffer)
     {
         for(size_t i = 0; i < this->outBuffers.size(); ++i) {
             if (this->outBuffers[i].second == kernelBufferName) {
-                this->outBuffers[i].first = buffer;
+                this->outBuffers[i].first = buffer->buffer;
                 return;
             }
         }
-        this->outBuffers.push_back(make_pair(buffer, kernelBufferName));
+        this->outBuffers.push_back(make_pair(buffer->buffer, kernelBufferName));
     }
 
     void SetParamInt(const gpuip::Parameter<int> & param)
@@ -100,21 +119,25 @@ class _BaseWrapper
         }
     }
 
-    boost::shared_ptr<_KernelWrapper> CreateKernel(const std::string name)
+    boost::shared_ptr<_KernelWrapper> CreateKernel(const std::string & name)
     {
         gpuip::Kernel::Ptr ptr = _base->CreateKernel(name);
         // safe since KernelWrapper doesnt hold any extra data
         return boost::static_pointer_cast<_KernelWrapper>(ptr);
     }
 
+    boost::shared_ptr<_BufferWrapper> CreateBuffer(const std::string & name,
+                                                   gpuip::Buffer::Type type,
+                                                   unsigned int channels)
+    {
+        gpuip::Buffer::Ptr ptr = _base->CreateBuffer(name, type, channels);
+        // safe since BufferWrapper doesnt hold any extra data
+        return boost::shared_ptr<_BufferWrapper>(new _BufferWrapper(ptr));
+    }
+
     void SetDimensions(unsigned int width, unsigned int height)
     {
         _base->SetDimensions(width,height);
-    }
-    
-    void AddBuffer(boost::shared_ptr<_BufferWrapper> buffer)
-    {
-        _base->AddBuffer(*buffer.get());
     }
 
     std::string Allocate()
@@ -138,19 +161,19 @@ class _BaseWrapper
         return err;
     }
 
-    std::string ReadBufferFromGPU(_BufferWrapper & buffer)
+    std::string ReadBufferFromGPU(boost::shared_ptr<_BufferWrapper> buffer)
     {
         std::string err;
-        _base->Copy(buffer.name, gpuip::Buffer::READ_DATA,
-                    buffer.data.get_data(), &err);
+        _base->Copy(buffer->name(), gpuip::Buffer::READ_DATA,
+                    buffer->data.get_data(), &err);
         return err;
     }
 
-    std::string WriteBufferToGPU(const _BufferWrapper & buffer)
+    std::string WriteBufferToGPU(boost::shared_ptr<_BufferWrapper> buffer)
     {
         std::string err;
-        _base->Copy(buffer.name, gpuip::Buffer::WRITE_DATA,
-                    buffer.data.get_data(), &err);
+        _base->Copy(buffer->name(), gpuip::Buffer::WRITE_DATA,
+                    buffer->data.get_data(), &err);
         return err;
     }
     
@@ -176,10 +199,11 @@ BOOST_PYTHON_MODULE(pygpuip)
             .value("HALF", gpuip::Buffer::HALF)
             .value("FLOAT", gpuip::Buffer::FLOAT);
 
-    bp::class_<_BufferWrapper, boost::shared_ptr<_BufferWrapper> >("Buffer")
-            .def_readwrite("name", &_BufferWrapper::name)
-            .def_readwrite("channels", &_BufferWrapper::channels)
-            .def_readwrite("type", &_BufferWrapper::type)
+    bp::class_<_BufferWrapper, boost::shared_ptr<_BufferWrapper> >
+            ("Buffer", bp::no_init)
+            .add_property("name", &_BufferWrapper::name)
+            .add_property("type", &_BufferWrapper::type)
+            .add_property("channels", &_BufferWrapper::channels) 
             .def_readwrite("data", &_BufferWrapper::data)
             .def("Read", &_BufferWrapper::Read)
             .def("Read", &_BufferWrapper::ReadMT)
@@ -194,7 +218,8 @@ BOOST_PYTHON_MODULE(pygpuip)
             .def_readwrite("name", &gpuip::Parameter<float>::name)
             .def_readwrite("value", &gpuip::Parameter<float>::value);
 
-    bp::class_<_KernelWrapper, boost::shared_ptr<_KernelWrapper> >("Kernel")
+    bp::class_<_KernelWrapper, boost::shared_ptr<_KernelWrapper> >
+            ("Kernel", bp::no_init)
             .def_readwrite("name", &_KernelWrapper::name)
             .def_readwrite("code", &_KernelWrapper::code)
             .def("SetInBuffer", &_KernelWrapper::SetInBuffer)
@@ -206,7 +231,7 @@ BOOST_PYTHON_MODULE(pygpuip)
             ("gpuip",
              bp::init<gpuip::GpuEnvironment>())
             .def("SetDimensions", &_BaseWrapper::SetDimensions)
-            .def("AddBuffer", &_BaseWrapper::AddBuffer)
+            .def("CreateBuffer", &_BaseWrapper::CreateBuffer)
             .def("CreateKernel", &_BaseWrapper::CreateKernel)
             .def("Allocate", &_BaseWrapper::Allocate)
             .def("Build", &_BaseWrapper::Build)

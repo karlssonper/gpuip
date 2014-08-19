@@ -21,44 +21,49 @@ CUDAImpl::CUDAImpl()
         throw std::logic_error("gpuip::CUDAImpl() could not set device id");
     };
     cudaFree(0); //use runtime api to create a CUDA context implicitly
+
+    cudaEventCreate(&_start);
+    cudaEventCreate(&_stop);
 }
 //----------------------------------------------------------------------------//
-bool
+double
 CUDAImpl::Allocate(std::string * err)
 {
+    _StartTimer();
+            
     cudaError_t c_err;
-
     std::map<std::string, float*>::iterator itb;
     for(itb = _cudaBuffers.begin(); itb != _cudaBuffers.end(); ++itb) {
         c_err = cudaFree(itb->second);
         if (_cudaErrorFree(c_err, err)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
     _cudaBuffers.clear();
         
-    std::map<std::string,Buffer>::const_iterator it;
+    std::map<std::string,Buffer::Ptr>::const_iterator it;
     for(it = _buffers.begin(); it != _buffers.end(); ++it) {
-        _cudaBuffers[it->second.name] = NULL;
-        c_err = cudaMalloc(&_cudaBuffers[it->second.name],
+        _cudaBuffers[it->second->name] = NULL;
+        c_err = cudaMalloc(&_cudaBuffers[it->second->name],
                            _GetBufferSize(it->second));
         if(_cudaErrorMalloc(c_err, err)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
-    return true;
+    return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-bool
+double
 CUDAImpl::Build(std::string * err)
 {
+    _StartTimer();
     CUresult c_err;
     if (_cudaBuild) {
         _cudaKernels.clear();
         _cudaBuild = false;
         c_err = cuModuleUnload(_cudaModule);
         if (_cudaErrorLoadModule(c_err, err)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
     
@@ -75,7 +80,10 @@ CUDAImpl::Build(std::string * err)
     out.close();
 
     std::stringstream ss;
-    ss << "nvcc -ptx .temp.cu -o .temp.ptx --Wno-deprecated-gpu-targets";
+#ifndef NVCC_BIN
+#  define NVCC_BIN nvcc
+#endif
+    ss << NVCC_BIN << " -ptx .temp.cu -o .temp.ptx --Wno-deprecated-gpu-targets";
 #ifdef CUDA_HELPER_DIR
     // Includes vector float operations such as mult, add etc
     ss << " -I " << CUDA_HELPER_DIR;
@@ -88,14 +96,14 @@ CUDAImpl::Build(std::string * err)
     
     if (nvcc_exit_status) {
         (*err) = "Cuda error: Could not compile kernels.";
-        return false;
+        return GPUIP_ERROR;
     }
 
     // Load cuda ptx from file
     c_err = cuModuleLoad(&_cudaModule, ".temp.ptx");
     system("rm .temp.ptx");
     if (_cudaErrorLoadModule(c_err, err)) {
-        return false;
+        return GPUIP_ERROR;
     }
 
     _cudaKernels.resize(_kernels.size());
@@ -103,32 +111,35 @@ CUDAImpl::Build(std::string * err)
         c_err = cuModuleGetFunction(&_cudaKernels[i], _cudaModule,
                                     _kernels[i]->name.c_str());
         if (_cudaErrorGetFunction(c_err, err, _kernels[i]->name)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
 
     _cudaBuild = true;
     
-    return true;
+    return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-bool
+double
 CUDAImpl::Process(std::string * err)
 {
+    _StartTimer();
     for(size_t i = 0; i < _kernels.size(); ++i) {
         if (!_LaunchKernel(*_kernels[i].get(), _cudaKernels[i], err)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
-    return true;
+    cudaDeviceSynchronize();
+    return  _StopTimer();
 }
 //----------------------------------------------------------------------------//
-bool
+double
 CUDAImpl::Copy(const std::string & buffer,
                     Buffer::CopyOperation op,
                     void * data,
                     std::string * err)
 {
+    _StartTimer();
     cudaError_t e = cudaSuccess;
     const size_t size = _GetBufferSize(_buffers[buffer]);
     if (op == Buffer::READ_DATA) {
@@ -137,9 +148,9 @@ CUDAImpl::Copy(const std::string & buffer,
         e = cudaMemcpy(_cudaBuffers[buffer],data, size, cudaMemcpyHostToDevice);
     }
     if (_cudaErrorCopy(e, err, buffer, op)) {
-        return false;
+        return GPUIP_ERROR;
     }
-    return true;
+    return _StopTimer();
 }
 //----------------------------------------------------------------------------//
 bool
@@ -152,13 +163,13 @@ CUDAImpl::_LaunchKernel(Kernel & kernel,
     int paramOffset = 0;
     for(size_t i = 0; i < kernel.inBuffers.size(); ++i) {
         c_err = cuParamSetv(cudaKernel, paramOffset,
-                            &_cudaBuffers[kernel.inBuffers[i].first.name],
+                            &_cudaBuffers[kernel.inBuffers[i].first->name],
                             sizeof(void*));
         paramOffset += sizeof(void *);
     }
     for(size_t i = 0; i < kernel.outBuffers.size(); ++i) {
         c_err = cuParamSetv(cudaKernel, paramOffset,
-                            &_cudaBuffers[kernel.outBuffers[i].first.name],
+                            &_cudaBuffers[kernel.outBuffers[i].first->name],
                             sizeof(void*));
         paramOffset += sizeof(void *);
     }
@@ -200,12 +211,12 @@ CUDAImpl::_LaunchKernel(Kernel & kernel,
     return true;
 }
 //----------------------------------------------------------------------------//
-inline std::string _GetTypeStr(const Buffer & buffer)
+inline std::string _GetTypeStr(Buffer::Ptr buffer)
 {
     std::stringstream type;
-    switch(buffer.type) {
+    switch(buffer->type) {
         case Buffer::UNSIGNED_BYTE:
-            if (buffer.channels > 1) {
+            if (buffer->channels > 1) {
                 type << "uchar";
             } else {
                 type << "unsigned char";
@@ -220,8 +231,8 @@ inline std::string _GetTypeStr(const Buffer & buffer)
         default:
             type << "float";
     };
-    if (buffer.channels > 1 && buffer.type != Buffer::HALF) {
-        type << buffer.channels;
+    if (buffer->channels > 1 && buffer->type != Buffer::HALF) {
+        type << buffer->channels;
     }
     return type.str();
 }
@@ -241,18 +252,18 @@ std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
     for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
         ss << (first ? "" : indent);
         first = false;
-        const std::string & name = kernel->inBuffers[i].first.name;
+        const std::string & name = kernel->inBuffers[i].first->name;
         ss << "const " << _GetTypeStr(_buffers.find(name)->second)
            << " * " << kernel->inBuffers[i].second
-           << (_buffers.find(name)->second.type == Buffer::HALF ? "_half" : "");   }
+           << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");   }
 
     for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
         ss << (first ? "" : indent);
         first = false;
-        const std::string & name = kernel->outBuffers[i].first.name;
+        const std::string & name = kernel->outBuffers[i].first->name;
         ss <<  _GetTypeStr(_buffers.find(name)->second)
            << " * " << kernel->outBuffers[i].second
-           << (_buffers.find(name)->second.type == Buffer::HALF ? "_half" : "");
+           << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");
     }
 
     for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
@@ -279,14 +290,14 @@ std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
    
     // Do half to float conversions (if needed)
     for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        const std::string & bname = kernel->inBuffers[i].first.name;
-        const Buffer & buf = _buffers.find(bname)->second;
-        if (buf.type == Buffer::HALF) {
+        const std::string & bname = kernel->inBuffers[i].first->name;
+        Buffer::Ptr buf = _buffers.find(bname)->second;
+        if (buf->type == Buffer::HALF) {
             if (!i) {
                 ss << "    // half to float conversion\n";
             }
             
-            if (buf.channels == 1) {
+            if (buf->channels == 1) {
                 ss << "    const float " << kernel->inBuffers[i].second
                    << " = " << "__half2float(" <<  kernel->inBuffers[i].second
                    << "_half[idx]);\n";
@@ -294,20 +305,20 @@ std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
             }
             
             std::stringstream subss;
-            subss << "    const float" << buf.channels << " "
+            subss << "    const float" << buf->channels << " "
                   << kernel->inBuffers[i].second
-                  << " = make_float" << buf.channels << "(";
+                  << " = make_float" << buf->channels << "(";
             const std::string preindent = subss.str();
             subss.str("");
             subss << ",\n" << std::string(preindent.size(), ' ');
             const std::string subindent = subss.str();
             ss << preindent;
             bool subfirst = true;
-            for (unsigned int j = 0; j < buf.channels; ++j) {
+            for (unsigned int j = 0; j < buf->channels; ++j) {
                 ss << (subfirst ? "" : subindent);
                 subfirst = false;
                 ss << "__half2float(" <<  kernel->inBuffers[i].second
-                   << "_half[" << buf.channels << " * idx + " << j << "])";
+                   << "_half[" << buf->channels << " * idx + " << j << "])";
             }
             ss <<");\n";
 
@@ -319,28 +330,28 @@ std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 
     ss << "    // kernel code\n";
     for (size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        const Buffer & b = _buffers.find(
-            kernel->outBuffers[i].first.name)->second;
+        Buffer::Ptr b = _buffers.find(
+            kernel->outBuffers[i].first->name)->second;
         ss << "    ";
-        if (b.type == Buffer::HALF) {
-            ss << "float" << b.channels << " ";
+        if (b->type == Buffer::HALF) {
+            ss << "float" << b->channels << " ";
         }
         ss << kernel->outBuffers[i].second;
-        if (b.type != Buffer::HALF) {
+        if (b->type != Buffer::HALF) {
             ss << "[idx]";
         }
         ss << " = ";
-        if (b.channels == 1) {
+        if (b->channels == 1) {
             ss << "0;\n";
         } else {
             ss << "make_";
-            if (b.type != Buffer::HALF) {
+            if (b->type != Buffer::HALF) {
                 ss << _GetTypeStr(b);
             } else {
-                ss << "float" << b.channels;
+                ss << "float" << b->channels;
             }
             ss << "(";
-            for (size_t j = 0; j < b.channels; ++j) {
+            for (size_t j = 0; j < b->channels; ++j) {
                 ss << (j ==0 ? "" : ", ") << "0";
             }
             ss << ");\n";
@@ -349,23 +360,23 @@ std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 
     // Do half to float conversions (if needed)
     for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        const std::string & bname = kernel->outBuffers[i].first.name;
-        const Buffer & buf = _buffers.find(bname)->second;
-        if (buf.type == Buffer::HALF) {
+        const std::string & bname = kernel->outBuffers[i].first->name;
+        Buffer::Ptr buf = _buffers.find(bname)->second;
+        if (buf->type == Buffer::HALF) {
             if (!i) {
                 ss << "\n    // float to half conversion\n";
             }
 
-            for (unsigned int j = 0; j < buf.channels; ++j) {
+            for (unsigned int j = 0; j < buf->channels; ++j) {
                 ss << "    " << kernel->outBuffers[i].second << "_half[";
-                if (buf.channels > 1) {
-                    ss << buf.channels << " * ";
+                if (buf->channels > 1) {
+                    ss << buf->channels << " * ";
                 }
                 ss << "idx + " << j << "] = __float2half_rn("
                    << kernel->outBuffers[i].second;
                 switch(j) {
                     case 0:
-                        ss << (buf.channels > 1 ? ".x" : "");
+                        ss << (buf->channels > 1 ? ".x" : "");
                         break;
                     case 1:
                         ss << ".y";
@@ -384,6 +395,20 @@ std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
    
     ss << "}";
     return ss.str();
+}
+//----------------------------------------------------------------------------//
+void CUDAImpl::_StartTimer()
+{
+    cudaEventRecord(_start, 0);
+}
+//----------------------------------------------------------------------------//
+double CUDAImpl::_StopTimer()
+{
+    cudaEventRecord(_stop, 0);
+    cudaEventSynchronize(_stop);
+    float time;
+    cudaEventElapsedTime(&time, _start, _stop);
+    return time;
 }
 //----------------------------------------------------------------------------//
 int _cudaGetMaxGflopsDeviceId()

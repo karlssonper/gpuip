@@ -6,12 +6,12 @@ extern "C" {
     bool _HasNSGLContext();
 }
 #else
-#ifdef _WIN32
-#include <windows.h>
-#include<Wingdi.h>
-#else
-#include <GL/glx.h>
-#endif
+#  ifdef _WIN32
+#    include <windows.h>
+#    include <Wingdi.h>
+#  else
+#    include <GL/glx.h>
+#  endif
 #endif
 #include <GLFW/glfw3.h>
 #include <string>
@@ -29,19 +29,19 @@ class GLContext
             return true;
         }
 #else
-#ifdef _WIN32
+#  ifdef _WIN32
         if (wglGetCurrentContext()) {
             return true;
         }
-#else
+#  else
         if (glXGetCurrentContext()) {
             return true;
         }
-#endif
+#  endif
 #endif
         return false;
     }
-    //----------------------------------------------------------------------------//
+    
     static bool Create(std::string * err)
     {
         if (!glfwInit()) {

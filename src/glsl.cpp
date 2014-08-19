@@ -5,11 +5,11 @@
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-inline GLenum _GetType(const Buffer & b);
+inline GLenum _GetType(const Buffer::Ptr & b);
 //----------------------------------------------------------------------------//
-inline GLenum _GetFormat(const Buffer & b);
+inline GLenum _GetFormat(const Buffer::Ptr & b);
 //----------------------------------------------------------------------------//
-inline GLenum _GetInternalFormat(const Buffer & b);
+inline GLenum _GetInternalFormat(const Buffer::Ptr & b);
 //----------------------------------------------------------------------------//
 Base * CreateGLSL()
 {
@@ -21,7 +21,8 @@ GLSLImpl::GLSLImpl()
 {
 }
 //----------------------------------------------------------------------------//
-bool GLSLImpl::_InitGLEW(std::string * err)
+bool
+GLSLImpl::_InitGLEW(std::string * err)
 {
     if(!GLContext::Exists() && !GLContext::Create(err)) {
         return false;
@@ -32,24 +33,36 @@ bool GLSLImpl::_InitGLEW(std::string * err)
         std::stringstream ss;
         ss << glewGetErrorString(result) << "\ngpuip could not initiate GLEW\n";
         (*err) += ss.str();
-        return false;
+        return GPUIP_ERROR;
     } else {
         _glewInit = true;
     }
     return true;
 }
 //----------------------------------------------------------------------------//
-bool GLSLImpl::Allocate(std::string * err)
+void
+GLSLImpl::_StartTimer()
 {
-    if (!_glewInit) {
-        _InitGLEW(err);
+    glGetInteger64v(GL_TIMESTAMP, &_timer);
+}
+//----------------------------------------------------------------------------//
+double
+GLSLImpl::_StopTimer()
+{
+    const GLint64 timerStart = _timer;
+    glFinish();
+    glGetInteger64v(GL_TIMESTAMP, &_timer);
+    return (_timer - timerStart) / 1000000.0;
+}
+//----------------------------------------------------------------------------//
+double
+GLSLImpl::Allocate(std::string * err)
+{
+    if (!_glewInit && !_InitGLEW(err)) {
+        return GPUIP_ERROR;
     }
-    
-    GLenum result = glewInit();
-    if (result != GLEW_OK) {
-        std::cerr << glewGetErrorString(result) << std::endl;
-        throw std::logic_error("gpuip could not initiate GLEW");
-    }
+
+    _StartTimer();
     
     std::map<std::string, GLuint>::iterator itt;
     if (!_fbos.empty()) {
@@ -62,7 +75,7 @@ bool GLSLImpl::Allocate(std::string * err)
     _fbos.clear();
     _textures.clear(); 
     
-    std::map<std::string,Buffer>::const_iterator it;
+    std::map<std::string,Buffer::Ptr>::const_iterator it;
     for(it = _buffers.begin(); it != _buffers.end(); ++it) {
         GLuint texID;
         glGenTextures(1, &texID);
@@ -80,14 +93,14 @@ bool GLSLImpl::Allocate(std::string * err)
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE); 
 
         // Allocate memory on gpu (needed to bind framebuffer)
-        const Buffer & b = it->second;
+        Buffer::Ptr b = it->second;
         glTexImage2D(GL_TEXTURE_2D, 0, _GetInternalFormat(b),
                      _w, _h, 0, _GetFormat(b), _GetType(b), 0);
         
-        _textures[it->second.name] = texID;
+        _textures[it->second->name] = texID;
 
         if (_glErrorCreateTexture(err)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
             
@@ -106,7 +119,7 @@ bool GLSLImpl::Allocate(std::string * err)
     for(size_t i = 0; i < _kernels.size(); ++i) {
         glBindFramebuffer(GL_FRAMEBUFFER, _fbos[i]);
         for(size_t j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
-            GLuint texID = _textures[_kernels[i]->outBuffers[j].first.name];
+            GLuint texID = _textures[_kernels[i]->outBuffers[j].first->name];
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
                                    GL_TEXTURE_2D, texID, 0 /*mipmap level*/);
         }
@@ -115,7 +128,7 @@ bool GLSLImpl::Allocate(std::string * err)
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                                   GL_RENDERBUFFER, _rboId);
         if (_glErrorFramebuffer(err)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -126,14 +139,17 @@ bool GLSLImpl::Allocate(std::string * err)
     float vertices[] = {0,0,1,0,1,1,0,1};
     glBufferData(GL_ARRAY_BUFFER, 32, vertices, GL_STATIC_DRAW);
     
-    return true;
+    return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-bool GLSLImpl::Build(std::string * err)
+double
+GLSLImpl::Build(std::string * err)
 {
     if (!_glewInit) {
         _InitGLEW(err);
     }
+
+    _StartTimer();
     
     for(size_t i = 0; i < _programs.size(); ++i) {
         glDeleteProgram(_programs[i]);
@@ -169,15 +185,18 @@ bool GLSLImpl::Build(std::string * err)
         glLinkProgram(_programs[i]);
         glDeleteShader(fragShaderID);
         if(_glCheckBuildError(_programs[i],_vertexShaderID,fragShaderID, err)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
 
-    return true;
+    return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-bool GLSLImpl::Process(std::string * err)
+double
+GLSLImpl::Process(std::string * err)
 {
+    _StartTimer();
+    
     glPushAttrib( GL_VIEWPORT_BIT );
     
     // Set the viewport to match the width and height
@@ -185,23 +204,23 @@ bool GLSLImpl::Process(std::string * err)
     
     for(size_t i = 0; i < _kernels.size(); ++i) {
         if (!_DrawQuad(*_kernels[i].get(), _fbos[i], _programs[i], err)) {
-            return false;
+            return GPUIP_ERROR;
         }
     }
 
-    glFinish();
-
     // Reset back to the previous viewport
     glPopAttrib();
-    return true;
+    return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-bool GLSLImpl::Copy(const std::string & buffer,
-                    Buffer::CopyOperation op,
-                    void * data,
-                    std::string * err)
+double
+GLSLImpl::Copy(const std::string & buffer,
+               Buffer::CopyOperation op,
+               void * data,
+               std::string * err)
 {
-    const Buffer & b = _buffers[buffer];
+    _StartTimer();
+    Buffer::Ptr b = _buffers[buffer];
     if (op == Buffer::READ_DATA) {
         glBindTexture(GL_TEXTURE_2D, _textures[buffer]);
         glGetTexImage(GL_TEXTURE_2D, 0, _GetFormat(b), _GetType(b), data);
@@ -211,9 +230,9 @@ bool GLSLImpl::Copy(const std::string & buffer,
                      _w, _h, 0, _GetFormat(b), _GetType(b), data);
     }
     if (_glErrorCopy(err, buffer, op)) {
-        return false;
+        return GPUIP_ERROR;
     }
-    return true;
+    return _StopTimer();
 }
 //----------------------------------------------------------------------------//
 std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
@@ -245,10 +264,11 @@ std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
     return ss.str();
 }
 //----------------------------------------------------------------------------//
-bool GLSLImpl::_DrawQuad(const Kernel & kernel,
-                   GLuint fbo,
-                   GLuint program,
-                   std::string * error)
+bool
+GLSLImpl::_DrawQuad(const Kernel & kernel,
+                    GLuint fbo,
+                    GLuint program,
+                    std::string * error)
 {   
     // Bind framebuffer and clear previous content
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -292,7 +312,7 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
         loc = glGetUniformLocation(program, kernel.inBuffers[i].second.c_str());
         glUniform1i(loc, i);
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, _textures[kernel.inBuffers[i].first.name]);
+        glBindTexture(GL_TEXTURE_2D, _textures[kernel.inBuffers[i].first->name]);
     }
 
     if (_glErrorDrawSetup(error, kernel.name)) {
@@ -301,7 +321,6 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
 
     // Draw quad
     glDrawArrays(GL_QUADS, 0, 4);
-    glFinish();
     
     if (_glErrorDraw(error, kernel.name)) {
         return false;
@@ -318,9 +337,10 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
     return true;
 }
 //----------------------------------------------------------------------------//
-GLenum _GetType(const Buffer & b)
+GLenum
+_GetType(const Buffer::Ptr & b)
 {
-    switch(b.type) {
+    switch(b->type) {
         case Buffer::UNSIGNED_BYTE:
             return GL_UNSIGNED_BYTE;
         case Buffer::HALF:
@@ -333,9 +353,10 @@ GLenum _GetType(const Buffer & b)
     }
 }
 //----------------------------------------------------------------------------//
-GLenum _GetFormat(const Buffer & b)
+GLenum
+_GetFormat(const Buffer::Ptr & b)
 {
-    switch(b.channels) {
+    switch(b->channels) {
         case 1:
             return GL_RED;
         case 2:
@@ -345,13 +366,14 @@ GLenum _GetFormat(const Buffer & b)
         case 4:
             return GL_RGBA;
         default:
-            std::cerr << "Unknown OpenGL buffer channels " << b.channels
+            std::cerr << "Unknown OpenGL buffer channels " << b->channels
                       << std::endl;
             return GL_RGB;
     }
 }
 //----------------------------------------------------------------------------//
-GLenum _GetInternalFormat(const Buffer & b)
+GLenum
+_GetInternalFormat(const Buffer::Ptr & b)
 {
     const GLenum type = _GetType(b);
     const GLenum format = _GetFormat(b);

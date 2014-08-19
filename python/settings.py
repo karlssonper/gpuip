@@ -212,25 +212,21 @@ class Settings(object):
         # Create and add buffers
         buffers = {}
         for b in self.buffers:
-            buf = pygpuip.Buffer()
-            buf.name = b.name
-            buf.channels = b.channels
+            channels = b.channels
 
             # Special case and has to do with how OpenCL
             # aligns vector types with n = 3
-            if env == pygpuip.Environment.OpenCL and buf.channels == 3:
-                buf.channels = 4;
+            if env == pygpuip.Environment.OpenCL and channels == 3:
+                channels = 4;
 
-            if b.type == "half":
-                buf.type = pygpuip.BufferType.HALF
-            elif b.type == "float":
-                buf.type = pygpuip.BufferType.FLOAT
+            type = type = pygpuip.BufferType.HALF
+            if b.type == "float":
+                type = pygpuip.BufferType.FLOAT
             elif b.type == "ubyte":
-                buf.type = pygpuip.BufferType.UNSIGNED_BYTE
+                type = pygpuip.BufferType.UNSIGNED_BYTE
 
-            buffers[b.name] = buf
-            gpuip_obj.AddBuffer(buf)
-
+            buffers[b.name] = gpuip_obj.CreateBuffer(b.name, type, channels)
+            
         # Create kernels
         kernels = []
         for k in self.kernels:

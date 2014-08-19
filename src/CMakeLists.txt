@@ -18,6 +18,8 @@ endif()
 # Build with CUDA
 if(CUDA_FOUND AND BUILD_WITH_CUDA)
   add_definitions(-D_GPUIP_CUDA)
+  find_program(NVCC_BIN NAMES nvcc)
+  add_definitions(-DNVCC_BIN="\\"${NVCC_BIN}\\"")
   if(CUDA_HELPER_MATH_FOUND)
     add_definitions(-DCUDA_HELPER_DIR="\\"${CUDA_HELPER_MATH_DIR}\\"")
   else(CUDA_HELPER_MATH_FOUND)

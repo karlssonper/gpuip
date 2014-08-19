@@ -15,13 +15,13 @@ class OpenCLImpl : public Base
   public:
     OpenCLImpl();
 
-    virtual bool Allocate(std::string * err);
+    virtual double Allocate(std::string * err);
     
-    virtual bool Build(std::string * err);
+    virtual double Build(std::string * err);
 
-    virtual bool Process(std::string * err);
+    virtual double Process(std::string * err);
 
-    virtual bool Copy(const std::string & buffer,
+    virtual double Copy(const std::string & buffer,
                       Buffer::CopyOperation op,
                       void * data,
                       std::string * err);
@@ -39,6 +39,7 @@ class OpenCLImpl : public Base
   private:
     bool _EnqueueKernel(const Kernel & kernel,
                         const cl_kernel & clKernel,
+                        cl_event & event,
                         std::string * err);
 };
 //----------------------------------------------------------------------------//

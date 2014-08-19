@@ -11,13 +11,13 @@ class GLSLImpl : public Base
   public:
     GLSLImpl();
 
-    virtual bool Allocate(std::string * err);
+    virtual double Allocate(std::string * err);
       
-    virtual bool Build(std::string * err);
+    virtual double Build(std::string * err);
 
-    virtual bool Process(std::string * err);
+    virtual double Process(std::string * err);
     
-    virtual bool Copy(const std::string & buffer,
+    virtual double Copy(const std::string & buffer,
                       Buffer::CopyOperation op,
                       void * data,
                       std::string * err);
@@ -26,6 +26,7 @@ class GLSLImpl : public Base
     
   protected:
     bool _glewInit;
+    GLint64 _timer;
     GLuint _vbo;
     GLuint _rboId;
     GLuint _vertexShaderID;
@@ -39,6 +40,10 @@ class GLSLImpl : public Base
                    std::string * error);
 
     bool _InitGLEW(std::string * err);
+
+    void _StartTimer();
+
+    double _StopTimer();
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

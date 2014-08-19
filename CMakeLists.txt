@@ -56,6 +56,7 @@ set(CMAKE_MODULE_PATH ${GPUIP_ROOT_DIR}/cmake)
 # These variables will later be used to link against
 set(GPUIP_LIBRARIES)
 set(GPUIP_PYTHON_LIBRARIES)
+set(GPUIP_TEST_LIBRARIES)
 
 # All third party libraries will be statically built to this dir
 set(THIRD_PARTY_DIR ${GPUIP_ROOT_DIR}/thirdparty)
@@ -276,13 +277,14 @@ if(BUILD_PYTHON_BINDINGS)
 			BUILD_IN_SOURCE 1
 			PREFIX ${CMAKE_BINARY_DIR}/cimg
 			CONFIGURE_COMMAND "" 
-			BUILD_COMMAND ${cmake_bin} . -DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_DIR})
+			BUILD_COMMAND ${cmake_bin} . 
+			-DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_DIR} -Wno-dev)
 		# Not too happy about this extra step. Much simpler would just be empty
 		# Configure/Build commands and a 'cp CImg.h ${THIRD_PARTY_DIR}/include'
 		# as install command. Worked fine in unix/mac but could'nt get the 'copy' 
 		# command in windows to work with the args list, hence this 'hack'
 		ExternalProject_Add_Step(cimg modify_CMakeLists
-			COMMAND echo install(FILES CImg.h DESTINATION include) > CMakeLists.txt
+			COMMAND echo "install(FILES CImg.h DESTINATION include)" > CMakeLists.txt
 			DEPENDEES configure
 			DEPENDERS build
 			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/cimg/src/cimg)
@@ -333,6 +335,7 @@ if(BUILD_PYTHON_BINDINGS)
 	if(OPENEXR_FOUND)
 		include_directories(${OPENEXR_INCLUDE_PATHS})
 		list(APPEND GPUIP_PYTHON_LIBRARIES ${OPENEXR_LIBRARIES})
+		list(APPEND GPUIP_TEST_LIBRARIES ${OPENEXR_LIBRARIES})
 	elseif(BUILD_THIRD_PARTY_LIBS)
 		message(STATUS "${Cyan}Adding third party target openexr${ColorReset}")
 		ExternalProject_Add(openexr
@@ -348,11 +351,13 @@ if(BUILD_PYTHON_BINDINGS)
 			-DBUILD_BIN=OFF
 			-DBUILD_TESTS=OFF)
 		list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}Half${LIB_SUFFIX})
+		list(APPEND GPUIP_TEST_LIBRARIES ${LIB_PREFIX}Half${LIB_SUFFIX})  
 		set(OPENEXR_LIBS Iex IexMath IlmImf IlmThread Imath)
 		string(REPLACE "." "_" OPENEXR_VERSION_UNDERSCORE ${OPENEXR_VERSION})
 		set(VER -${OPENEXR_VERSION_UNDERSCORE})
 		foreach(_L ${OPENEXR_LIBS})
 			list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}${_L}${VER}${LIB_SUFFIX})
+			list(APPEND GPUIP_TEST_LIBRARIES ${LIB_PREFIX}${_L}${VER}${LIB_SUFFIX})
 		endforeach()
 		list(APPEND THIRD_PARTY_TARGETS openexr)
 	endif()
@@ -371,18 +376,7 @@ add_subdirectory(src)
 if(BUILD_TESTS)
 	message(STATUS "Testing enabled")
 	enable_testing()
-
-	# Add C++ test
-	add_executable(test_cpp test/test)
-	target_link_libraries(test_cpp gpuip)
-	add_test(NAME test_cpp COMMAND test_cpp)
-
-	# Add python test
-	if(BUILD_PYTHON_BINDINGS)
-		find_package(PythonInterp REQUIRED)
-		configure_file(test/test.py src/test.py COPYONLY)
-		add_test(NAME test_py COMMAND ${PYTHON_EXECUTABLE} src/test.py)
-	endif()
+	add_subdirectory(test)
 endif()
 
 if(BUILD_DOCS)

@@ -14,12 +14,20 @@
 #endif
 //----------------------------------------------------------------------------//
 namespace gpuip {
+//
+#define GPUIP_ERROR -1.0
 //----------------------------------------------------------------------------//
 enum GpuEnvironment { OpenCL, CUDA, GLSL };
 //----------------------------------------------------------------------------//
 struct Buffer {
+#ifdef _GPUIP_PYTHON_BINDINGS
+    typedef boost::shared_ptr<Buffer> Ptr;
+#else
+    typedef std::tr1::shared_ptr<Buffer> Ptr;
+#endif
     enum CopyOperation{ READ_DATA, WRITE_DATA };
     enum Type{ UNSIGNED_BYTE, HALF, FLOAT };
+    Buffer(const std::string & name, Type type, unsigned int channels);
     std::string name;
     Type type;
     unsigned int channels;
@@ -35,14 +43,14 @@ struct Parameter
 struct Kernel {
 #ifdef _GPUIP_PYTHON_BINDINGS
     typedef boost::shared_ptr<Kernel> Ptr;
-#else // else _GPUIP_PYTHON_BINDINGS
+#else
     typedef std::tr1::shared_ptr<Kernel> Ptr;
-#endif // end _GPUIP_PYTHON_BINDINGS
-        
+#endif
+    Kernel(const std::string & name);
     std::string name;
     std::string code;
-    std::vector<std::pair<Buffer,std::string> > inBuffers;
-    std::vector<std::pair<Buffer,std::string> > outBuffers;
+    std::vector<std::pair<Buffer::Ptr,std::string> > inBuffers;
+    std::vector<std::pair<Buffer::Ptr,std::string> > outBuffers;
     std::vector<Parameter<int> > paramsInt;
     std::vector<Parameter<float> > paramsFloat;
 };
@@ -67,7 +75,9 @@ class Base
         return _env;
     }
 
-    bool AddBuffer(const Buffer & buffer);
+    Buffer::Ptr CreateBuffer(const std::string & name,
+                             Buffer::Type type,
+                             unsigned int channels);
 
     Kernel::Ptr CreateKernel(const std::string & name);
     
@@ -85,13 +95,13 @@ class Base
         return _h;
     }
 
-    virtual bool Allocate(std::string * err) = 0;
+    virtual double Allocate(std::string * err) = 0;
 
-    virtual bool Build(std::string * err) = 0;
+    virtual double Build(std::string * err) = 0;
 
-    virtual bool Process(std::string * err) = 0;
+    virtual double Process(std::string * err) = 0;
 
-    virtual bool Copy(const std::string & buffer,
+    virtual double Copy(const std::string & buffer,
                       Buffer::CopyOperation op,
                       void * data,
                       std::string * err) = 0;
@@ -104,10 +114,10 @@ class Base
     GpuEnvironment _env;
     unsigned int _w; // width
     unsigned int _h; // height
-    std::map<std::string, Buffer> _buffers;
+    std::map<std::string, Buffer::Ptr> _buffers;
     std::vector<Kernel::Ptr> _kernels;
 
-    unsigned int _GetBufferSize(const Buffer & buffer) const;
+    unsigned int _GetBufferSize(Buffer::Ptr buffer) const;
   
   private:
     Base();

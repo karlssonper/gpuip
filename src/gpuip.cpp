@@ -67,28 +67,41 @@ bool Base::CanCreateGpuEnvironment(GpuEnvironment env)
     }
 }
 //----------------------------------------------------------------------------//
+Buffer::Buffer(const std::string & name_, Type type_, unsigned int channels_)
+        : name(name_), type(type_), channels(channels_)
+{
+}
+//----------------------------------------------------------------------------//
+Kernel::Kernel(const std::string & name_)
+        : name(name_)
+{
+}
+//----------------------------------------------------------------------------//
 Base::Base(GpuEnvironment env)
         : _env(env), _w(0), _h(0)
 {
     
 }
 //----------------------------------------------------------------------------//
-bool Base::AddBuffer(const Buffer & buffer)
+Buffer::Ptr
+Base::CreateBuffer(const std::string & name,
+                   Buffer::Type type,
+                   unsigned int channels)
 {
-    if (_buffers.find(buffer.name) == _buffers.end()) {
-        _buffers[buffer.name] = buffer;
-        return true;
+    if (_buffers.find(name) == _buffers.end()) {
+        Buffer::Ptr p = Buffer::Ptr(new Buffer(name, type, channels));
+        _buffers[name] = p;
+        return p;
     } else {
-        std::cerr << "gpuip error: Buffer named " << buffer.name
+        std::cerr << "gpuip error: Buffer named " << name
                   << " already exists. Skipping..." << std::endl;
-        return false;
+        return Buffer::Ptr(new Buffer(name, type, channels));
     }
 }
 //----------------------------------------------------------------------------//
 Kernel::Ptr Base::CreateKernel(const std::string & name)
 {
-    _kernels.push_back(Kernel::Ptr(new Kernel()));
-    _kernels.back()->name = name;
+    _kernels.push_back(Kernel::Ptr(new Kernel(name)));
     return _kernels.back();
 }
 //----------------------------------------------------------------------------//
@@ -110,18 +123,18 @@ void Base::SetDimensions(unsigned int width, unsigned int height)
     _h = height;
 }
 //----------------------------------------------------------------------------//
-unsigned int  Base::_GetBufferSize(const Buffer & buffer) const
+unsigned int  Base::_GetBufferSize(Buffer::Ptr buffer) const
 {
     unsigned int bpp = 0; // bytes per pixel
-    switch(buffer.type) {
+    switch(buffer->type) {
         case Buffer::UNSIGNED_BYTE:
-            bpp = buffer.channels;
+            bpp = buffer->channels;
             break;
         case Buffer::HALF:
-            bpp = sizeof(float)/2 * buffer.channels;
+            bpp = sizeof(float)/2 * buffer->channels;
             break;
         case Buffer::FLOAT:
-            bpp = sizeof(float) * buffer.channels;
+            bpp = sizeof(float) * buffer->channels;
             break;
     }
     
