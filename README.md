@@ -46,11 +46,11 @@ optional arguments:
   * [`Boost Numpy`] (https://github.com/ndarray/Boost.NumPy) *numpy python bindings*
   * [`OpenEXR`] (http://www.openexr.com/) *exr i/o*
   * [`CImg`] (http://cimg.sourceforge.net/) *png, jpeg,t iff, tga i/o*
-  * [`libpng`] (http://www.libpng.org/pub/png/libpng.html) *png*
+  * [`libpng`] (http://www.libpng.org/pub/png/libpng.html) *png format*
   * [`zlib`] (http://www.zlib.net) *compression used by OpenEXR and libpng*
   
 * bin/gpuip
-  * [`Qt`] (http://qt-project.org/) *GUI*
+  * [`Qt`] (http://qt-project.org/) *GUI (optional)*
   * [`PySide`] (http://qt-project.org/wiki/PySide) *Qt python bindings*
   
 
