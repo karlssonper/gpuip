@@ -6,7 +6,7 @@
 #include <cassert>
 #include <ctime>
 #ifndef NUM_TESTS
-#  define NUM_TESTS 10
+#  define NUM_TESTS 5
 #endif
 #define ALPHA 0.5
 #define BLUR_N 4
@@ -76,19 +76,23 @@ void LerpCPU(const std::vector<Imf::Rgba> & A,
 
 void LerpCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                           const std::vector<Imf::Rgba> & B,
-                          std::vector<Imf::Rgba> & C)
+                          std::vector<Imf::Rgba> & C,
+                          unsigned int width,
+                          unsigned int height)
 {
 #ifdef _GPUIP_TEST_WITH_OPENMP
     double time = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
         std::clock_t start = TimerStartOMP();
-        const int size = A.size();
 #pragma omp parallel for
-        for(size_t i = 0; i < size; ++i) {
-            C[i].r = (1-ALPHA) * A[i].r + ALPHA * B[i].r;
-            C[i].g = (1-ALPHA) * A[i].g + ALPHA * B[i].g;
-            C[i].b = (1-ALPHA) * A[i].b + ALPHA * B[i].b;
-            C[i].a = (1-ALPHA) * A[i].a + ALPHA * B[i].a;
+        for(unsigned int y = 0; y < height; ++y) {
+            for (unsigned int x = 0; x < width; ++x) {
+                const size_t idx = x + width * y;
+                C[idx].r = (1-ALPHA) * A[idx].r + ALPHA * B[idx].r;
+                C[idx].g = (1-ALPHA) * A[idx].g + ALPHA * B[idx].g;
+                C[idx].b = (1-ALPHA) * A[idx].b + ALPHA * B[idx].b;
+                C[idx].a = (1-ALPHA) * A[idx].a + ALPHA * B[idx].a;
+            }
         }
         time += double(TimerStopOMP(start)*1000.0);
     }
@@ -536,7 +540,7 @@ int main(int argc, char ** argv)
            "|                  LERP                                       |\n"
            "---------------------------------------------------------------\n");
     LerpCPU(dataA, dataB, dataCPU);
-    LerpCPUMultiThreaded(dataA, dataB, dataCPU);
+    LerpCPUMultiThreaded(dataA, dataB, dataCPU, width, height);
     LerpGPU(gpuip::OpenCL,
             GetKernelCode(kernels_dir + "lerp.cl").c_str(),
             width, height, dataA, dataB, dataGPU);
