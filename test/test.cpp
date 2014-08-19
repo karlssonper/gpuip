@@ -1,4 +1,4 @@
-#include "../src/gpuip.h"
+#include <gpuip.h>
 #include <cassert>
 #include <stdlib.h>
 #include <math.h>
@@ -257,26 +257,22 @@ inline bool equal(float a, float b)
 void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
           const char * boilerplateA, const char * boilerplateB)
 {
+    if (!gpuip::Base::CanCreateGpuEnvironment(env)) {
+        return;
+    }
+    
+    const char * gpu[3] = {"OpenCL", "CUDA", "GLSL"};
+    std::cout << "Testing " << gpu[env] << "..." << std::endl;
+    
     const unsigned int width = 4;
     const unsigned int height = 4;
     const unsigned int N = width * height;
     gpuip::Base::Ptr b(gpuip::Base::Create(env));
     b->SetDimensions(width, height);
 
-    gpuip::Buffer b1;
-    b1.name = "b1";
-    b1.channels = 1;
-    b1.type = gpuip::Buffer::FLOAT;
-
-    gpuip::Buffer b2 = b1;
-    b2.name = "b2";
-
-    gpuip::Buffer b3 = b1;
-    b3.name = "b3";
-    
-    b->AddBuffer(b1);
-    b->AddBuffer(b2);
-    b->AddBuffer(b3);
+    gpuip::Buffer::Ptr b1 = b->CreateBuffer("b1", gpuip::Buffer::FLOAT, 1);
+    gpuip::Buffer::Ptr b2 = b->CreateBuffer("b2", gpuip::Buffer::FLOAT, 1);
+    gpuip::Buffer::Ptr b3 = b->CreateBuffer("b3", gpuip::Buffer::FLOAT, 1);
 
     gpuip::Kernel::Ptr kernelA = b->CreateKernel("my_kernelA");
     assert(kernelA.get() != NULL);
@@ -335,23 +331,12 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
 //----------------------------------------------------------------------------//
 int main()
 {
-    if (gpuip::Base::CanCreateGpuEnvironment(gpuip::OpenCL)) {
-        std::cout << "Testing OpenCL..." << std::endl;
-        test(gpuip::OpenCL, opencl_codeA, opencl_codeB,
-             opencl_boilerplateA, opencl_boilerplateB);
-    }
-
-    if (gpuip::Base::CanCreateGpuEnvironment(gpuip::CUDA)) {
-        std::cout << "Testing CUDA..." << std::endl;
-        test(gpuip::CUDA, cuda_codeA, cuda_codeB,
-             cuda_boilerplateA, cuda_boilerplateB);
-    }
-
-    if (gpuip::Base::CanCreateGpuEnvironment(gpuip::GLSL)) {
-        std::cout << "Testing GLSL..." << std::endl;
-        test(gpuip::GLSL, glsl_codeA, glsl_codeB,
-             glsl_boilerplateA, glsl_boilerplateB);
-    }
+    test(gpuip::OpenCL, opencl_codeA, opencl_codeB,
+         opencl_boilerplateA, opencl_boilerplateB);
+    test(gpuip::CUDA, cuda_codeA, cuda_codeB,
+         cuda_boilerplateA, cuda_boilerplateB);
+    test(gpuip::GLSL, glsl_codeA, glsl_codeB,
+         glsl_boilerplateA, glsl_boilerplateB);
     return 0;
 }
 //----------------------------------------------------------------------------//

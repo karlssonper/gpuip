@@ -259,14 +259,12 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     base.SetDimensions(width, height)
     assert base
 
-    buffers = [gpuip.Buffer() for i in range(3)]
-    for i, b in enumerate(buffers):
-        b.name = "b%i" % i
-        b.data = numpy.zeros((width,height), dtype = numpy.float32)
-        b.channels = 1
-        b.type = gpuip.BufferType.FLOAT
-        base.AddBuffer(b)
-
+    buffers = []
+    for i in xrange(3):
+        b = base.CreateBuffer("b%i" % i, gpuip.BufferType.FLOAT, 1)
+        b.data = numpy.zeros((width,height,1), dtype = numpy.float32)
+        buffers.append(b)
+        
     kernelA = base.CreateKernel("my_kernelA")
     assert kernelA 
     assert kernelA.name == "my_kernelA" 
@@ -297,7 +295,7 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
 
     assert base.Allocate() == no_error
     assert base.Allocate() == no_error # reinit should not break things
-    indata = numpy.zeros((width,height), dtype = numpy.float32)
+    indata = numpy.zeros((width,height,1), dtype = numpy.float32)
     for i in range(width):
         for j in range(height):
             indata[i][j] = i + j * width
