@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import settings
 import utils
 import sys
 import signal
@@ -7,7 +6,7 @@ import os
 try:
     import argparse
     parsermodule = argparse.ArgumentParser
-except Exception:
+except:
     import optparse
     parsermodule = optparse.OptionParser
     parsermodule.add_argument = parsermodule.add_option
@@ -16,7 +15,7 @@ def getCommandLineArguments():
     # Command line arguments
     desc = "Framework for Image Processing on the GPU"
     parser = parsermodule(desc)
-    parser.add_argument("--file",
+    parser.add_argument("-f", "--file",
                         help="Image Processing file *.ip")
     parser.add_argument("-p", "--param",
                         action="append",
@@ -36,21 +35,25 @@ def getCommandLineArguments():
     parser.add_argument("-v","--verbose",
                         action="store_true",
                         help="Outputs information")
-    parser.add_argument("-t","--timestamp",
+    parser.add_argument("--timestamp",
                         action="store_true",
                         help="Add timestamp in log output")
-    parser.add_argument("-n", "--nogui",
+    parser.add_argument("--nogui",
                         action="store_true",
                         help="Command line version")
-    return parser.parse_args()[0]
+
+    if parsermodule.__name__  == "ArgumentParser":
+        return parser.parse_args()
+    else:
+        return parser.parse_args()[0]
 
 def terminate(msg):
     print msg
     sys.exit(1)
 
 def getSettings(args):
-    if not args.file:
-        terminate("error: must specify .ip file")
+    import settings
+
     if not os.path.isfile(args.file):
         return None
 
@@ -95,12 +98,11 @@ def getSettings(args):
 
 def runGUI(ippath, ipsettings):
     # Run GUI version
+    from PySide import QtGui
     import mainwindow
 
     # Makes it possible to close program with ctrl+c in a terminal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    from PySide import QtGui
     app = QtGui.QApplication(sys.argv)
     app.setStyle("plastique")
     mainwindow = mainwindow.MainWindow(path = ippath, settings = ipsettings)

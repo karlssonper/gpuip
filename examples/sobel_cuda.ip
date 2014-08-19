@@ -4,7 +4,7 @@
     <name>buffer1</name>
     <type>ubyte</type>
     <channels>4</channels>
-    <input>/home/per/dev/gpuip/examples/images/lena.png</input>
+    <input>images/lena.png</input>
   </buffer>
   <buffer>
     <name>buffer2</name>
@@ -28,7 +28,7 @@
   </buffer>
   <kernel>
     <name>sobel</name>
-    <code_file>/home/per/dev/gpuip/examples/kernels/sobel.cu</code_file>
+    <code_file>kernels/sobel.cu</code_file>
     <inbuffer>
       <name>in</name>
       <targetbuffer>buffer1</targetbuffer>

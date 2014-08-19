@@ -28,7 +28,7 @@
   </buffer>
   <kernel>
     <name>sobel</name>
-    <code_file>/home/per/dev/gpuip/examples/kernels/sobel.glsl</code_file>
+    <code_file>kernels/sobel.glsl</code_file>
     <inbuffer>
       <name>input</name>
       <targetbuffer>buffer1</targetbuffer>

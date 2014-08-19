@@ -1,3 +1,5 @@
+project(gpuip_python)
+
 file(GLOB PYTHON_FILES "*.py")
 
 install(FILES ${PYTHON_FILES} DESTINATION gpuip)
@@ -12,7 +14,7 @@ if(NOT WIN32)
   # Create symlink in CMAKE_INSTALL_PREFIX/bin
   set(GPUIP_PY ${CMAKE_INSTALL_PREFIX}/gpuip/gpuip.py)
   set(GPUIP_PY_TARGET ${CMAKE_INSTALL_PREFIX}/bin/gpuip)
-  install(CODE "execute_process(COMMAND ln -sf ${GPUIP_PY} ${GPUIP_PY_TARGET}")
+  install(CODE "execute_process(COMMAND ln -sf ${GPUIP_PY} ${GPUIP_PY_TARGET})")
 endif(NOT WIN32)
 
 

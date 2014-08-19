@@ -47,13 +47,6 @@ FIND_LIBRARY(GLFW_LIBRARIES DOC "Absolute path to GLFW library."
   ${GLFW_ROOT_DIR}/lib-msvc100/release # added by ptr
 )
 
-if (APPLE)
-  set(GLFW_cocoa "-framework Cocoa" CACHE STRING "Cocoa framework for OSX")
-  set(GLFW_corevideo "-framework CoreVideo" CACHE STRING "CoreVideo framework for OSX")
-  set(GLFW_iokit "-framework IOKit" CACHE STRING "IOKit framework for OSX")
-  set(GLFW_LIBRARIES ${GLFW_LIBRARIES} ${GLFW_cocoa} ${GLFW_corevideo} ${GLFW_iokit})
-endif(APPLE)
-
 SET(GLFW_FOUND 0)
 IF(GLFW_LIBRARY AND GLFW_INCLUDE_DIR)
   SET(GLFW_FOUND 1)

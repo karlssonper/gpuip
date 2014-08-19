@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.8)
-
 project(gpuip_src)
 
 if(NOT WIN32)
@@ -46,6 +44,7 @@ endif()
 add_library(gpuip ${LIBRARY_TYPE} ${SOURCE})
 target_link_libraries(gpuip ${GPUIP_LIBRARIES})
 install(TARGETS gpuip DESTINATION lib)
+install(FILES gpuip.h DESTINATION include)
 if (THIRD_PARTY_TARGETS)
   add_dependencies(gpuip ${THIRD_PARTY_TARGETS})
 endif()
