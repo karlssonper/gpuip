@@ -50,8 +50,8 @@ optional arguments:
   * [`zlib`] (http://www.zlib.net) *compression used by OpenEXR and libpng*
   
 * bin/gpuip
-  * [Qt] (http://qt-project.org/) *GUI*
-  * [PySide] (http://qt-project.org/wiki/PySide) *Qt python bindings*
+  * [`Qt`] (http://qt-project.org/) *GUI*
+  * [`PySide`] (http://qt-project.org/wiki/PySide) *Qt python bindings*
   
 
 ### Build/Install ###
