@@ -39,7 +39,45 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   </div>
 </div>
 <div class="contents">
-<h1>gpuip Documentation</h1><h3>0.1 </h3></div>
+<h1>gpuip Documentation</h1><h3>0.1 </h3><p><a class="el" href="namespacegpuip.html">gpuip</a> is a cross-platform framework for image processing on the GPU.</p>
+<p>Example: </p>
+<div class="fragment"><pre class="fragment"><span class="preprocessor">#include &lt;<a class="code" href="gpuip_8h.html">gpuip.h</a>&gt;</span>
+
+<span class="keywordtype">void</span> print_timings(<span class="keyword">const</span> <span class="keywordtype">char</span> * func_name, <span class="keywordtype">double</span> ms, std::string * err)
+{
+    <span class="keywordflow">if</span> (ms != <a class="code" href="gpuip_8h.html#abdd2b9c50e626da37c6c5cb18699e9f1">GPUIP_ERROR</a>) {
+        printf(<span class="stringliteral">&quot;%s took %.2lf ms.\n&quot;</span>, func_name, ms);
+    } <span class="keywordflow">else</span> {
+        printf(<span class="stringliteral">&quot;Error in %s: %s\n&quot;</span>, func_name, err-&gt;c_str());
+    }
+}
+
+<span class="keywordtype">void</span> use_gpuip()
+{
+    std::string err;
+    <span class="keywordtype">float</span> * data;
+    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> width, height;
+    ReadImage(&amp;data, &amp;width, &amp;height); <span class="comment">// definied somewhere else</span>
+
+    <span class="keywordflow">if</span> (!gpuip::ImageProcessor::CanCreateGpuEnvironment(<a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9a0e63224082c67bd72c84dc0105dba9fe">gpuip::GLSL</a>)) {
+        <span class="comment">// ... deal with error - throw exception, return function etc</span>
+    }
+    <a class="code" href="classgpuip_1_1_image_processor.html#ae371dfdd8da86a33075b7eebb3445245" title="Smart pointer.">gpuip::ImageProcessor::Ptr</a> ip = <a class="code" href="classgpuip_1_1_image_processor.html#ac23b654456200ed44f4e9dde5b9d344b" title="Factory function to create an ImageProcessor entity.">gpuip::ImageProcessor::Create</a>(<a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9a0e63224082c67bd72c84dc0105dba9fe">gpuip::GLSL</a>);
+    ip-&gt;SetDimensions(width, height);
+    <a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">gpuip::Buffer::Ptr</a> b0 = ip-&gt;CreateBuffer(<span class="stringliteral">&quot;b0&quot;</span>, gpuip::FLOAT, 4);
+    <a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">gpuip::Buffer::Ptr</a> b1 = ip-&gt;CreateBuffer(<span class="stringliteral">&quot;b1&quot;</span>, gpuip::FLOAT, 4);
+    <a class="code" href="structgpuip_1_1_kernel.html#a93adaf0a6f5e397f0d5714eb5ffd2589" title="Smart pointer.">gpuip::Kernel::Ptr</a> kernel = gpuipip-&gt;CreateKernel(<span class="stringliteral">&quot;modify_red&quot;</span>);
+    kernel-&gt;code = GetKernelCode(); <span class="comment">// definied somewhere else</span>
+    kernel-&gt;inBuffers.push_back(<a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html" title="Tells a kernel which buffers to use in the argument list.">gpuip::Kernel::BufferLink</a>(b0, <span class="stringliteral">&quot;img&quot;</span>));
+    kernel-&gt;outBuffers.push_back(<a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html" title="Tells a kernel which buffers to use in the argument list.">gpuip::Kernel::BufferLink</a>(b1, <span class="stringliteral">&quot;out_img&quot;</span>));
+    kernel-&gt;paramsFloat.push_back(<a class="code" href="structgpuip_1_1_parameter.html">gpuip::Parameter&lt;float&gt;</a>(<span class="stringliteral">&quot;alpha&quot;</span>, 0.4));
+    print_timings(<span class="stringliteral">&quot;Build&quot;</span>, ip-&gt;Build(&amp;err), &amp;err);
+    print_timings(<span class="stringliteral">&quot;Allocate&quot;</span>, ip-&gt;Allocate(&amp;err), &amp;err);
+    print_timings(<span class="stringliteral">&quot;Copy&quot;</span>, ip-&gt;Copy(b0, <a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672a4fbffe708b1fe7b831c84148e51b501c">gpuip::Buffer::COPY_TO_GPU</a>, data, &amp;err), &amp;err);
+    print_timings(<span class="stringliteral">&quot;Run&quot;</span>, ip-&gt;Run(&amp;err), &amp;err);
+    print_timings(<span class="stringliteral">&quot;Copy&quot;</span>, ip-&gt;Copy(b1, <a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672aec10357928834f05a65b4caba10052a2">gpuip::Buffer::COPY_FROM_GPU</a>, data, &amp;err), &amp;err);
+}
+</pre></div> </div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
