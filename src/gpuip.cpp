@@ -76,6 +76,11 @@ Kernel::Kernel(const std::string & name_)
         : name(name_)
 {
 }
+
+Kernel::BufferLink::BufferLink(Buffer::Ptr buffer_, const std::string & name_)
+        : buffer(buffer_), name(name_)
+{
+}
 //----------------------------------------------------------------------------//
 ImageProcessor::ImageProcessor(GpuEnvironment env)
         : _env(env), _w(0), _h(0)

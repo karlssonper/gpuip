@@ -17,14 +17,31 @@ ImageProcessor * CreateGLSL()
 }
 //----------------------------------------------------------------------------//
 GLSLImpl::GLSLImpl()
-        : ImageProcessor(gpuip::GLSL), _glewInit(false)
+        : ImageProcessor(gpuip::GLSL), _glewInit(false),_glContextCreated(false)
 {
+}
+//----------------------------------------------------------------------------//
+GLSLImpl::~GLSLImpl()
+{
+    _DeleteBuffers();
+    
+    // Delete shader programs
+    for(size_t i = 0; i < _programs.size(); ++i) {
+        glDeleteProgram(_programs[i]);
+    }
+    
+    if(_glContextCreated) {
+        GLContext::Delete();
+    }
 }
 //----------------------------------------------------------------------------//
 bool GLSLImpl::_InitGLEW(std::string * err)
 {
-    if(!GLContext::Exists() && !GLContext::Create(err)) {
-        return false;
+    if(!GLContext::Exists()) {
+        _glContextCreated = true;
+        if(!GLContext::Create(err)) {
+            return false;
+        }
     }
     
     GLenum result = glewInit();
@@ -52,14 +69,8 @@ double GLSLImpl::_StopTimer()
     return (_timer - timerStart) / 1000000.0;
 }
 //----------------------------------------------------------------------------//
-double GLSLImpl::Allocate(std::string * err)
+void GLSLImpl::_DeleteBuffers()
 {
-    if (!_glewInit && !_InitGLEW(err)) {
-        return GPUIP_ERROR;
-    }
-
-    _StartTimer();
-    
     std::map<std::string, GLuint>::iterator itt;
     if (!_fbos.empty()) {
         glDeleteRenderbuffers(1, &_rboId);
@@ -70,7 +81,18 @@ double GLSLImpl::Allocate(std::string * err)
     }
     _fbos.clear();
     _textures.clear(); 
-    
+}
+//----------------------------------------------------------------------------//
+double GLSLImpl::Allocate(std::string * err)
+{
+    if (!_glewInit && !_InitGLEW(err)) {
+        return GPUIP_ERROR;
+    }
+
+    _StartTimer();
+
+    _DeleteBuffers();
+        
     std::map<std::string,Buffer::Ptr>::const_iterator it;
     for(it = _buffers.begin(); it != _buffers.end(); ++it) {
         GLuint texID;
@@ -115,7 +137,7 @@ double GLSLImpl::Allocate(std::string * err)
     for(size_t i = 0; i < _kernels.size(); ++i) {
         glBindFramebuffer(GL_FRAMEBUFFER, _fbos[i]);
         for(size_t j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
-            GLuint texID = _textures[_kernels[i]->outBuffers[j].first->name];
+            GLuint texID = _textures[_kernels[i]->outBuffers[j].buffer->name];
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
                                    GL_TEXTURE_2D, texID, 0 /*mipmap level*/);
         }
@@ -178,6 +200,7 @@ double GLSLImpl::Build(std::string * err)
         glAttachShader(_programs[i], fragShaderID);
         glAttachShader(_programs[i], _vertexShaderID);
         glLinkProgram(_programs[i]);
+        glDeleteShader(_vertexShaderID);
         glDeleteShader(fragShaderID);
         if(_glCheckBuildError(_programs[i],_vertexShaderID,fragShaderID, err)) {
             return GPUIP_ERROR;
@@ -233,7 +256,7 @@ std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
     std::stringstream ss;
     ss << "#version 120\n";
     for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        ss << "uniform sampler2D " << kernel->inBuffers[i].second << ";\n";
+        ss << "uniform sampler2D " << kernel->inBuffers[i].name << ";\n";
     }
     for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
         ss << "uniform int " << kernel->paramsInt[i].name <<";\n";
@@ -250,7 +273,7 @@ std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
             ss << "\n";
         }
         ss << "    // gl_FragData[" << i << "] is buffer "
-           << kernel->outBuffers[i].second << "\n"
+           << kernel->outBuffers[i].name << "\n"
            << "    gl_FragData[" << i<<"] = vec4(0,0,0,1);\n";  
     }    
     ss << "}";
@@ -301,10 +324,10 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
 
     // Texture setup
     for(size_t i = 0; i < kernel.inBuffers.size(); ++i) {
-        loc = glGetUniformLocation(program, kernel.inBuffers[i].second.c_str());
+        loc = glGetUniformLocation(program, kernel.inBuffers[i].name.c_str());
         glUniform1i(loc, i);
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, _textures[kernel.inBuffers[i].first->name]);
+        glBindTexture(GL_TEXTURE_2D, _textures[kernel.inBuffers[i].buffer->name]);
     }
 
     if (_glErrorDrawSetup(error, kernel.name)) {

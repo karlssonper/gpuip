@@ -12,6 +12,8 @@ class CUDAImpl : public ImageProcessor
   public:
     CUDAImpl();
 
+    virtual ~CUDAImpl();
+    
     virtual double Allocate(std::string * err);
     
     virtual double Build(std::string * err);
@@ -39,6 +41,10 @@ class CUDAImpl : public ImageProcessor
     void _StartTimer();
     
     double _StopTimer();
+
+    bool _FreeBuffers(std::string * err);
+
+    bool _UnloadModule(std::string * err);
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

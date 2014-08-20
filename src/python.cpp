@@ -65,24 +65,26 @@ class _KernelWrapper : public gpuip::Kernel
                      boost::shared_ptr<_BufferWrapper> buffer)
     {
         for(size_t i = 0; i < this->inBuffers.size(); ++i) {
-            if (this->inBuffers[i].second == kernelBufferName) {
-                this->inBuffers[i].first = buffer->buffer;
+            if (this->inBuffers[i].name == kernelBufferName) {
+                this->inBuffers[i].buffer = buffer->buffer;
                 return;
             }
         }
-        this->inBuffers.push_back(make_pair(buffer->buffer, kernelBufferName));
+        this->inBuffers.push_back(
+            gpuip::Kernel::BufferLink(buffer->buffer, kernelBufferName));
     }
 
     void SetOutBuffer(const std::string & kernelBufferName,
                       boost::shared_ptr<_BufferWrapper> buffer)
     {
         for(size_t i = 0; i < this->outBuffers.size(); ++i) {
-            if (this->outBuffers[i].second == kernelBufferName) {
-                this->outBuffers[i].first = buffer->buffer;
+            if (this->outBuffers[i].name == kernelBufferName) {
+                this->outBuffers[i].buffer = buffer->buffer;
                 return;
             }
         }
-        this->outBuffers.push_back(make_pair(buffer->buffer, kernelBufferName));
+        this->outBuffers.push_back(
+            gpuip::Kernel::BufferLink(buffer->buffer, kernelBufferName));
     }
 
     void SetParamInt(const gpuip::Parameter<int> & param)

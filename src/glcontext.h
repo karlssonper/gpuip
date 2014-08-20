@@ -57,6 +57,12 @@ class GLContext
         return true;
     }
 
+    static void Delete()
+    {
+        if(glfwGetCurrentContext()) {
+            glfwTerminate();
+        }
+    }
 };
 //----------------------------------------------------------------------------//
 }// end namespace gpuip

@@ -11,6 +11,8 @@ class GLSLImpl : public ImageProcessor
   public:
     GLSLImpl();
 
+    virtual ~GLSLImpl();
+
     virtual double Allocate(std::string * err);
       
     virtual double Build(std::string * err);
@@ -26,6 +28,7 @@ class GLSLImpl : public ImageProcessor
     
   protected:
     bool _glewInit;
+    bool _glContextCreated;
     GLint64 _timer;
     GLuint _vbo;
     GLuint _rboId;
@@ -44,6 +47,8 @@ class GLSLImpl : public ImageProcessor
     void _StartTimer();
 
     double _StopTimer();
+
+    void _DeleteBuffers();
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

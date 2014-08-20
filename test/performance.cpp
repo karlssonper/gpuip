@@ -77,8 +77,8 @@ void LerpCPU(const std::vector<Imf::Rgba> & A,
 void LerpCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                           const std::vector<Imf::Rgba> & B,
                           std::vector<Imf::Rgba> & C,
-                          unsigned int width,
-                          unsigned int height)
+                          const unsigned int width,
+                          const unsigned int height)
 {
 #ifdef _GPUIP_TEST_WITH_OPENMP
     double time = 0;
@@ -391,16 +391,16 @@ void GaussianBlurSeparableGPU(gpuip::GpuEnvironment env,
 
     gpuip::Kernel::Ptr kernelA = ip->CreateKernel("gaussian_blur_hor");
     kernelA->code = codeHor;
-    kernelA->inBuffers.push_back(make_pair(b1,std::string("input")));
-    kernelA->outBuffers.push_back(make_pair(b2,std::string("output")));
+    kernelA->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"input"));
+    kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"output"));
 
     const gpuip::Parameter<int> nA = { "n", BLUR_N};
     kernelA->paramsInt.push_back(nA);
 
     gpuip::Kernel::Ptr kernelB = ip->CreateKernel("gaussian_blur_vert");
     kernelB->code = codeVert;
-    kernelB->inBuffers.push_back(make_pair(b2,std::string("input")));
-    kernelB->outBuffers.push_back(make_pair(b3,std::string("output")));
+    kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b2,"input"));
+    kernelB->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"output"));
 
     const gpuip::Parameter<int> nB= { "n", BLUR_N};
     kernelB->paramsInt.push_back(nB);
@@ -444,8 +444,8 @@ void BlurGPU(gpuip::GpuEnvironment env,
 
     gpuip::Kernel::Ptr kernel = ip->CreateKernel(blur);
     kernel->code = code;
-    kernel->inBuffers.push_back(make_pair(b1,std::string("input")));
-    kernel->outBuffers.push_back(make_pair(b2,std::string("output")));
+    kernel->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"input"));
+    kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"output"));
 
     const gpuip::Parameter<int> n = { "n", BLUR_N};
     kernel->paramsInt.push_back(n);
@@ -489,10 +489,10 @@ void LerpGPU(gpuip::GpuEnvironment env,
     
     gpuip::Kernel::Ptr kernel = ip->CreateKernel("lerp");
     kernel->code = code;
-    kernel->inBuffers.push_back(make_pair(b1,std::string("a")));
-    kernel->outBuffers.push_back(make_pair(b2,std::string("b")));
-    kernel->outBuffers.push_back(make_pair(b3,std::string("c")));
-
+    kernel->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"a"));
+    kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"b"));
+    kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"c"));
+   
     const gpuip::Parameter<float> alpha = { "alpha", ALPHA};
     kernel->paramsFloat.push_back(alpha);
 

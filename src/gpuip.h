@@ -19,7 +19,8 @@ namespace gpuip {
 //----------------------------------------------------------------------------//
 enum GpuEnvironment { OpenCL, CUDA, GLSL };
 //----------------------------------------------------------------------------//
-struct Buffer {
+struct Buffer
+{
 #ifdef _GPUIP_PYTHON_BINDINGS
     typedef boost::shared_ptr<Buffer> Ptr;
 #else
@@ -40,17 +41,24 @@ struct Parameter
     T value;
 };
 //----------------------------------------------------------------------------//
-struct Kernel {
+struct Kernel
+{
 #ifdef _GPUIP_PYTHON_BINDINGS
     typedef boost::shared_ptr<Kernel> Ptr;
 #else
     typedef std::tr1::shared_ptr<Kernel> Ptr;
 #endif
+    struct BufferLink
+    {
+        BufferLink(Buffer::Ptr buffer, const std::string & name);
+        Buffer::Ptr buffer;
+        std::string name;
+    };
     Kernel(const std::string & name);
     std::string name;
     std::string code;
-    std::vector<std::pair<Buffer::Ptr,std::string> > inBuffers;
-    std::vector<std::pair<Buffer::Ptr,std::string> > outBuffers;
+    std::vector<BufferLink> inBuffers;
+    std::vector<BufferLink> outBuffers;
     std::vector<Parameter<int> > paramsInt;
     std::vector<Parameter<float> > paramsFloat;
 };
@@ -102,9 +110,9 @@ class ImageProcessor
     virtual double Run(std::string * err) = 0;
 
     virtual double Copy(const std::string & buffer,
-                      Buffer::CopyOperation op,
-                      void * data,
-                      std::string * err) = 0;
+                        Buffer::CopyOperation op,
+                        void * data,
+                        std::string * err) = 0;
 
     virtual std::string GetBoilerplateCode(Kernel::Ptr kernel) const = 0;
                

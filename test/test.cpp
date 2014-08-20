@@ -278,9 +278,10 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
     assert(kernelA.get() != NULL);
     assert(kernelA->name == std::string("my_kernelA"));
     kernelA->code = codeA;
-    kernelA->inBuffers.push_back(make_pair(b1,std::string("A")));
-    kernelA->outBuffers.push_back(make_pair(b2,std::string("B")));
-    kernelA->outBuffers.push_back(make_pair(b3,std::string("C")));
+    kernelA->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"A"));
+    kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"B"));
+    kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"C"));
+
 
     const gpuip::Parameter<int> incA = { "incA", 2 };
     const gpuip::Parameter<float> incB = { "incB", 0.25};
@@ -292,31 +293,31 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
     assert(kernelB.get() != NULL);
     assert(kernelB->name == std::string("my_kernelB"));
     kernelB->code = codeB;
-    kernelB->inBuffers.push_back(make_pair(b2,std::string("B")));
-    kernelB->inBuffers.push_back(make_pair(b3,std::string("C")));
-    kernelB->outBuffers.push_back(make_pair(b1,std::string("A")));
+    kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b2,"B"));
+    kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b3,"C"));
+    kernelB->outBuffers.push_back(gpuip::Kernel::BufferLink(b1,"A"));
     assert(ip->GetBoilerplateCode(kernelB) == std::string(boilerplateB));
     
-    std::string error;
-    assert(ip->Allocate(&error));
-    assert(ip->Allocate(&error)); //reiniting should not break things
+    std::string err;
+    assert(ip->Allocate(&err) >= 0);
+    assert(ip->Allocate(&err) >= 0); //reiniting should not break things
     
     std::vector<float> data_in(N);
     for(size_t i = 0; i < data_in.size(); ++i) {
         data_in[i] = i;
     }
     assert(ip->Copy("b1", gpuip::Buffer::WRITE_DATA,
-                   data_in.data(), &error));
+                   data_in.data(), &err) >= 0);
 
-    assert(ip->Build(&error));
-    assert(ip->Build(&error)); // rebuilding should not break things
+    assert(ip->Build(&err) >= 0);
+    assert(ip->Build(&err) >= 0); // rebuilding should not break things
   
-    assert(ip->Run(&error));
+    assert(ip->Run(&err) >= 0);
     
     std::vector<float> data_outA(N), data_outB(N), data_outC(N);
-    assert(ip->Copy("b1", gpuip::Buffer::READ_DATA,data_outA.data(), &error));
-    assert(ip->Copy("b2", gpuip::Buffer::READ_DATA,data_outB.data(), &error));
-    assert(ip->Copy("b3", gpuip::Buffer::READ_DATA,data_outC.data(), &error));
+    assert(ip->Copy("b1", gpuip::Buffer::READ_DATA,data_outA.data(),&err) >= 0);
+    assert(ip->Copy("b2", gpuip::Buffer::READ_DATA,data_outB.data(),&err) >= 0);
+    assert(ip->Copy("b3", gpuip::Buffer::READ_DATA,data_outC.data(),&err) >= 0);
 
     for(unsigned int i = 0; i < N; ++i) {
         // Check first kernel call, where B = A + 0.2, C = A + 0.25

@@ -18,15 +18,15 @@ inline bool _clErrorEnqueueKernel(cl_int cl_err, std::string * err,
                 std::stringstream ss;
                 ss << "In buffers: ";
                 for (size_t i = 0; i < kernel.inBuffers.size(); ++i) {
-                    ss << kernel.inBuffers[i].second << "("
-                       << kernel.inBuffers[i].first->name << "), ";
+                    ss << kernel.inBuffers[i].name << "("
+                       << kernel.inBuffers[i].buffer->name << "), ";
                 }
                 ss << "\n";
                 
                 ss << "Out buffers: ";
                 for (size_t i = 0; i < kernel.outBuffers.size(); ++i) {
-                    ss << kernel.outBuffers[i].second << "("
-                       << kernel.outBuffers[i].first->name << "), ";
+                    ss << kernel.outBuffers[i].name << "("
+                       << kernel.outBuffers[i].buffer->name << "), ";
                 }
                 ss << "\n";
 

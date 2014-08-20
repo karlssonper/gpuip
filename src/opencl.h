@@ -15,6 +15,8 @@ class OpenCLImpl : public ImageProcessor
   public:
     OpenCLImpl();
 
+    virtual ~OpenCLImpl();
+
     virtual double Allocate(std::string * err);
     
     virtual double Build(std::string * err);
@@ -41,6 +43,10 @@ class OpenCLImpl : public ImageProcessor
                         const cl_kernel & clKernel,
                         cl_event & event,
                         std::string * err);
+
+    bool _ReleaseBuffers(std::string * err);
+
+    bool _ReleaseKernels(std::string * err);
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

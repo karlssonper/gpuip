@@ -34,19 +34,31 @@ OpenCLImpl::OpenCLImpl()
                                   CL_QUEUE_PROFILING_ENABLE, NULL);
 }
 //----------------------------------------------------------------------------//
+OpenCLImpl::~OpenCLImpl()
+{
+    std::string err;
+    if (!_ReleaseBuffers(&err)) {
+        std::cerr << err << std::endl;
+    }
+
+    err.clear();
+    if (!_ReleaseKernels(&err)) {
+        std::cerr << err << std::endl;
+    }
+    
+    clReleaseCommandQueue(_queue);
+    clReleaseContext(_ctx);
+}
+//----------------------------------------------------------------------------//
 double OpenCLImpl::Allocate(std::string * err)
 {
     const std::clock_t start = std::clock();
-    cl_int cl_err;
-    std::map<std::string,  cl_mem>::iterator itb;
-    for(itb = _clBuffers.begin(); itb != _clBuffers.end(); ++itb) {
-        cl_err = clReleaseMemObject(itb->second);
-        if (_clErrorReleaseMemObject(cl_err, err)) {
-            return GPUIP_ERROR;
-        }
+
+    if(!_ReleaseBuffers(err)) {
+        return GPUIP_ERROR;
     }
-    _clBuffers.clear();
-    
+
+    cl_int cl_err;
     std::map<std::string,Buffer::Ptr>::const_iterator it;
     for (it = _buffers.begin(); it != _buffers.end(); ++it) {
         _clBuffers[it->second->name] = clCreateBuffer(
@@ -62,16 +74,12 @@ double OpenCLImpl::Allocate(std::string * err)
 double OpenCLImpl::Build(std::string * error)
 {
     const std::clock_t start = std::clock();
-    // Clear previous kernels if rebuilding
-    cl_int cl_err;
-    for(size_t i = 0; i < _clKernels.size(); ++i) {
-        cl_err = clReleaseKernel(_clKernels[i]);
-        if (_clErrorReleaseKernel(cl_err, error)) {
-            return GPUIP_ERROR;
-        }
-    }
-    _clKernels.clear();
 
+    if(!_ReleaseKernels(error)) {
+        return GPUIP_ERROR;
+    }
+    
+    cl_int cl_err;
     for(size_t i = 0; i < _kernels.size(); ++i) {
         const char * code = _kernels[i]->code.c_str();
         const char * name = _kernels[i]->name.c_str();
@@ -157,13 +165,13 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     const size_t size = sizeof(cl_mem);
     for(size_t j = 0; j < kernel.inBuffers.size(); ++j) {
         cl_err = clSetKernelArg(clKernel, argc++, size,
-                                &_clBuffers[kernel.inBuffers[j].first->name]);
+                                &_clBuffers[kernel.inBuffers[j].buffer->name]);
     }
 
     // 2. Output buffers.
     for(size_t j = 0; j < kernel.outBuffers.size(); ++j) {
         cl_err = clSetKernelArg(clKernel, argc++, size,
-                                &_clBuffers[kernel.outBuffers[j].first->name]);
+                                &_clBuffers[kernel.outBuffers[j].buffer->name]);
     }
 
     // 3. Int parameters
@@ -238,17 +246,17 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
     for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
         ss << (first ? "" : indent);
         first = false;
-        const std::string & name = kernel->inBuffers[i].first->name;
+        const std::string & name = kernel->inBuffers[i].buffer->name;
         ss << "__global const " << _GetTypeStr(_buffers.find(name)->second)
-           << " * " << kernel->inBuffers[i].second
+           << " * " << kernel->inBuffers[i].name
            << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");
     }
     for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
         ss << (first ? "" : indent);
         first = false;
-        const std::string & name = kernel->outBuffers[i].first->name;
+        const std::string & name = kernel->outBuffers[i].buffer->name;
         ss << "__global " <<  _GetTypeStr(_buffers.find(name)->second)
-           << " * " << kernel->outBuffers[i].second
+           << " * " << kernel->outBuffers[i].name
            << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");
     }
     for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
@@ -275,7 +283,7 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 
     // Do half to float conversions (if needed)
     for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        const std::string & bname = kernel->inBuffers[i].first->name;
+        const std::string & bname = kernel->inBuffers[i].buffer->name;
         Buffer::Ptr buf = _buffers.find(bname)->second;
         if (buf->type == Buffer::HALF) {
             if (!i) {
@@ -283,15 +291,15 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
             }
             
             if (buf->channels == 1) {
-                ss << "    const float " << kernel->inBuffers[i].second
+                ss << "    const float " << kernel->inBuffers[i].name
                    << " = vload_half(idx, "
-                   << kernel->inBuffers[i].second << "_half);\n";
+                   << kernel->inBuffers[i].name << "_half);\n";
                 continue;
             }
             
             std::stringstream subss;
             subss << "    const float" << buf->channels << " "
-                  << kernel->inBuffers[i].second
+                  << kernel->inBuffers[i].name
                   << " = (float" << buf->channels << ")(";
             const std::string preindent = subss.str();
             subss.str("");
@@ -303,7 +311,7 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
                 ss << (subfirst ? "" : subindent);
                 subfirst = false;
                 ss << "vload_half(" << buf->channels << " * idx + " << j << ", "
-                   << kernel->inBuffers[i].second << "_half)";
+                   << kernel->inBuffers[i].name << "_half)";
             }
             ss <<");\n";
 
@@ -316,12 +324,12 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
     ss << "    // kernel code\n";
     for (size_t i = 0; i < kernel->outBuffers.size(); ++i) {
         Buffer::Ptr b = _buffers.find(
-            kernel->outBuffers[i].first->name)->second;
+            kernel->outBuffers[i].buffer->name)->second;
         ss << "    ";
         if (b->type == Buffer::HALF) {
             ss << "float" << b->channels << " ";
         }
-        ss << kernel->outBuffers[i].second;
+        ss << kernel->outBuffers[i].name;
         if (b->type != Buffer::HALF) {
             ss << "[idx]";
         }
@@ -345,7 +353,7 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 
     // Do half to float conversions (if needed)
     for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        const std::string & bname = kernel->outBuffers[i].first->name;
+        const std::string & bname = kernel->outBuffers[i].buffer->name;
         Buffer::Ptr buf = _buffers.find(bname)->second;
         if (buf->type == Buffer::HALF) {
             if (!i) {
@@ -353,7 +361,7 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
             }
 
             for (unsigned int j = 0; j < buf->channels; ++j) {
-                ss << "    vstore_half(" << kernel->outBuffers[i].second;
+                ss << "    vstore_half(" << kernel->outBuffers[i].name;
                 switch(j) {
                     case 0:
                         ss << (buf->channels > 1 ? ".x" : "");
@@ -374,7 +382,7 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
                     ss << buf->channels << " * ";
                 }
                 ss << "idx + " << j << ", "
-                   << kernel->outBuffers[i].second << "_half);\n";
+                   << kernel->outBuffers[i].name << "_half);\n";
             }
         }
     }
@@ -382,6 +390,31 @@ std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
     ss << "}";
     
     return ss.str();
+}
+//----------------------------------------------------------------------------//
+bool OpenCLImpl::_ReleaseBuffers(std::string * err)
+{
+    std::map<std::string,  cl_mem>::iterator itb;
+    for(itb = _clBuffers.begin(); itb != _clBuffers.end(); ++itb) {
+        cl_int cl_err = clReleaseMemObject(itb->second);
+        if (_clErrorReleaseMemObject(cl_err, err)) {
+            return false;
+        }
+    }
+    _clBuffers.clear();
+    return true;
+}
+//----------------------------------------------------------------------------//
+bool OpenCLImpl::_ReleaseKernels(std::string * err)
+{
+    for(size_t i = 0; i < _clKernels.size(); ++i) {
+        cl_int cl_err = clReleaseKernel(_clKernels[i]);
+        if (_clErrorReleaseKernel(cl_err, err)) {
+            return false;
+        }
+    }
+    _clKernels.clear();
+    return true;
 }
 //----------------------------------------------------------------------------//
 } // end namespace gpuip
