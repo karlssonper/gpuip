@@ -1,4 +1,5 @@
 build
-doc
+doc/html
+doc/man
 examples/output_images
 thirdparty

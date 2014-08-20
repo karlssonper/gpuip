@@ -259,13 +259,8 @@ class Settings(object):
 
             # Params
             for p in k.params:
-                if p.type == "float":
-                    param = pygpuip.ParamFloat()
-                elif p.type == "int":
-                    param = pygpuip.ParamInt()
-                param.name = p.name
-                param.value = p.value
-                kernel.SetParam(param)
+                c= pygpuip.ParamFloat if p.type == "float" else pygpuip.ParamInt
+                kernel.SetParam(c(p.name,p.value))
 
             # Code
             kernel.code = k.code

@@ -273,15 +273,10 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     kernelA.SetOutBuffer("B", buffers[1])
     kernelA.SetOutBuffer("C", buffers[2])
 
-    incA = pygpuip.ParamInt()
-    incA.name = "incA"
-    incA.value = 2
-    kernelA.SetParam(incA)
-
-    incB = pygpuip.ParamFloat()
-    incB.name = "incB"
-    incB.value = 0.25
-    kernelA.SetParam(incB)
+    incA = 2
+    incB = 0.25
+    kernelA.SetParam(pygpuip.ParamInt("incA",incA))
+    kernelA.SetParam(pygpuip.ParamFloat("incB", incB))
     assert ip.BoilerplateCode(kernelA) == boilerplateA
 
     kernelB = ip.CreateKernel("my_kernelB")
@@ -315,8 +310,8 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     b0,b1,b2 = buffers[0].data, buffers[1].data, buffers[2].data
     for i in range(width):
         for j in range(height):
-            assert eq(b1[i][j], indata[i][j] + incA.value*0.1)
-            assert eq(b2[i][j], indata[i][j] + incB.value)
+            assert eq(b1[i][j], indata[i][j] + incA*0.1)
+            assert eq(b2[i][j], indata[i][j] + incB)
 
             assert eq(b0[i][j], b1[i][j] + b2[i][j])
     print "Test passed!\n"

@@ -69,7 +69,7 @@ def getSettings(args):
                 terminate("gpuip error: No kernel %s found." % kernelName)
             param = kernel.getParam(paramName)
             if param:
-                param.setValue(eval(value))
+                param.setValue(utils.safeEval(value))
             else:
                 terminate("gpuip error: No param %s found in kernel %s." \
                           % (paramName, kernelName))
