@@ -126,7 +126,7 @@ inline bool _glErrorCopy(std::string * err,
     GLenum gl_err = glGetError();
     if (gl_err != GL_NO_ERROR) {
         (*err) += "GLSL: error when copying data ";
-        (*err) += op == Buffer::READ_DATA ? "FROM" : "TO";
+        (*err) += op == Buffer::COPY_FROM_GPU ? "FROM" : "TO";
         (*err) += " buffer ";
         (*err) += buffer;
         (*err) += "\n";

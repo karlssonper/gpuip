@@ -41,7 +41,7 @@ ImageProcessor::Ptr ImageProcessor::Create(GpuEnvironment env)
     }
 }
 //----------------------------------------------------------------------------//
-bool ImageProcessor::CanCreateGpuEnvironment(GpuEnvironment env)
+bool ImageProcessor::CanCreate(GpuEnvironment env)
 {
     switch(env) {
         case OpenCL:
@@ -76,7 +76,7 @@ Kernel::Kernel(const std::string & name_)
         : name(name_)
 {
 }
-
+//----------------------------------------------------------------------------//
 Kernel::BufferLink::BufferLink(Buffer::Ptr buffer_, const std::string & name_)
         : buffer(buffer_), name(name_)
 {
@@ -110,25 +110,41 @@ Kernel::Ptr ImageProcessor::CreateKernel(const std::string & name)
     return _kernels.back();
 }
 //----------------------------------------------------------------------------//
-Kernel::Ptr ImageProcessor::GetKernel(const std::string & name)
-{
-    for (size_t i = 0; i < _kernels.size(); ++i) {
-        if (_kernels[i]->name == name) {
-            return _kernels[i];
-        }
-    }
-    std::cerr << "gpuip error: Could not find kernel named "
-              << name << std::endl;
-    return Kernel::Ptr();
-}
-//----------------------------------------------------------------------------//
 void ImageProcessor::SetDimensions(unsigned int width, unsigned int height)
 {
     _w = width;
     _h = height;
 }
 //----------------------------------------------------------------------------//
-unsigned int  ImageProcessor::_GetBufferSize(Buffer::Ptr buffer) const
+double ImageProcessor::Allocate(std::string * error)
+{
+    throw std::logic_error("'Allocate' not implemented in subclass");
+}
+//----------------------------------------------------------------------------//
+double ImageProcessor::Build(std::string * error)
+{
+    throw std::logic_error("'Build' not implemented in subclass");
+}
+//----------------------------------------------------------------------------//
+double ImageProcessor::Run(std::string * error)
+{
+    throw std::logic_error("'Run' not implemented in subclass");
+}
+//----------------------------------------------------------------------------//
+double ImageProcessor::Copy(Buffer::Ptr buffer,
+                            Buffer::CopyOperation operation,
+                            void * data,
+                            std::string * error)
+{
+    throw std::logic_error("'Copy' not implemented in subclass");
+}
+//----------------------------------------------------------------------------//
+std::string ImageProcessor::BoilerplateCode(Kernel::Ptr kernel) const
+{
+    throw std::logic_error("'BoilerplateCode' not implemented in subclass");
+}
+//----------------------------------------------------------------------------//
+unsigned int  ImageProcessor::_BufferSize(Buffer::Ptr buffer) const
 {
     unsigned int bpp = 0; // bytes per pixel
     switch(buffer->type) {
@@ -142,7 +158,6 @@ unsigned int  ImageProcessor::_GetBufferSize(Buffer::Ptr buffer) const
             bpp = sizeof(float) * buffer->channels;
             break;
     }
-    
     return bpp * _w * _h;
 }
 //----------------------------------------------------------------------------//

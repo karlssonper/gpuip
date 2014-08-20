@@ -52,7 +52,7 @@ double CUDAImpl::Allocate(std::string * err)
     for(it = _buffers.begin(); it != _buffers.end(); ++it) {
         _cudaBuffers[it->second->name] = NULL;
         cudaError_t c_err = cudaMalloc(&_cudaBuffers[it->second->name],
-                                       _GetBufferSize(it->second));
+                                       _BufferSize(it->second));
         if(_cudaErrorMalloc(c_err, err)) {
             return GPUIP_ERROR;
         }
@@ -133,20 +133,22 @@ double CUDAImpl::Run(std::string * err)
     return  _StopTimer();
 }
 //----------------------------------------------------------------------------//
-double CUDAImpl::Copy(const std::string & buffer,
+double CUDAImpl::Copy(Buffer::Ptr buffer,
                       Buffer::CopyOperation op,
                       void * data,
                       std::string * err)
 {
     _StartTimer();
     cudaError_t e = cudaSuccess;
-    const size_t size = _GetBufferSize(_buffers[buffer]);
-    if (op == Buffer::READ_DATA) {
-        e =cudaMemcpy(data, _cudaBuffers[buffer], size, cudaMemcpyDeviceToHost);
-    } else if (op == Buffer::WRITE_DATA) {
-        e = cudaMemcpy(_cudaBuffers[buffer],data, size, cudaMemcpyHostToDevice);
+    const size_t size = _BufferSize(buffer);
+    if (op == Buffer::COPY_FROM_GPU) {
+        e =cudaMemcpy(data, _cudaBuffers[buffer->name],
+                      size, cudaMemcpyDeviceToHost);
+    } else if (op == Buffer::COPY_TO_GPU) {
+        e = cudaMemcpy(_cudaBuffers[buffer->name],data,
+                       size, cudaMemcpyHostToDevice);
     }
-    if (_cudaErrorCopy(e, err, buffer, op)) {
+    if (_cudaErrorCopy(e, err, buffer->name, op)) {
         return GPUIP_ERROR;
     }
     return _StopTimer();
@@ -209,7 +211,7 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
     return true;
 }
 //----------------------------------------------------------------------------//
-std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const 
+std::string CUDAImpl::BoilerplateCode(Kernel::Ptr kernel) const 
 {
     std::stringstream ss;
 

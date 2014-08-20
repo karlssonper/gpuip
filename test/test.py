@@ -282,7 +282,7 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     incB.name = "incB"
     incB.value = 0.25
     kernelA.SetParam(incB)
-    assert ip.GetBoilerplateCode(kernelA) == boilerplateA
+    assert ip.BoilerplateCode(kernelA) == boilerplateA
 
     kernelB = ip.CreateKernel("my_kernelB")
     assert kernelB
@@ -291,7 +291,7 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     kernelB.SetInBuffer("B", buffers[1])
     kernelB.SetInBuffer("C", buffers[2])
     kernelB.SetOutBuffer("A", buffers[0])
-    assert ip.GetBoilerplateCode(kernelB) == boilerplateB
+    assert ip.BoilerplateCode(kernelB) == boilerplateB
 
     assert ip.Allocate() == no_error
     assert ip.Allocate() == no_error # reinit should not break things

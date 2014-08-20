@@ -146,7 +146,7 @@ inline bool _clErrorCopy(cl_int cl_err, std::string * err,
 {
     if (cl_err != CL_SUCCESS) {
         (*err) += "OpenCL: error when copying data ";
-        (*err) += op == Buffer::READ_DATA ? "FROM" : "TO";
+        (*err) += op == Buffer::COPY_FROM_GPU ? "FROM" : "TO";
         (*err) += " buffer";
         (*err) += buffer;
         switch(cl_err) {

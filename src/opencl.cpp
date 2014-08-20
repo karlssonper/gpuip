@@ -63,7 +63,7 @@ double OpenCLImpl::Allocate(std::string * err)
     for (it = _buffers.begin(); it != _buffers.end(); ++it) {
         _clBuffers[it->second->name] = clCreateBuffer(
             _ctx, CL_MEM_READ_WRITE,
-            _GetBufferSize(it->second), NULL, &cl_err);
+            _BufferSize(it->second), NULL, &cl_err);
         if (_clErrorInitBuffers(cl_err, err)) {
             return GPUIP_ERROR;
         }
@@ -122,25 +122,25 @@ double OpenCLImpl::Run(std::string * err)
     return (double)(end-start) * 1.0e-6 ;
 }
 //----------------------------------------------------------------------------//
-double OpenCLImpl::Copy(const std::string & buffer,
-                 Buffer::CopyOperation op,
-                 void * data,
-                 std::string * error)
+double OpenCLImpl::Copy(Buffer::Ptr buffer,
+                        Buffer::CopyOperation op,
+                        void * data,
+                        std::string * error)
 {
     cl_event event;
     cl_int cl_err = CL_SUCCESS; //set to success to get rid of compiler warnings
-    if (op == Buffer::READ_DATA) {
+    if (op == Buffer::COPY_FROM_GPU) {
         cl_err =  clEnqueueReadBuffer(
-            _queue,  _clBuffers[buffer],
+            _queue,  _clBuffers[buffer->name],
             CL_TRUE /* function call returns when copy is done */ ,
-            0, _GetBufferSize(_buffers[buffer]), data, 0 , NULL, &event);
-    } else if (op == Buffer::WRITE_DATA) {
+            0, _BufferSize(buffer), data, 0 , NULL, &event);
+    } else if (op == Buffer::COPY_TO_GPU) {
         cl_err =  clEnqueueWriteBuffer(
-            _queue,  _clBuffers[buffer],
+            _queue,  _clBuffers[buffer->name],
             CL_TRUE /* function call returns when copy is done */ ,
-            0, _GetBufferSize(_buffers[buffer]), data, 0 , NULL, &event);
+            0, _BufferSize(buffer), data, 0 , NULL, &event);
     }
-    if (_clErrorCopy(cl_err, error, buffer, op)) {
+    if (_clErrorCopy(cl_err, error, buffer->name, op)) {
         return GPUIP_ERROR;
     }
     clWaitForEvents(1, &event);
@@ -153,9 +153,9 @@ double OpenCLImpl::Copy(const std::string & buffer,
 }
 //----------------------------------------------------------------------------//
 bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
-                           const cl_kernel & clKernel,
-                           cl_event & event,
-                           std::string * err)
+                                const cl_kernel & clKernel,
+                                cl_event & event,
+                                std::string * err)
 {
     cl_int cl_err;
     cl_int argc = 0;
@@ -230,7 +230,8 @@ inline std::string _GetTypeStr(const Buffer::Ptr & buffer)
     }
     return type.str();
 }
-std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
+//----------------------------------------------------------------------------//
+std::string OpenCLImpl::BoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
 

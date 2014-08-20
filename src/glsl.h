@@ -19,12 +19,12 @@ class GLSLImpl : public ImageProcessor
 
     virtual double Run(std::string * err);
     
-    virtual double Copy(const std::string & buffer,
-                      Buffer::CopyOperation op,
-                      void * data,
-                      std::string * err);
+    virtual double Copy(Buffer::Ptr buffer,
+                        Buffer::CopyOperation op,
+                        void * data,
+                        std::string * err);
 
-    virtual std::string GetBoilerplateCode(Kernel::Ptr kernel) const;
+    virtual std::string BoilerplateCode(Kernel::Ptr kernel) const;
     
   protected:
     bool _glewInit;

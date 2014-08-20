@@ -378,7 +378,7 @@ void GaussianBlurSeparableGPU(gpuip::GpuEnvironment env,
                               std::vector<Imf::Rgba> & A,
                               std::vector<Imf::Rgba> & C)
 {
-    if (!gpuip::ImageProcessor::CanCreateGpuEnvironment(env)) {
+    if (!gpuip::ImageProcessor::CanCreate(env)) {
         return;
     }
 
@@ -394,7 +394,7 @@ void GaussianBlurSeparableGPU(gpuip::GpuEnvironment env,
     kernelA->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"input"));
     kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"output"));
 
-    const gpuip::Parameter<int> nA = { "n", BLUR_N};
+    const gpuip::Parameter<int> nA("n", BLUR_N);
     kernelA->paramsInt.push_back(nA);
 
     gpuip::Kernel::Ptr kernelB = ip->CreateKernel("gaussian_blur_vert");
@@ -402,7 +402,7 @@ void GaussianBlurSeparableGPU(gpuip::GpuEnvironment env,
     kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b2,"input"));
     kernelB->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"output"));
 
-    const gpuip::Parameter<int> nB= { "n", BLUR_N};
+    const gpuip::Parameter<int> nB("n", BLUR_N);
     kernelB->paramsInt.push_back(nB);
 
     std::string error;
@@ -412,9 +412,9 @@ void GaussianBlurSeparableGPU(gpuip::GpuEnvironment env,
     double tt = 0;
     double t = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
-        tt += ip->Copy("b1", gpuip::Buffer::WRITE_DATA, A.data(), &error);
+        tt += ip->Copy(b1, gpuip::Buffer::COPY_TO_GPU, A.data(), &error);
         t += ip->Run(&error);
-        tt += ip->Copy("b3", gpuip::Buffer::READ_DATA, C.data(), &error);
+        tt += ip->Copy(b3, gpuip::Buffer::COPY_FROM_GPU, C.data(), &error);
     }
     tt /= NUM_TESTS;
     t /= NUM_TESTS;
@@ -431,7 +431,7 @@ void BlurGPU(gpuip::GpuEnvironment env,
              std::vector<Imf::Rgba> & A,
              std::vector<Imf::Rgba> & B)
 {
-    if (!gpuip::ImageProcessor::CanCreateGpuEnvironment(env)) {
+    if (!gpuip::ImageProcessor::CanCreate(env)) {
         return;
     }
 
@@ -447,7 +447,7 @@ void BlurGPU(gpuip::GpuEnvironment env,
     kernel->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"input"));
     kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"output"));
 
-    const gpuip::Parameter<int> n = { "n", BLUR_N};
+    const gpuip::Parameter<int> n("n", BLUR_N);
     kernel->paramsInt.push_back(n);
 
     std::string error;
@@ -457,9 +457,9 @@ void BlurGPU(gpuip::GpuEnvironment env,
     double tt = 0;
     double t = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
-        tt += ip->Copy("b1", gpuip::Buffer::WRITE_DATA, A.data(), &error);
+        tt += ip->Copy(b1, gpuip::Buffer::COPY_TO_GPU, A.data(), &error);
         t += ip->Run(&error);
-        tt += ip->Copy("b2", gpuip::Buffer::READ_DATA, B.data(), &error);
+        tt += ip->Copy(b2, gpuip::Buffer::COPY_FROM_GPU, B.data(), &error);
     }
     tt /= NUM_TESTS;
     t /= NUM_TESTS;
@@ -476,7 +476,7 @@ void LerpGPU(gpuip::GpuEnvironment env,
              std::vector<Imf::Rgba> & B,
              std::vector<Imf::Rgba> & C)
 {
-    if (!gpuip::ImageProcessor::CanCreateGpuEnvironment(env)) {
+    if (!gpuip::ImageProcessor::CanCreate(env)) {
         return;
     }
 
@@ -493,7 +493,7 @@ void LerpGPU(gpuip::GpuEnvironment env,
     kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"b"));
     kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"c"));
    
-    const gpuip::Parameter<float> alpha = { "alpha", ALPHA};
+    const gpuip::Parameter<float> alpha( "alpha", ALPHA);
     kernel->paramsFloat.push_back(alpha);
 
     std::string error;
@@ -503,10 +503,10 @@ void LerpGPU(gpuip::GpuEnvironment env,
     double tt = 0;
     double t = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
-        tt += ip->Copy("b1", gpuip::Buffer::WRITE_DATA, A.data(), &error);
-        tt += ip->Copy("b2", gpuip::Buffer::WRITE_DATA, B.data(), &error);
+        tt += ip->Copy(b1, gpuip::Buffer::COPY_TO_GPU, A.data(), &error);
+        tt += ip->Copy(b2, gpuip::Buffer::COPY_TO_GPU, B.data(), &error);
         t += ip->Run(&error);
-        tt += ip->Copy("b3", gpuip::Buffer::READ_DATA, C.data(), &error);
+        tt += ip->Copy(b3, gpuip::Buffer::COPY_FROM_GPU, C.data(), &error);
     }
     tt /= NUM_TESTS;
     t /= NUM_TESTS;

@@ -6,10 +6,14 @@
 namespace bp = boost::python;
 namespace np = boost::numpy;
 //----------------------------------------------------------------------------//
-class _BufferWrapper
+namespace gpuip {
+//----------------------------------------------------------------------------//
+namespace python {
+//----------------------------------------------------------------------------//
+class BufferWrapper
 {
   public:
-    _BufferWrapper(gpuip::Buffer::Ptr b)
+    BufferWrapper(gpuip::Buffer::Ptr b)
             : buffer(b),
               data(np::empty(
                   bp::make_tuple(0,0),
@@ -58,11 +62,11 @@ class _BufferWrapper
     np::ndarray data;
 };
 //----------------------------------------------------------------------------//
-class _KernelWrapper : public gpuip::Kernel
+class KernelWrapper : public gpuip::Kernel
 {
   public:
     void SetInBuffer(const std::string & kernelBufferName,
-                     boost::shared_ptr<_BufferWrapper> buffer)
+                     boost::shared_ptr<BufferWrapper> buffer)
     {
         for(size_t i = 0; i < this->inBuffers.size(); ++i) {
             if (this->inBuffers[i].name == kernelBufferName) {
@@ -75,7 +79,7 @@ class _KernelWrapper : public gpuip::Kernel
     }
 
     void SetOutBuffer(const std::string & kernelBufferName,
-                      boost::shared_ptr<_BufferWrapper> buffer)
+                      boost::shared_ptr<BufferWrapper> buffer)
     {
         for(size_t i = 0; i < this->outBuffers.size(); ++i) {
             if (this->outBuffers[i].name == kernelBufferName) {
@@ -110,10 +114,10 @@ class _KernelWrapper : public gpuip::Kernel
     }
 };
 //----------------------------------------------------------------------------//
-class _ImageProcessorWrapper
+class ImageProcessorWrapper
 {
   public:
-    _ImageProcessorWrapper(gpuip::GpuEnvironment env)
+    ImageProcessorWrapper(gpuip::GpuEnvironment env)
             : _ip(gpuip::ImageProcessor::Create(env))
     {
         if (_ip.get() ==  NULL) {
@@ -121,20 +125,20 @@ class _ImageProcessorWrapper
         }
     }
 
-    boost::shared_ptr<_KernelWrapper> CreateKernel(const std::string & name)
+    boost::shared_ptr<KernelWrapper> CreateKernel(const std::string & name)
     {
         gpuip::Kernel::Ptr ptr = _ip->CreateKernel(name);
         // safe since KernelWrapper doesnt hold any extra data
-        return boost::static_pointer_cast<_KernelWrapper>(ptr);
+        return boost::static_pointer_cast<KernelWrapper>(ptr);
     }
 
-    boost::shared_ptr<_BufferWrapper> CreateBuffer(const std::string & name,
+    boost::shared_ptr<BufferWrapper> CreateBuffer(const std::string & name,
                                                    gpuip::Buffer::Type type,
                                                    unsigned int channels)
     {
         gpuip::Buffer::Ptr ptr = _ip->CreateBuffer(name, type, channels);
         // safe since BufferWrapper doesnt hold any extra data
-        return boost::shared_ptr<_BufferWrapper>(new _BufferWrapper(ptr));
+        return boost::shared_ptr<BufferWrapper>(new BufferWrapper(ptr));
     }
 
     void SetDimensions(unsigned int width, unsigned int height)
@@ -142,6 +146,16 @@ class _ImageProcessorWrapper
         _ip->SetDimensions(width,height);
     }
 
+    unsigned int Width() const
+    {
+        return _ip->Width();
+    }
+
+    unsigned int Height() const
+    {
+        return _ip->Height();
+    }
+    
     std::string Allocate()
     {
         std::string err;
@@ -163,32 +177,38 @@ class _ImageProcessorWrapper
         return err;
     }
 
-    std::string ReadBufferFromGPU(boost::shared_ptr<_BufferWrapper> buffer)
+    std::string ReadBufferFromGPU(boost::shared_ptr<BufferWrapper> buffer)
     {
         std::string err;
-        _ip->Copy(buffer->name(), gpuip::Buffer::READ_DATA,
+        _ip->Copy(buffer->buffer, gpuip::Buffer::COPY_FROM_GPU,
                     buffer->data.get_data(), &err);
         return err;
     }
 
-    std::string WriteBufferToGPU(boost::shared_ptr<_BufferWrapper> buffer)
+    std::string WriteBufferToGPU(boost::shared_ptr<BufferWrapper> buffer)
     {
         std::string err;
-        _ip->Copy(buffer->name(), gpuip::Buffer::WRITE_DATA,
+        _ip->Copy(buffer->buffer, gpuip::Buffer::COPY_TO_GPU,
                     buffer->data.get_data(), &err);
         return err;
     }
     
-    std::string GetBoilerplateCode(boost::shared_ptr<_KernelWrapper> k) const
+    std::string BoilerplateCode(boost::shared_ptr<KernelWrapper> k) const
     {
-        return _ip->GetBoilerplateCode(k);
+        return _ip->BoilerplateCode(k);
     }
   private:
     gpuip::ImageProcessor::Ptr _ip;
 };
 //----------------------------------------------------------------------------//
+} //end namespace python
+//----------------------------------------------------------------------------//
+} //end namespace gpuip
+//----------------------------------------------------------------------------//
 BOOST_PYTHON_MODULE(pygpuip)
 {
+    namespace gp = gpuip::python;
+
     np::initialize();
 
     bp::enum_<gpuip::GpuEnvironment>("Environment")
@@ -201,52 +221,55 @@ BOOST_PYTHON_MODULE(pygpuip)
             .value("HALF", gpuip::Buffer::HALF)
             .value("FLOAT", gpuip::Buffer::FLOAT);
 
-    bp::class_<_BufferWrapper, boost::shared_ptr<_BufferWrapper> >
+    bp::class_<gp::BufferWrapper, boost::shared_ptr<gp::BufferWrapper> >
             ("Buffer", bp::no_init)
-            .add_property("name", &_BufferWrapper::name)
-            .add_property("type", &_BufferWrapper::type)
-            .add_property("channels", &_BufferWrapper::channels) 
-            .def_readwrite("data", &_BufferWrapper::data)
-            .def("Read", &_BufferWrapper::Read)
-            .def("Read", &_BufferWrapper::ReadMT)
-            .def("Write", &_BufferWrapper::Write)
-            .def("Write", &_BufferWrapper::WriteMT);
+            .add_property("name", &gp::BufferWrapper::name)
+            .add_property("type", &gp::BufferWrapper::type)
+            .add_property("channels", &gp::BufferWrapper::channels) 
+            .def_readwrite("data", &gp::BufferWrapper::data)
+            .def("Read", &gp::BufferWrapper::Read)
+            .def("Read", &gp::BufferWrapper::ReadMT)
+            .def("Write", &gp::BufferWrapper::Write)
+            .def("Write", &gp::BufferWrapper::WriteMT);
     
-    bp::class_<gpuip::Parameter<int> >("ParamInt")
-            .def_readwrite("name", &gpuip::Parameter<int>::name)
+    bp::class_<gpuip::Parameter<int> >
+            ("ParamInt",bp::init<std::string, int>())
+            .def_readonly("name", &gpuip::Parameter<int>::name)
             .def_readwrite("value", &gpuip::Parameter<int>::value);
 
-    bp::class_<gpuip::Parameter<float> >("ParamFloat")
-            .def_readwrite("name", &gpuip::Parameter<float>::name)
+    bp::class_<gpuip::Parameter<float> >
+            ("ParamFloat", bp::init<std::string, float>())
+            .def_readonly("name", &gpuip::Parameter<float>::name)
             .def_readwrite("value", &gpuip::Parameter<float>::value);
 
-    bp::class_<_KernelWrapper, boost::shared_ptr<_KernelWrapper> >
+    bp::class_<gp::KernelWrapper, boost::shared_ptr<gp::KernelWrapper> >
             ("Kernel", bp::no_init)
-            .def_readwrite("name", &_KernelWrapper::name)
-            .def_readwrite("code", &_KernelWrapper::code)
-            .def("SetInBuffer", &_KernelWrapper::SetInBuffer)
-            .def("SetOutBuffer", &_KernelWrapper::SetOutBuffer)
-            .def("SetParam", &_KernelWrapper::SetParamInt)
-            .def("SetParam", &_KernelWrapper::SetParamFloat);
+            .def_readonly("name", &gp::KernelWrapper::name)
+            .def_readwrite("code", &gp::KernelWrapper::code)
+            .def("SetInBuffer", &gp::KernelWrapper::SetInBuffer)
+            .def("SetOutBuffer", &gp::KernelWrapper::SetOutBuffer)
+            .def("SetParam", &gp::KernelWrapper::SetParamInt)
+            .def("SetParam", &gp::KernelWrapper::SetParamFloat);
     
-    bp::class_<_ImageProcessorWrapper,
-            boost::shared_ptr<_ImageProcessorWrapper> >
+    bp::class_<gp::ImageProcessorWrapper,
+            boost::shared_ptr<gp::ImageProcessorWrapper> >
             ("ImageProcessor",
              bp::init<gpuip::GpuEnvironment>())
-            .def("SetDimensions", &_ImageProcessorWrapper::SetDimensions)
-            .def("CreateBuffer", &_ImageProcessorWrapper::CreateBuffer)
-            .def("CreateKernel", &_ImageProcessorWrapper::CreateKernel)
-            .def("Allocate", &_ImageProcessorWrapper::Allocate)
-            .def("Build", &_ImageProcessorWrapper::Build)
-            .def("Run", &_ImageProcessorWrapper::Run)
+            .def("SetDimensions", &gp::ImageProcessorWrapper::SetDimensions)
+            .add_property("width", &gp::ImageProcessorWrapper::Width)
+            .add_property("height", &gp::ImageProcessorWrapper::Height)
+            .def("CreateBuffer", &gp::ImageProcessorWrapper::CreateBuffer)
+            .def("CreateKernel", &gp::ImageProcessorWrapper::CreateKernel)
+            .def("Allocate", &gp::ImageProcessorWrapper::Allocate)
+            .def("Build", &gp::ImageProcessorWrapper::Build)
+            .def("Run", &gp::ImageProcessorWrapper::Run)
             .def("ReadBufferFromGPU",
-                 &_ImageProcessorWrapper::ReadBufferFromGPU)
+                 &gp::ImageProcessorWrapper::ReadBufferFromGPU)
             .def("WriteBufferToGPU",
-                 &_ImageProcessorWrapper::WriteBufferToGPU)
-            .def("GetBoilerplateCode",
-                 &_ImageProcessorWrapper::GetBoilerplateCode);
+                 &gp::ImageProcessorWrapper::WriteBufferToGPU)
+            .def("BoilerplateCode",
+                 &gp::ImageProcessorWrapper::BoilerplateCode);
 
-    bp::def("CanCreateGpuEnvironment",
-            &gpuip::ImageProcessor::CanCreateGpuEnvironment);
+    bp::def("CanCreateGpuEnvironment",&gpuip::ImageProcessor::CanCreate);
 }
 //----------------------------------------------------------------------------//

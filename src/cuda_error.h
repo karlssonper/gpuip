@@ -55,7 +55,7 @@ inline bool _cudaErrorCopy(cudaError_t c_err, std::string * err,
 {
     if (c_err != cudaSuccess) {
         (*err) += "CUDA: error when copying data ";
-        (*err) += op == Buffer::READ_DATA ? "FROM" : "TO";
+        (*err) += op == Buffer::COPY_FROM_GPU ? "FROM" : "TO";
         (*err) += " buffer ";
         (*err) += buffer;
         switch(c_err) {
@@ -71,7 +71,7 @@ inline bool _cudaErrorCopy(cudaError_t c_err, std::string * err,
             case cudaErrorIllegalAddress:
                 (*err) += ". Illegal address.\n";
                 break;
-            //TODO: add cases here
+                //TODO: add cases here
             default: {
                 (*err) += ". Unknown error enum: ";
                 std::stringstream ss;

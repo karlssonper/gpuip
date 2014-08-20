@@ -230,28 +230,27 @@ double GLSLImpl::Run(std::string * err)
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-double GLSLImpl::Copy(const std::string & buffer,
-               Buffer::CopyOperation op,
-               void * data,
-               std::string * err)
+double GLSLImpl::Copy(Buffer::Ptr b,
+                      Buffer::CopyOperation op,
+                      void * data,
+                      std::string * err)
 {
     _StartTimer();
-    Buffer::Ptr b = _buffers[buffer];
-    if (op == Buffer::READ_DATA) {
-        glBindTexture(GL_TEXTURE_2D, _textures[buffer]);
+    if (op == Buffer::COPY_FROM_GPU) {
+        glBindTexture(GL_TEXTURE_2D, _textures[b->name]);
         glGetTexImage(GL_TEXTURE_2D, 0, _GetFormat(b), _GetType(b), data);
-    } else if (op == Buffer::WRITE_DATA) {
-        glBindTexture(GL_TEXTURE_2D, _textures[buffer]);
+    } else if (op == Buffer::COPY_TO_GPU) {
+        glBindTexture(GL_TEXTURE_2D, _textures[b->name]);
         glTexImage2D(GL_TEXTURE_2D, 0, _GetInternalFormat(b),
                      _w, _h, 0, _GetFormat(b), _GetType(b), data);
     }
-    if (_glErrorCopy(err, buffer, op)) {
+    if (_glErrorCopy(err, b->name, op)) {
         return GPUIP_ERROR;
     }
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
+std::string GLSLImpl::BoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
     ss << "#version 120\n";
@@ -281,9 +280,9 @@ std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 }
 //----------------------------------------------------------------------------//
 bool GLSLImpl::_DrawQuad(const Kernel & kernel,
-                    GLuint fbo,
-                    GLuint program,
-                    std::string * error)
+                         GLuint fbo,
+                         GLuint program,
+                         std::string * error)
 {   
     // Bind framebuffer and clear previous content
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
