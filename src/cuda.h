@@ -7,7 +7,7 @@
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-class CUDAImpl : public Base
+class CUDAImpl : public ImageProcessor
 {
   public:
     CUDAImpl();
@@ -16,7 +16,7 @@ class CUDAImpl : public Base
     
     virtual double Build(std::string * err);
 
-    virtual double Process(std::string * err);
+    virtual double Run(std::string * err);
     
     virtual double Copy(const std::string & buffer,
                       Buffer::CopyOperation op,

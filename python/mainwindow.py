@@ -105,7 +105,7 @@ class MainWindow(QtGui.QMainWindow):
     def initFromSettings(self):
         self.reset()
 
-        self.gpuip, self.buffers, self.kernels = self.settings.create()
+        self.ip, self.buffers, self.kernels = self.settings.create()
 
         self.displayWidget.setBuffers(self.buffers)
 
@@ -137,7 +137,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def reset(self):
         self.logBrowser.clear()
-        self.gpuip = None
+        self.ip = None
         self.bufferData = None
         self.kernels = []
         self.buffers = {}
@@ -165,7 +165,7 @@ class MainWindow(QtGui.QMainWindow):
         self.log("Building kernels [ <i>%s</i> ] ..." % kernelNames[:-2])
 
         clock = utils.StopWatch()
-        err = self.gpuip.Build()
+        err = self.ip.Build()
         if not err:
             self.logSuccess("All kernels were built.", clock)
             self.needsBuild = False
@@ -202,8 +202,8 @@ class MainWindow(QtGui.QMainWindow):
         bufferNames = [b.name for b in self.settings.buffers]
         self.log("Allocating buffers <i> %s </i> ..." % bufferNames)
         width, height = utils.allocateBufferData(self.buffers)
-        self.gpuip.SetDimensions(width, height)
-        err = self.gpuip.Allocate()
+        self.ip.SetDimensions(width, height)
+        err = self.ip.Allocate()
         clock = utils.StopWatch()
         if err:
             self.logError(err)
@@ -215,7 +215,7 @@ class MainWindow(QtGui.QMainWindow):
         clock = utils.StopWatch()
         for b in self.settings.buffers:
             if b.input:
-                err = self.gpuip.WriteBufferToGPU(self.buffers[b.name])
+                err = self.ip.WriteBufferToGPU(self.buffers[b.name])
                 if err:
                     self.logError(err)
                     return False
@@ -229,25 +229,25 @@ class MainWindow(QtGui.QMainWindow):
                (self.needsAllocate and not self.allocate()) or \
                (self.needsImport and not self.import_from_images()):
                 return False
-            self.process()
+            self.run()
 
-    def process(self):
+    def run(self):
         self.updateSettings()
 
-        self.log("Processing kernels...")
+        self.log("Running kernels...")
 
         self.settings.updateKernels(self.kernels, self.buffers)
         clock = utils.StopWatch()
-        err = self.gpuip.Process()
+        err = self.ip.Run()
         if err:
             self.logError(err)
             return False
 
-        self.logSuccess("All kernels were processed.", clock)
+        self.logSuccess("All kernels processed.", clock)
 
         clock = utils.StopWatch()
         for b in self.buffers:
-            err = self.gpuip.ReadBufferFromGPU(self.buffers[b])
+            err = self.ip.ReadBufferFromGPU(self.buffers[b])
             if err:
                 self.logError(err)
                 return False
@@ -307,7 +307,7 @@ class MainWindow(QtGui.QMainWindow):
             editor = self.kernelWidgets[kernel.name].codeEditor
             if skipDialog and str(editor.toPlainText()) != "":
                 return
-            code = self.gpuip.GetBoilerplateCode(kernel)
+            code = self.ip.GetBoilerplateCode(kernel)
             editor.clear()
             editor.setText(code)
 
@@ -383,8 +383,8 @@ class MainWindow(QtGui.QMainWindow):
                    self.import_from_images, runMenu, toolBar),
         _addAction(icons.get("init"), "3. &Allocate", "Ctrl+I",
                    self.allocate, runMenu, toolBar),
-        _addAction(icons.get("process"), "4. &Process", "Ctrl+P",
-                   self.process, runMenu, toolBar),
+        _addAction(icons.get("process"), "4. &Run", "Ctrl+P",
+                   self.run, runMenu, toolBar),
         _addAction(icons.get("export"), "5. &Export to images", "Ctrl+E",
                    self.export_to_images, runMenu, toolBar),
         _addAction(QtGui.QIcon(""), "&All steps", "Ctrl+A",

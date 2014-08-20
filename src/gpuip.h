@@ -55,18 +55,18 @@ struct Kernel {
     std::vector<Parameter<float> > paramsFloat;
 };
 //----------------------------------------------------------------------------//
-class Base
+class ImageProcessor
 {
   public:
 #ifdef _GPUIP_PYTHON_BINDINGS
-    typedef boost::shared_ptr<Base> Ptr;
+    typedef boost::shared_ptr<ImageProcessor> Ptr;
 #else
-    typedef std::tr1::shared_ptr<Base> Ptr;
+    typedef std::tr1::shared_ptr<ImageProcessor> Ptr;
 #endif
     
     static Ptr Create(GpuEnvironment env);
     
-    virtual ~Base() {}
+    virtual ~ImageProcessor() {}
 
     static bool CanCreateGpuEnvironment(GpuEnvironment env);
     
@@ -99,7 +99,7 @@ class Base
 
     virtual double Build(std::string * err) = 0;
 
-    virtual double Process(std::string * err) = 0;
+    virtual double Run(std::string * err) = 0;
 
     virtual double Copy(const std::string & buffer,
                       Buffer::CopyOperation op,
@@ -109,7 +109,7 @@ class Base
     virtual std::string GetBoilerplateCode(Kernel::Ptr kernel) const = 0;
                
   protected:
-    Base(GpuEnvironment env);
+    ImageProcessor(GpuEnvironment env);
 
     GpuEnvironment _env;
     unsigned int _w; // width
@@ -120,9 +120,9 @@ class Base
     unsigned int _GetBufferSize(Buffer::Ptr buffer) const;
   
   private:
-    Base();
-    Base(const Base &);
-    void operator=(const Base &);
+    ImageProcessor();
+    ImageProcessor(const ImageProcessor &);
+    void operator=(const ImageProcessor &);
 };
 //----------------------------------------------------------------------------//
 } //end namespace gpuip

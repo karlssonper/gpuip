@@ -152,7 +152,8 @@ inline bool _clErrorCopy(cl_int cl_err, std::string * err,
         switch(cl_err) {
             case CL_INVALID_MEM_OBJECT:
                 (*err) += ". Invalid memory object. Does the buffer exist and "
-                        "has it been added? (i.e. gpuip::Base::AddBuffer).";
+                        "has it been created? "
+                        "(i.e. gpuip::ImageProcessor::CreateBuffer).";
             default:
                 break;
         }

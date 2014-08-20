@@ -4,14 +4,13 @@
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-Base *
-CreateOpenCL()
+ImageProcessor * CreateOpenCL()
 {
     return new OpenCLImpl();
 }
 //----------------------------------------------------------------------------//
 OpenCLImpl::OpenCLImpl()
-        : Base(OpenCL)
+        : ImageProcessor(OpenCL)
 {
     // Get Platform ID
     cl_platform_id platform_id;
@@ -35,8 +34,7 @@ OpenCLImpl::OpenCLImpl()
                                   CL_QUEUE_PROFILING_ENABLE, NULL);
 }
 //----------------------------------------------------------------------------//
-double
-OpenCLImpl::Allocate(std::string * err)
+double OpenCLImpl::Allocate(std::string * err)
 {
     const std::clock_t start = std::clock();
     cl_int cl_err;
@@ -61,8 +59,7 @@ OpenCLImpl::Allocate(std::string * err)
     return ( std::clock() - start ) / (long double) CLOCKS_PER_SEC;
 }
 //----------------------------------------------------------------------------//
-double
-OpenCLImpl::Build(std::string * error)
+double OpenCLImpl::Build(std::string * error)
 {
     const std::clock_t start = std::clock();
     // Clear previous kernels if rebuilding
@@ -99,8 +96,7 @@ OpenCLImpl::Build(std::string * error)
     return ( std::clock() - start ) / (long double) CLOCKS_PER_SEC;
 }
 //----------------------------------------------------------------------------//
-double
-OpenCLImpl::Process(std::string * err)
+double OpenCLImpl::Run(std::string * err)
 {
     cl_event event;
     for(size_t i = 0; i < _kernels.size(); ++i) {
@@ -118,8 +114,7 @@ OpenCLImpl::Process(std::string * err)
     return (double)(end-start) * 1.0e-6 ;
 }
 //----------------------------------------------------------------------------//
-double
-OpenCLImpl::Copy(const std::string & buffer,
+double OpenCLImpl::Copy(const std::string & buffer,
                  Buffer::CopyOperation op,
                  void * data,
                  std::string * error)
@@ -149,8 +144,7 @@ OpenCLImpl::Copy(const std::string & buffer,
     return (double)(end-start) * 1.0e-6 ;
 }
 //----------------------------------------------------------------------------//
-bool
-OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
+bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
                            const cl_kernel & clKernel,
                            cl_event & event,
                            std::string * err)
@@ -204,8 +198,7 @@ OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     return true;
 }
 //----------------------------------------------------------------------------//
-inline std::string
-_GetTypeStr(const Buffer::Ptr & buffer)
+inline std::string _GetTypeStr(const Buffer::Ptr & buffer)
 {
     std::stringstream type;
     switch(buffer->type) {
@@ -229,8 +222,7 @@ _GetTypeStr(const Buffer::Ptr & buffer)
     }
     return type.str();
 }
-std::string
-OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
+std::string OpenCLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
 

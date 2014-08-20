@@ -3,45 +3,45 @@
 namespace gpuip {
 //----------------------------------------------------------------------------//
 #ifdef _GPUIP_OPENCL
-Base * CreateOpenCL();
+ImageProcessor * CreateOpenCL();
 #endif
 //----------------------------------------------------------------------------//
 #ifdef _GPUIP_CUDA
-Base * CreateCUDA();
+ImageProcessor * CreateCUDA();
 #endif
 //----------------------------------------------------------------------------//
 #ifdef _GPUIP_GLSL
-Base * CreateGLSL();
+ImageProcessor * CreateGLSL();
 #endif
 //----------------------------------------------------------------------------//
-Base::Ptr Base::Create(GpuEnvironment env)
+ImageProcessor::Ptr ImageProcessor::Create(GpuEnvironment env)
 {
     switch(env) {
         case OpenCL:
 #ifdef _GPUIP_OPENCL
-            return Base::Ptr(CreateOpenCL());
+            return ImageProcessor::Ptr(CreateOpenCL());
 #else
             throw std::logic_error("gpuip was not built with OpenCL");
 #endif
         case CUDA:
 #ifdef _GPUIP_CUDA
-            return Base::Ptr(CreateCUDA());
+            return ImageProcessor::Ptr(CreateCUDA());
 #else
             throw std::logic_error("gpuip was not built with CUDA");
 #endif
         case GLSL:
 #ifdef _GPUIP_GLSL
-            return Base::Ptr(CreateGLSL());
+            return ImageProcessor::Ptr(CreateGLSL());
 #else
             throw std::logic_error("gpuip was not built with GLSL");
 #endif
         default:
             std::cerr << "gpuip error: Could not create env" << std::endl;
-            return Base::Ptr();
+            return ImageProcessor::Ptr();
     }
 }
 //----------------------------------------------------------------------------//
-bool Base::CanCreateGpuEnvironment(GpuEnvironment env)
+bool ImageProcessor::CanCreateGpuEnvironment(GpuEnvironment env)
 {
     switch(env) {
         case OpenCL:
@@ -77,16 +77,16 @@ Kernel::Kernel(const std::string & name_)
 {
 }
 //----------------------------------------------------------------------------//
-Base::Base(GpuEnvironment env)
+ImageProcessor::ImageProcessor(GpuEnvironment env)
         : _env(env), _w(0), _h(0)
 {
     
 }
 //----------------------------------------------------------------------------//
 Buffer::Ptr
-Base::CreateBuffer(const std::string & name,
-                   Buffer::Type type,
-                   unsigned int channels)
+ImageProcessor::CreateBuffer(const std::string & name,
+                             Buffer::Type type,
+                             unsigned int channels)
 {
     if (_buffers.find(name) == _buffers.end()) {
         Buffer::Ptr p = Buffer::Ptr(new Buffer(name, type, channels));
@@ -99,13 +99,13 @@ Base::CreateBuffer(const std::string & name,
     }
 }
 //----------------------------------------------------------------------------//
-Kernel::Ptr Base::CreateKernel(const std::string & name)
+Kernel::Ptr ImageProcessor::CreateKernel(const std::string & name)
 {
     _kernels.push_back(Kernel::Ptr(new Kernel(name)));
     return _kernels.back();
 }
 //----------------------------------------------------------------------------//
-Kernel::Ptr Base::GetKernel(const std::string & name)
+Kernel::Ptr ImageProcessor::GetKernel(const std::string & name)
 {
     for (size_t i = 0; i < _kernels.size(); ++i) {
         if (_kernels[i]->name == name) {
@@ -117,13 +117,13 @@ Kernel::Ptr Base::GetKernel(const std::string & name)
     return Kernel::Ptr();
 }
 //----------------------------------------------------------------------------//
-void Base::SetDimensions(unsigned int width, unsigned int height)
+void ImageProcessor::SetDimensions(unsigned int width, unsigned int height)
 {
     _w = width;
     _h = height;
 }
 //----------------------------------------------------------------------------//
-unsigned int  Base::_GetBufferSize(Buffer::Ptr buffer) const
+unsigned int  ImageProcessor::_GetBufferSize(Buffer::Ptr buffer) const
 {
     unsigned int bpp = 0; // bytes per pixel
     switch(buffer->type) {

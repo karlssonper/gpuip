@@ -10,7 +10,7 @@
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-class OpenCLImpl : public Base
+class OpenCLImpl : public ImageProcessor
 {
   public:
     OpenCLImpl();
@@ -19,7 +19,7 @@ class OpenCLImpl : public Base
     
     virtual double Build(std::string * err);
 
-    virtual double Process(std::string * err);
+    virtual double Run(std::string * err);
 
     virtual double Copy(const std::string & buffer,
                       Buffer::CopyOperation op,

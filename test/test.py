@@ -1,4 +1,4 @@
-import pygpuip as gpuip
+import pygpuip
 import numpy
 
 opencl_codeA = """
@@ -255,17 +255,17 @@ N = width * height
 no_error = ""
 
 def test(env, codeA, codeB, boilerplateA, boilerplateB):
-    base = gpuip.gpuip(env)
-    base.SetDimensions(width, height)
-    assert base
+    ip = pygpuip.ImageProcessor(env)
+    ip.SetDimensions(width, height)
+    assert ip
 
     buffers = []
     for i in xrange(3):
-        b = base.CreateBuffer("b%i" % i, gpuip.BufferType.FLOAT, 1)
+        b = ip.CreateBuffer("b%i" % i, pygpuip.BufferType.FLOAT, 1)
         b.data = numpy.zeros((width,height,1), dtype = numpy.float32)
         buffers.append(b)
         
-    kernelA = base.CreateKernel("my_kernelA")
+    kernelA = ip.CreateKernel("my_kernelA")
     assert kernelA 
     assert kernelA.name == "my_kernelA" 
     kernelA.code = codeA
@@ -273,41 +273,41 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     kernelA.SetOutBuffer("B", buffers[1])
     kernelA.SetOutBuffer("C", buffers[2])
 
-    incA = gpuip.ParamInt()
+    incA = pygpuip.ParamInt()
     incA.name = "incA"
     incA.value = 2
     kernelA.SetParam(incA)
 
-    incB = gpuip.ParamFloat()
+    incB = pygpuip.ParamFloat()
     incB.name = "incB"
     incB.value = 0.25
     kernelA.SetParam(incB)
-    assert base.GetBoilerplateCode(kernelA) == boilerplateA
+    assert ip.GetBoilerplateCode(kernelA) == boilerplateA
 
-    kernelB = base.CreateKernel("my_kernelB")
+    kernelB = ip.CreateKernel("my_kernelB")
     assert kernelB
     assert kernelB.name == "my_kernelB" 
     kernelB.code = codeB
     kernelB.SetInBuffer("B", buffers[1])
     kernelB.SetInBuffer("C", buffers[2])
     kernelB.SetOutBuffer("A", buffers[0])
-    assert base.GetBoilerplateCode(kernelB) == boilerplateB
+    assert ip.GetBoilerplateCode(kernelB) == boilerplateB
 
-    assert base.Allocate() == no_error
-    assert base.Allocate() == no_error # reinit should not break things
+    assert ip.Allocate() == no_error
+    assert ip.Allocate() == no_error # reinit should not break things
     indata = numpy.zeros((width,height,1), dtype = numpy.float32)
     for i in range(width):
         for j in range(height):
             indata[i][j] = i + j * width
     buffers[0].data[:] = indata
-    assert base.WriteBufferToGPU(buffers[0]) == no_error
+    assert ip.WriteBufferToGPU(buffers[0]) == no_error
 
-    assert base.Build() == no_error
-    assert base.Build() == no_error # rebuilding should not break things
-    assert base.Process() == no_error
+    assert ip.Build() == no_error
+    assert ip.Build() == no_error # rebuilding should not break things
+    assert ip.Run() == no_error
 
     for b in buffers:
-        assert base.ReadBufferFromGPU(b) == no_error
+        assert ip.ReadBufferFromGPU(b) == no_error
 
     def eq(a,b):
         return abs(a-b) < 0.0001
@@ -322,17 +322,17 @@ def test(env, codeA, codeB, boilerplateA, boilerplateB):
     print "Test passed!\n"
 
 if __name__ == '__main__':
-    if gpuip.CanCreateGpuEnvironment(gpuip.Environment.OpenCL):
+    if pygpuip.CanCreateGpuEnvironment(pygpuip.Environment.OpenCL):
         print "Testing OpenCL..." 
-        test(gpuip.Environment.OpenCL, opencl_codeA, opencl_codeB,
+        test(pygpuip.Environment.OpenCL, opencl_codeA, opencl_codeB,
              opencl_boilerplateA, opencl_boilerplateB)
 
-    if gpuip.CanCreateGpuEnvironment(gpuip.Environment.CUDA):
+    if pygpuip.CanCreateGpuEnvironment(pygpuip.Environment.CUDA):
         print "Testing CUDA..." 
-        test(gpuip.Environment.CUDA, cuda_codeA, cuda_codeB,
+        test(pygpuip.Environment.CUDA, cuda_codeA, cuda_codeB,
              cuda_boilerplateA, cuda_boilerplateB)
 
-    if gpuip.CanCreateGpuEnvironment(gpuip.Environment.GLSL):
+    if pygpuip.CanCreateGpuEnvironment(pygpuip.Environment.GLSL):
         print "Testing GLSL..." 
-        test(gpuip.Environment.GLSL, glsl_codeA, glsl_codeB,
+        test(pygpuip.Environment.GLSL, glsl_codeA, glsl_codeB,
              glsl_boilerplateA, glsl_boilerplateB)

@@ -11,18 +11,17 @@ inline GLenum _GetFormat(const Buffer::Ptr & b);
 //----------------------------------------------------------------------------//
 inline GLenum _GetInternalFormat(const Buffer::Ptr & b);
 //----------------------------------------------------------------------------//
-Base * CreateGLSL()
+ImageProcessor * CreateGLSL()
 {
     return new GLSLImpl();
 }
 //----------------------------------------------------------------------------//
 GLSLImpl::GLSLImpl()
-        : Base(gpuip::GLSL), _glewInit(false)
+        : ImageProcessor(gpuip::GLSL), _glewInit(false)
 {
 }
 //----------------------------------------------------------------------------//
-bool
-GLSLImpl::_InitGLEW(std::string * err)
+bool GLSLImpl::_InitGLEW(std::string * err)
 {
     if(!GLContext::Exists() && !GLContext::Create(err)) {
         return false;
@@ -40,14 +39,12 @@ GLSLImpl::_InitGLEW(std::string * err)
     return true;
 }
 //----------------------------------------------------------------------------//
-void
-GLSLImpl::_StartTimer()
+void GLSLImpl::_StartTimer()
 {
     glGetInteger64v(GL_TIMESTAMP, &_timer);
 }
 //----------------------------------------------------------------------------//
-double
-GLSLImpl::_StopTimer()
+double GLSLImpl::_StopTimer()
 {
     const GLint64 timerStart = _timer;
     glFinish();
@@ -55,8 +52,7 @@ GLSLImpl::_StopTimer()
     return (_timer - timerStart) / 1000000.0;
 }
 //----------------------------------------------------------------------------//
-double
-GLSLImpl::Allocate(std::string * err)
+double GLSLImpl::Allocate(std::string * err)
 {
     if (!_glewInit && !_InitGLEW(err)) {
         return GPUIP_ERROR;
@@ -142,8 +138,7 @@ GLSLImpl::Allocate(std::string * err)
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-double
-GLSLImpl::Build(std::string * err)
+double GLSLImpl::Build(std::string * err)
 {
     if (!_glewInit) {
         _InitGLEW(err);
@@ -192,8 +187,7 @@ GLSLImpl::Build(std::string * err)
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-double
-GLSLImpl::Process(std::string * err)
+double GLSLImpl::Run(std::string * err)
 {
     _StartTimer();
     
@@ -213,8 +207,7 @@ GLSLImpl::Process(std::string * err)
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-double
-GLSLImpl::Copy(const std::string & buffer,
+double GLSLImpl::Copy(const std::string & buffer,
                Buffer::CopyOperation op,
                void * data,
                std::string * err)
@@ -264,8 +257,7 @@ std::string GLSLImpl::GetBoilerplateCode(Kernel::Ptr kernel) const
     return ss.str();
 }
 //----------------------------------------------------------------------------//
-bool
-GLSLImpl::_DrawQuad(const Kernel & kernel,
+bool GLSLImpl::_DrawQuad(const Kernel & kernel,
                     GLuint fbo,
                     GLuint program,
                     std::string * error)
@@ -337,8 +329,7 @@ GLSLImpl::_DrawQuad(const Kernel & kernel,
     return true;
 }
 //----------------------------------------------------------------------------//
-GLenum
-_GetType(const Buffer::Ptr & b)
+GLenum _GetType(const Buffer::Ptr & b)
 {
     switch(b->type) {
         case Buffer::UNSIGNED_BYTE:
@@ -348,13 +339,12 @@ _GetType(const Buffer::Ptr & b)
         case Buffer::FLOAT:
             return GL_FLOAT;
         default:
-            std::cerr << "Unknown OpenGL data type.. " << std::endl;
+            std::cerr << "gpuip: Unknown OpenGL data type.. " << std::endl;
             return GL_FLOAT;
     }
 }
 //----------------------------------------------------------------------------//
-GLenum
-_GetFormat(const Buffer::Ptr & b)
+GLenum _GetFormat(const Buffer::Ptr & b)
 {
     switch(b->channels) {
         case 1:
@@ -366,14 +356,13 @@ _GetFormat(const Buffer::Ptr & b)
         case 4:
             return GL_RGBA;
         default:
-            std::cerr << "Unknown OpenGL buffer channels " << b->channels
+            std::cerr << "gouip: Unknown OpenGL buffer channels " << b->channels
                       << std::endl;
             return GL_RGB;
     }
 }
 //----------------------------------------------------------------------------//
-GLenum
-_GetInternalFormat(const Buffer::Ptr & b)
+GLenum _GetInternalFormat(const Buffer::Ptr & b)
 {
     const GLenum type = _GetType(b);
     const GLenum format = _GetFormat(b);

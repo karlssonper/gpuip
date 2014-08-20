@@ -8,14 +8,15 @@ namespace gpuip {
 //----------------------------------------------------------------------------//
 inline int _cudaGetMaxGflopsDeviceId();
 //----------------------------------------------------------------------------//
-Base *
-CreateCUDA()
+inline std::string _GetTypeStr(Buffer::Ptr buffer);
+//----------------------------------------------------------------------------//
+ImageProcessor * CreateCUDA()
 {
     return new CUDAImpl();
 }
 //----------------------------------------------------------------------------//
 CUDAImpl::CUDAImpl()
-        : Base(CUDA), _cudaBuild(false)
+        : ImageProcessor(CUDA), _cudaBuild(false)
 {
     if (cudaSetDevice(_cudaGetMaxGflopsDeviceId()) != cudaSuccess) {
         throw std::logic_error("gpuip::CUDAImpl() could not set device id");
@@ -26,8 +27,7 @@ CUDAImpl::CUDAImpl()
     cudaEventCreate(&_stop);
 }
 //----------------------------------------------------------------------------//
-double
-CUDAImpl::Allocate(std::string * err)
+double CUDAImpl::Allocate(std::string * err)
 {
     _StartTimer();
             
@@ -53,8 +53,7 @@ CUDAImpl::Allocate(std::string * err)
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-double
-CUDAImpl::Build(std::string * err)
+double CUDAImpl::Build(std::string * err)
 {
     _StartTimer();
     CUresult c_err;
@@ -120,8 +119,7 @@ CUDAImpl::Build(std::string * err)
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-double
-CUDAImpl::Process(std::string * err)
+double CUDAImpl::Run(std::string * err)
 {
     _StartTimer();
     for(size_t i = 0; i < _kernels.size(); ++i) {
@@ -133,11 +131,10 @@ CUDAImpl::Process(std::string * err)
     return  _StopTimer();
 }
 //----------------------------------------------------------------------------//
-double
-CUDAImpl::Copy(const std::string & buffer,
-                    Buffer::CopyOperation op,
-                    void * data,
-                    std::string * err)
+double CUDAImpl::Copy(const std::string & buffer,
+                      Buffer::CopyOperation op,
+                      void * data,
+                      std::string * err)
 {
     _StartTimer();
     cudaError_t e = cudaSuccess;
@@ -153,8 +150,7 @@ CUDAImpl::Copy(const std::string & buffer,
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-bool
-CUDAImpl::_LaunchKernel(Kernel & kernel,
+bool CUDAImpl::_LaunchKernel(Kernel & kernel,
                              const CUfunction & cudaKernel,
                              std::string * err)
 {
@@ -211,31 +207,6 @@ CUDAImpl::_LaunchKernel(Kernel & kernel,
     return true;
 }
 //----------------------------------------------------------------------------//
-inline std::string _GetTypeStr(Buffer::Ptr buffer)
-{
-    std::stringstream type;
-    switch(buffer->type) {
-        case Buffer::UNSIGNED_BYTE:
-            if (buffer->channels > 1) {
-                type << "uchar";
-            } else {
-                type << "unsigned char";
-            }
-            break;
-        case Buffer::HALF:
-            type << "unsigned short";
-            break;
-        case Buffer::FLOAT:
-            type << "float";
-            break;
-        default:
-            type << "float";
-    };
-    if (buffer->channels > 1 && buffer->type != Buffer::HALF) {
-        type << buffer->channels;
-    }
-    return type.str();
-}
 std::string CUDAImpl::GetBoilerplateCode(Kernel::Ptr kernel) const 
 {
     std::stringstream ss;
@@ -409,6 +380,32 @@ double CUDAImpl::_StopTimer()
     float time;
     cudaEventElapsedTime(&time, _start, _stop);
     return time;
+}
+//----------------------------------------------------------------------------//
+std::string _GetTypeStr(Buffer::Ptr buffer)
+{
+    std::stringstream type;
+    switch(buffer->type) {
+        case Buffer::UNSIGNED_BYTE:
+            if (buffer->channels > 1) {
+                type << "uchar";
+            } else {
+                type << "unsigned char";
+            }
+            break;
+        case Buffer::HALF:
+            type << "unsigned short";
+            break;
+        case Buffer::FLOAT:
+            type << "float";
+            break;
+        default:
+            type << "float";
+    };
+    if (buffer->channels > 1 && buffer->type != Buffer::HALF) {
+        type << buffer->channels;
+    }
+    return type.str();
 }
 //----------------------------------------------------------------------------//
 int _cudaGetMaxGflopsDeviceId()

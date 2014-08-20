@@ -207,7 +207,7 @@ class Settings(object):
             env = pygpuip.Environment.CUDA
         elif self.environment == "GLSL":
             env = pygpuip.Environment.GLSL
-        gpuip_obj = pygpuip.gpuip(env)
+        ip = pygpuip.ImageProcessor(env)
 
         # Create and add buffers
         buffers = {}
@@ -225,18 +225,18 @@ class Settings(object):
             elif b.type == "ubyte":
                 type = pygpuip.BufferType.UNSIGNED_BYTE
 
-            buffers[b.name] = gpuip_obj.CreateBuffer(b.name, type, channels)
+            buffers[b.name] = ip.CreateBuffer(b.name, type, channels)
             
         # Create kernels
         kernels = []
         for k in self.kernels:
-            kernel = gpuip_obj.CreateKernel(k.name)
+            kernel = ip.CreateKernel(k.name)
             kernels.append(kernel)
 
         # Set buffer linking and parameters for each kernels
         self.updateKernels(kernels, buffers)
 
-        return gpuip_obj, buffers, kernels
+        return ip, buffers, kernels
 
     def updateKernels(self, kernels, buffers):
         for kernel, k in zip(kernels, self.kernels):

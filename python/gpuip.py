@@ -131,12 +131,12 @@ def runCommandLine(ipsettings, verbose):
     overall_clock = utils.StopWatch()
 
     ### 0. Create gpuip items from settings
-    gpuip, buffers, kernels = ipsettings.create()
+    ip, buffers, kernels = ipsettings.create()
     log("Created elements from settings.", overall_clock)
 
     ### 1. Build
     c = utils.StopWatch()
-    check_error(gpuip.Build())
+    check_error(ip.Build())
     log("Building kernels [%s]." %  [k.name for k in kernels], c)
     
     ### 2. Import data from images
@@ -150,18 +150,18 @@ def runCommandLine(ipsettings, verbose):
     ### 3. Allocate and transfer data to GPU
     c = utils.StopWatch()
     width, height = utils.allocateBufferData(buffers)
-    gpuip.SetDimensions(width, height)
-    check_error(gpuip.Allocate())
+    ip.SetDimensions(width, height)
+    check_error(ip.Allocate())
     log("Allocating done.", c)
     c = utils.StopWatch()
     for b in ipsettings.buffers:
         if b.input:
-            check_error(gpuip.WriteBufferToGPU(buffers[b.name]))
+            check_error(ip.WriteBufferToGPU(buffers[b.name]))
     log("Transfering data to GPU done.", c)
 
     ### 4. Process
     c = utils.StopWatch()
-    check_error(gpuip.Process())
+    check_error(ip.Run())
     log("Processing done.", c)
 
     ### 5. Export buffers to images
@@ -169,7 +169,7 @@ def runCommandLine(ipsettings, verbose):
     for b in ipsettings.buffers:
         if b.output:
             log("Exporting data from %s to %s" %(b.name, b.output))
-            check_error(gpuip.ReadBufferFromGPU(buffers[b.name]))
+            check_error(ip.ReadBufferFromGPU(buffers[b.name]))
             check_error(buffers[b.name].Write(b.output,utils.getNumCores()))
     log("Exporting data done.", c)
 

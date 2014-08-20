@@ -6,7 +6,7 @@
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-class GLSLImpl : public Base
+class GLSLImpl : public ImageProcessor
 {
   public:
     GLSLImpl();
@@ -15,7 +15,7 @@ class GLSLImpl : public Base
       
     virtual double Build(std::string * err);
 
-    virtual double Process(std::string * err);
+    virtual double Run(std::string * err);
     
     virtual double Copy(const std::string & buffer,
                       Buffer::CopyOperation op,
