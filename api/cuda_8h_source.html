@@ -18,7 +18,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="tabs">
     <ul>
       <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-      <li><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
+      <li><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
       <li class="current"><a href="files.html"><span>Files</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
@@ -49,50 +50,56 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00007"></a>00007 <span class="comment">//----------------------------------------------------------------------------//</span>
 <a name="l00008"></a>00008 <span class="keyword">namespace </span>gpuip {
 <a name="l00009"></a>00009 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00010"></a><a class="code" href="classgpuip_1_1_c_u_d_a_impl.html">00010</a> <span class="keyword">class </span><a class="code" href="classgpuip_1_1_c_u_d_a_impl.html">CUDAImpl</a> : <span class="keyword">public</span> <a class="code" href="classgpuip_1_1_base.html">Base</a>
+<a name="l00010"></a><a class="code" href="classgpuip_1_1_c_u_d_a_impl.html">00010</a> <span class="keyword">class </span><a class="code" href="classgpuip_1_1_c_u_d_a_impl.html">CUDAImpl</a> : <span class="keyword">public</span> <a class="code" href="classgpuip_1_1_image_processor.html">ImageProcessor</a>
 <a name="l00011"></a>00011 {
 <a name="l00012"></a>00012   <span class="keyword">public</span>:
 <a name="l00013"></a>00013     <a class="code" href="classgpuip_1_1_c_u_d_a_impl.html">CUDAImpl</a>();
 <a name="l00014"></a>00014 
-<a name="l00015"></a>00015     <span class="keyword">virtual</span> <span class="keywordtype">double</span> Allocate(std::string * err);
+<a name="l00015"></a>00015     <span class="keyword">virtual</span> ~<a class="code" href="classgpuip_1_1_c_u_d_a_impl.html">CUDAImpl</a>();
 <a name="l00016"></a>00016     
-<a name="l00017"></a>00017     <span class="keyword">virtual</span> <span class="keywordtype">double</span> Build(std::string * err);
-<a name="l00018"></a>00018 
-<a name="l00019"></a>00019     <span class="keyword">virtual</span> <span class="keywordtype">double</span> Process(std::string * err);
-<a name="l00020"></a>00020     
-<a name="l00021"></a>00021     <span class="keyword">virtual</span> <span class="keywordtype">double</span> Copy(<span class="keyword">const</span> std::string &amp; buffer,
-<a name="l00022"></a>00022                       Buffer::CopyOperation op,
-<a name="l00023"></a>00023                       <span class="keywordtype">void</span> * data,
-<a name="l00024"></a>00024                       std::string * err);
-<a name="l00025"></a>00025 
-<a name="l00026"></a>00026     <span class="keyword">virtual</span> std::string GetBoilerplateCode(Kernel::Ptr kernel) <span class="keyword">const</span>;
-<a name="l00027"></a>00027     
-<a name="l00028"></a>00028   <span class="keyword">protected</span>:
-<a name="l00029"></a>00029     std::vector&lt;CUfunction&gt; _cudaKernels;
-<a name="l00030"></a>00030     <span class="keywordtype">bool</span> _cudaBuild;
-<a name="l00031"></a>00031     CUmodule _cudaModule;
-<a name="l00032"></a>00032     cudaEvent_t _start,_stop;
-<a name="l00033"></a>00033     std::map&lt;std::string, float*&gt; _cudaBuffers;
-<a name="l00034"></a>00034     
-<a name="l00035"></a>00035     <span class="keywordtype">bool</span> _LaunchKernel(<a class="code" href="structgpuip_1_1_kernel.html">Kernel</a> &amp; kernel,
-<a name="l00036"></a>00036                        <span class="keyword">const</span> CUfunction &amp; cudaKernel,
-<a name="l00037"></a>00037                        std::string * err);
-<a name="l00038"></a>00038 
-<a name="l00039"></a>00039     <span class="keywordtype">void</span> _StartTimer();
-<a name="l00040"></a>00040     
-<a name="l00041"></a>00041     <span class="keywordtype">double</span> _StopTimer();
-<a name="l00042"></a>00042 };
-<a name="l00043"></a>00043 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00044"></a>00044 } <span class="comment">// end namespace gpuip</span>
-<a name="l00045"></a>00045 
-<a name="l00046"></a>00046 <span class="preprocessor">#endif</span>
+<a name="l00017"></a>00017     <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code" href="classgpuip_1_1_c_u_d_a_impl.html#aa3398f6d4b328d5e79dcb52f46f091dc" title="Allocates needed memory on the GPU.">Allocate</a>(std::string * err);
+<a name="l00018"></a>00018     
+<a name="l00019"></a>00019     <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code" href="classgpuip_1_1_c_u_d_a_impl.html#aa5ea3393e19d6de6be8b1098dfd332b1" title="Compiles the Kernel::Code for each Kernel object.">Build</a>(std::string * err);
+<a name="l00020"></a>00020 
+<a name="l00021"></a>00021     <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code" href="classgpuip_1_1_c_u_d_a_impl.html#a722cb287d3efa4bf6b977f8083a3eca6" title="Runs all of the image processing kernels.">Run</a>(std::string * err);
+<a name="l00022"></a>00022     
+<a name="l00023"></a>00023     <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code" href="classgpuip_1_1_c_u_d_a_impl.html#abfe734d72c6993286b1c10ba6aceabee" title="Data tranfser from the CPU and the GPU.">Copy</a>(<span class="keyword">const</span> std::string &amp; buffer,
+<a name="l00024"></a>00024                       <a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672" title="Transfer data from or to the GPU.">Buffer::CopyOperation</a> op,
+<a name="l00025"></a>00025                       <span class="keywordtype">void</span> * data,
+<a name="l00026"></a>00026                       std::string * err);
+<a name="l00027"></a>00027 
+<a name="l00028"></a>00028     <span class="keyword">virtual</span> std::string <a class="code" href="classgpuip_1_1_c_u_d_a_impl.html#a7254290e6e054dfca29b349a7282aa0a" title="Test.">GetBoilerplateCode</a>(<a class="code" href="structgpuip_1_1_kernel.html#a93adaf0a6f5e397f0d5714eb5ffd2589" title="Smart pointer.">Kernel::Ptr</a> kernel) <span class="keyword">const</span>;
+<a name="l00029"></a>00029     
+<a name="l00030"></a>00030   <span class="keyword">protected</span>:
+<a name="l00031"></a>00031     std::vector&lt;CUfunction&gt; _cudaKernels;
+<a name="l00032"></a>00032     <span class="keywordtype">bool</span> _cudaBuild;
+<a name="l00033"></a>00033     CUmodule _cudaModule;
+<a name="l00034"></a>00034     cudaEvent_t _start,_stop;
+<a name="l00035"></a>00035     std::map&lt;std::string, float*&gt; _cudaBuffers;
+<a name="l00036"></a>00036     
+<a name="l00037"></a>00037     <span class="keywordtype">bool</span> _LaunchKernel(<a class="code" href="structgpuip_1_1_kernel.html">Kernel</a> &amp; kernel,
+<a name="l00038"></a>00038                        <span class="keyword">const</span> CUfunction &amp; cudaKernel,
+<a name="l00039"></a>00039                        std::string * err);
+<a name="l00040"></a>00040 
+<a name="l00041"></a>00041     <span class="keywordtype">void</span> _StartTimer();
+<a name="l00042"></a>00042     
+<a name="l00043"></a>00043     <span class="keywordtype">double</span> _StopTimer();
+<a name="l00044"></a>00044 
+<a name="l00045"></a>00045     <span class="keywordtype">bool</span> _FreeBuffers(std::string * err);
+<a name="l00046"></a>00046 
+<a name="l00047"></a>00047     <span class="keywordtype">bool</span> _UnloadModule(std::string * err);
+<a name="l00048"></a>00048 };
+<a name="l00049"></a>00049 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00050"></a>00050 } <span class="comment">// end namespace gpuip</span>
+<a name="l00051"></a>00051 
+<a name="l00052"></a>00052 <span class="preprocessor">#endif</span>
 </pre></div></div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Data Structures</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerator</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -101,7 +108,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 19 Aug 2014 for gpuip by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 20 Aug 2014 for gpuip by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

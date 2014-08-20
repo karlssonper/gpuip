@@ -18,7 +18,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="tabs">
     <ul>
       <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-      <li><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
+      <li><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
       <li class="current"><a href="files.html"><span>Files</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
@@ -51,7 +52,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00009"></a>00009 {
 <a name="l00010"></a>00010     <span class="keywordflow">if</span> (cl_err != CL_SUCCESS) {
 <a name="l00011"></a>00011         (*err) += <span class="stringliteral">&quot;OpenCL: error when enqueuing kernel &quot;</span>;
-<a name="l00012"></a>00012         (*err) += kernel.name;
+<a name="l00012"></a>00012         (*err) += kernel.<a class="code" href="structgpuip_1_1_kernel.html#a09eb821d09abfc08a06bf1ce48c32579" title="Unique identifying name.">name</a>;
 <a name="l00013"></a>00013         std::cout &lt;&lt; cl_err &lt;&lt; std::endl;
 <a name="l00014"></a>00014         <span class="keywordflow">switch</span>(cl_err) {
 <a name="l00015"></a>00015             <span class="keywordflow">case</span> CL_INVALID_KERNEL_ARGS: {
@@ -59,30 +60,30 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00017"></a>00017                         <span class="stringliteral">&quot; following data:\n&quot;</span>;
 <a name="l00018"></a>00018                 std::stringstream ss;
 <a name="l00019"></a>00019                 ss &lt;&lt; <span class="stringliteral">&quot;In buffers: &quot;</span>;
-<a name="l00020"></a>00020                 <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; kernel.inBuffers.size(); ++i) {
-<a name="l00021"></a>00021                     ss &lt;&lt; kernel.inBuffers[i].second &lt;&lt; <span class="stringliteral">&quot;(&quot;</span>
-<a name="l00022"></a>00022                        &lt;&lt; kernel.inBuffers[i].first-&gt;name &lt;&lt; <span class="stringliteral">&quot;), &quot;</span>;
+<a name="l00020"></a>00020                 <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#af43fa190f2d1608f64f30c6e927a091b" title="Buffers used for input data. Can not be modified.">inBuffers</a>.size(); ++i) {
+<a name="l00021"></a>00021                     ss &lt;&lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#af43fa190f2d1608f64f30c6e927a091b" title="Buffers used for input data. Can not be modified.">inBuffers</a>[i].name &lt;&lt; <span class="stringliteral">&quot;(&quot;</span>
+<a name="l00022"></a>00022                        &lt;&lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#af43fa190f2d1608f64f30c6e927a091b" title="Buffers used for input data. Can not be modified.">inBuffers</a>[i].buffer-&gt;name &lt;&lt; <span class="stringliteral">&quot;), &quot;</span>;
 <a name="l00023"></a>00023                 }
 <a name="l00024"></a>00024                 ss &lt;&lt; <span class="stringliteral">&quot;\n&quot;</span>;
 <a name="l00025"></a>00025                 
 <a name="l00026"></a>00026                 ss &lt;&lt; <span class="stringliteral">&quot;Out buffers: &quot;</span>;
-<a name="l00027"></a>00027                 <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; kernel.outBuffers.size(); ++i) {
-<a name="l00028"></a>00028                     ss &lt;&lt; kernel.outBuffers[i].second &lt;&lt; <span class="stringliteral">&quot;(&quot;</span>
-<a name="l00029"></a>00029                        &lt;&lt; kernel.outBuffers[i].first-&gt;name &lt;&lt; <span class="stringliteral">&quot;), &quot;</span>;
+<a name="l00027"></a>00027                 <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#a9f5b78ef7c5595fd831904f75acbabfd" title="Buffers used to output data. Can not be read from.">outBuffers</a>.size(); ++i) {
+<a name="l00028"></a>00028                     ss &lt;&lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#a9f5b78ef7c5595fd831904f75acbabfd" title="Buffers used to output data. Can not be read from.">outBuffers</a>[i].name &lt;&lt; <span class="stringliteral">&quot;(&quot;</span>
+<a name="l00029"></a>00029                        &lt;&lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#a9f5b78ef7c5595fd831904f75acbabfd" title="Buffers used to output data. Can not be read from.">outBuffers</a>[i].buffer-&gt;name &lt;&lt; <span class="stringliteral">&quot;), &quot;</span>;
 <a name="l00030"></a>00030                 }
 <a name="l00031"></a>00031                 ss &lt;&lt; <span class="stringliteral">&quot;\n&quot;</span>;
 <a name="l00032"></a>00032 
 <a name="l00033"></a>00033                 ss &lt;&lt; <span class="stringliteral">&quot;Parameters int: &quot;</span>;
-<a name="l00034"></a>00034                 <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; kernel.paramsInt.size(); ++i) {
-<a name="l00035"></a>00035                     ss &lt;&lt; <span class="stringliteral">&quot;(&quot;</span> &lt;&lt; kernel.paramsInt[i].name &lt;&lt; <span class="stringliteral">&quot;,&quot;</span>
-<a name="l00036"></a>00036                        &lt;&lt; kernel.paramsInt[i].value &lt;&lt; <span class="stringliteral">&quot;), &quot;</span>;
+<a name="l00034"></a>00034                 <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#a89fcc2823ff6e9a30b9a415a1d74e9ec" title="Integer parameters.">paramsInt</a>.size(); ++i) {
+<a name="l00035"></a>00035                     ss &lt;&lt; <span class="stringliteral">&quot;(&quot;</span> &lt;&lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#a89fcc2823ff6e9a30b9a415a1d74e9ec" title="Integer parameters.">paramsInt</a>[i].name &lt;&lt; <span class="stringliteral">&quot;,&quot;</span>
+<a name="l00036"></a>00036                        &lt;&lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#a89fcc2823ff6e9a30b9a415a1d74e9ec" title="Integer parameters.">paramsInt</a>[i].value &lt;&lt; <span class="stringliteral">&quot;), &quot;</span>;
 <a name="l00037"></a>00037                 }
 <a name="l00038"></a>00038                 ss &lt;&lt; <span class="stringliteral">&quot;\n&quot;</span>;
 <a name="l00039"></a>00039 
 <a name="l00040"></a>00040                 ss &lt;&lt; <span class="stringliteral">&quot;Parameters float: &quot;</span>;
-<a name="l00041"></a>00041                 <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; kernel.paramsFloat.size(); ++i) {
-<a name="l00042"></a>00042                     ss &lt;&lt; <span class="stringliteral">&quot;(&quot;</span> &lt;&lt; kernel.paramsFloat[i].name &lt;&lt; <span class="stringliteral">&quot;,&quot;</span>
-<a name="l00043"></a>00043                        &lt;&lt; kernel.paramsFloat[i].value &lt;&lt; <span class="stringliteral">&quot;), &quot;</span>;
+<a name="l00041"></a>00041                 <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#afaa2de49d9d74d418ad94df5770c026e" title="Float parameters.">paramsFloat</a>.size(); ++i) {
+<a name="l00042"></a>00042                     ss &lt;&lt; <span class="stringliteral">&quot;(&quot;</span> &lt;&lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#afaa2de49d9d74d418ad94df5770c026e" title="Float parameters.">paramsFloat</a>[i].name &lt;&lt; <span class="stringliteral">&quot;,&quot;</span>
+<a name="l00043"></a>00043                        &lt;&lt; kernel.<a class="code" href="structgpuip_1_1_kernel.html#afaa2de49d9d74d418ad94df5770c026e" title="Float parameters.">paramsFloat</a>[i].value &lt;&lt; <span class="stringliteral">&quot;), &quot;</span>;
 <a name="l00044"></a>00044                 }
 <a name="l00045"></a>00045                 ss &lt;&lt; <span class="stringliteral">&quot;\n&quot;</span>;
 <a name="l00046"></a>00046                 (*err) += ss.str();
@@ -184,7 +185,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00142"></a>00142 }
 <a name="l00143"></a>00143 <span class="comment">//----------------------------------------------------------------------------//</span>
 <a name="l00144"></a>00144 <span class="keyword">inline</span> <span class="keywordtype">bool</span> _clErrorCopy(cl_int cl_err, std::string * err,
-<a name="l00145"></a>00145                          <span class="keyword">const</span> std::string &amp; buffer, Buffer::CopyOperation op)
+<a name="l00145"></a>00145                          <span class="keyword">const</span> std::string &amp; buffer, <a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672" title="Transfer data from or to the GPU.">Buffer::CopyOperation</a> op)
 <a name="l00146"></a>00146 {
 <a name="l00147"></a>00147     <span class="keywordflow">if</span> (cl_err != CL_SUCCESS) {
 <a name="l00148"></a>00148         (*err) += <span class="stringliteral">&quot;OpenCL: error when copying data &quot;</span>;
@@ -194,41 +195,42 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00152"></a>00152         <span class="keywordflow">switch</span>(cl_err) {
 <a name="l00153"></a>00153             <span class="keywordflow">case</span> CL_INVALID_MEM_OBJECT:
 <a name="l00154"></a>00154                 (*err) += <span class="stringliteral">&quot;. Invalid memory object. Does the buffer exist and &quot;</span>
-<a name="l00155"></a>00155                         <span class="stringliteral">&quot;has it been added? (i.e. gpuip::Base::AddBuffer).&quot;</span>;
-<a name="l00156"></a>00156             <span class="keywordflow">default</span>:
-<a name="l00157"></a>00157                 <span class="keywordflow">break</span>;
-<a name="l00158"></a>00158         }
-<a name="l00159"></a>00159         <span class="keywordflow">return</span> <span class="keyword">true</span>;
-<a name="l00160"></a>00160     }
-<a name="l00161"></a>00161     <span class="keywordflow">return</span> <span class="keyword">false</span>;
-<a name="l00162"></a>00162 }
-<a name="l00163"></a>00163 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00164"></a>00164 <span class="keyword">inline</span> <span class="keywordtype">bool</span> _clErrorSetKernelArg(cl_int cl_err, std::string * err,
-<a name="l00165"></a>00165                                  <span class="keyword">const</span> std::string &amp; kernel_name)
-<a name="l00166"></a>00166 {
-<a name="l00167"></a>00167     <span class="keywordflow">if</span> (cl_err != CL_SUCCESS) {
-<a name="l00168"></a>00168         (*err) += <span class="stringliteral">&quot;OpenCL: error in argument setup in kernel &quot;</span>;
-<a name="l00169"></a>00169         (*err) += kernel_name;
-<a name="l00170"></a>00170         <span class="keywordflow">switch</span>(cl_err) {
-<a name="l00171"></a>00171             <span class="comment">//TODO: add cases here</span>
-<a name="l00172"></a>00172             <span class="keywordflow">default</span>:
-<a name="l00173"></a>00173                 <span class="keywordflow">break</span>;
-<a name="l00174"></a>00174         }
-<a name="l00175"></a>00175         <span class="keywordflow">return</span> <span class="keyword">true</span>;
-<a name="l00176"></a>00176     }
-<a name="l00177"></a>00177     <span class="keywordflow">return</span> <span class="keyword">false</span>;
-<a name="l00178"></a>00178 }
-<a name="l00179"></a>00179 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00180"></a>00180 } <span class="comment">// end namespace gpuip</span>
-<a name="l00181"></a>00181 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00182"></a>00182 <span class="preprocessor">#endif</span>
+<a name="l00155"></a>00155                         <span class="stringliteral">&quot;has it been created? &quot;</span>
+<a name="l00156"></a>00156                         <span class="stringliteral">&quot;(i.e. gpuip::ImageProcessor::CreateBuffer).&quot;</span>;
+<a name="l00157"></a>00157             <span class="keywordflow">default</span>:
+<a name="l00158"></a>00158                 <span class="keywordflow">break</span>;
+<a name="l00159"></a>00159         }
+<a name="l00160"></a>00160         <span class="keywordflow">return</span> <span class="keyword">true</span>;
+<a name="l00161"></a>00161     }
+<a name="l00162"></a>00162     <span class="keywordflow">return</span> <span class="keyword">false</span>;
+<a name="l00163"></a>00163 }
+<a name="l00164"></a>00164 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00165"></a>00165 <span class="keyword">inline</span> <span class="keywordtype">bool</span> _clErrorSetKernelArg(cl_int cl_err, std::string * err,
+<a name="l00166"></a>00166                                  <span class="keyword">const</span> std::string &amp; kernel_name)
+<a name="l00167"></a>00167 {
+<a name="l00168"></a>00168     <span class="keywordflow">if</span> (cl_err != CL_SUCCESS) {
+<a name="l00169"></a>00169         (*err) += <span class="stringliteral">&quot;OpenCL: error in argument setup in kernel &quot;</span>;
+<a name="l00170"></a>00170         (*err) += kernel_name;
+<a name="l00171"></a>00171         <span class="keywordflow">switch</span>(cl_err) {
+<a name="l00172"></a>00172             <span class="comment">//TODO: add cases here</span>
+<a name="l00173"></a>00173             <span class="keywordflow">default</span>:
+<a name="l00174"></a>00174                 <span class="keywordflow">break</span>;
+<a name="l00175"></a>00175         }
+<a name="l00176"></a>00176         <span class="keywordflow">return</span> <span class="keyword">true</span>;
+<a name="l00177"></a>00177     }
+<a name="l00178"></a>00178     <span class="keywordflow">return</span> <span class="keyword">false</span>;
+<a name="l00179"></a>00179 }
+<a name="l00180"></a>00180 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00181"></a>00181 } <span class="comment">// end namespace gpuip</span>
+<a name="l00182"></a>00182 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00183"></a>00183 <span class="preprocessor">#endif</span>
 </pre></div></div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Data Structures</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerator</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -237,7 +239,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 19 Aug 2014 for gpuip by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 20 Aug 2014 for gpuip by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

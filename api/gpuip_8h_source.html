@@ -18,8 +18,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="tabs">
     <ul>
       <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-      <li><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
+      <li><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
       <li class="current"><a href="files.html"><span>Files</span></a></li>
+      <li><a href="examples.html"><span>Examples</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
         <img id="MSearchSelect" src="search/search.png"
@@ -38,9 +40,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="tabs">
     <ul>
       <li><a href="files.html"><span>File&nbsp;List</span></a></li>
+      <li><a href="globals.html"><span>Globals</span></a></li>
     </ul>
   </div>
-<h1>/home/per/dev/gpuip/src/gpuip.h</h1><div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="preprocessor">#ifndef GPUIP_H_</span>
+<h1>/home/per/dev/gpuip/src/gpuip.h</h1><a href="gpuip_8h.html">Go to the documentation of this file.</a><div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="preprocessor">#ifndef GPUIP_H_</span>
 <a name="l00002"></a>00002 <span class="preprocessor"></span><span class="preprocessor">#define GPUIP_H_</span>
 <a name="l00003"></a>00003 <span class="preprocessor"></span><span class="comment">//----------------------------------------------------------------------------//</span>
 <a name="l00004"></a>00004 <span class="preprocessor">#include &lt;string&gt;</span>
@@ -55,128 +58,165 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00013"></a>00013 <span class="preprocessor"></span><span class="preprocessor">#include &lt;tr1/memory&gt;</span>
 <a name="l00014"></a>00014 <span class="preprocessor">#endif</span>
 <a name="l00015"></a>00015 <span class="preprocessor"></span><span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00016"></a>00016 <span class="keyword">namespace </span>gpuip {
-<a name="l00017"></a>00017 <span class="comment">//</span>
-<a name="l00018"></a>00018 <span class="preprocessor">#define GPUIP_ERROR -1.0</span>
-<a name="l00019"></a>00019 <span class="preprocessor"></span><span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00020"></a>00020 <span class="keyword">enum</span> GpuEnvironment { OpenCL, CUDA, GLSL };
-<a name="l00021"></a>00021 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00022"></a><a class="code" href="structgpuip_1_1_buffer.html">00022</a> <span class="keyword">struct </span><a class="code" href="structgpuip_1_1_buffer.html">Buffer</a> {
-<a name="l00023"></a>00023 <span class="preprocessor">#ifdef _GPUIP_PYTHON_BINDINGS</span>
-<a name="l00024"></a>00024 <span class="preprocessor"></span>    <span class="keyword">typedef</span> boost::shared_ptr&lt;Buffer&gt; Ptr;
-<a name="l00025"></a>00025 <span class="preprocessor">#else</span>
-<a name="l00026"></a>00026 <span class="preprocessor"></span>    <span class="keyword">typedef</span> std::tr1::shared_ptr&lt;Buffer&gt; Ptr;
-<a name="l00027"></a>00027 <span class="preprocessor">#endif</span>
-<a name="l00028"></a>00028 <span class="preprocessor"></span>    <span class="keyword">enum</span> CopyOperation{ READ_DATA, WRITE_DATA };
-<a name="l00029"></a>00029     <span class="keyword">enum</span> Type{ UNSIGNED_BYTE, HALF, FLOAT };
-<a name="l00030"></a>00030     <a class="code" href="structgpuip_1_1_buffer.html">Buffer</a>(<span class="keyword">const</span> std::string &amp; name, Type type, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> channels);
-<a name="l00031"></a>00031     std::string name;
-<a name="l00032"></a>00032     Type type;
-<a name="l00033"></a>00033     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> channels;
-<a name="l00034"></a>00034 };
-<a name="l00035"></a>00035 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00036"></a>00036 <span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;
-<a name="l00037"></a><a class="code" href="structgpuip_1_1_parameter.html">00037</a> <span class="keyword">struct </span><a class="code" href="structgpuip_1_1_parameter.html">Parameter</a>
-<a name="l00038"></a>00038 {
-<a name="l00039"></a>00039     std::string name;
-<a name="l00040"></a>00040     T value;
-<a name="l00041"></a>00041 };
-<a name="l00042"></a>00042 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00043"></a><a class="code" href="structgpuip_1_1_kernel.html">00043</a> <span class="keyword">struct </span><a class="code" href="structgpuip_1_1_kernel.html">Kernel</a> {
+<a name="l00018"></a><a class="code" href="namespacegpuip.html">00018</a> <span class="comment"></span><span class="keyword">namespace </span>gpuip {
+<a name="l00019"></a>00019 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00022"></a><a class="code" href="gpuip_8h.html#abdd2b9c50e626da37c6c5cb18699e9f1">00022</a> <span class="comment"></span><span class="preprocessor">#define GPUIP_ERROR -1.0</span>
+<a name="l00023"></a>00023 <span class="preprocessor"></span><span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00025"></a><a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9">00025</a> <span class="comment"></span><span class="keyword">enum</span> <a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9">GpuEnvironment</a> {
+<a name="l00026"></a>00026     <span class="comment">/* OpenCL, Open Computing Language by Khronos Group. */</span>
+<a name="l00027"></a>00027     OpenCL,
+<a name="l00028"></a>00028 
+<a name="l00029"></a>00029     <span class="comment">/* CUDA, Compute Unified Device Architecture by NVIDIA Corporation.*/</span>
+<a name="l00030"></a>00030     CUDA,
+<a name="l00031"></a>00031 
+<a name="l00032"></a>00032     <span class="comment">/* GLSL, OpenGL Shading Language by Khronos Group. */</span>
+<a name="l00033"></a>00033     GLSL };
+<a name="l00034"></a>00034 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00041"></a><a class="code" href="structgpuip_1_1_buffer.html">00041</a> <span class="comment"></span><span class="keyword">struct </span><a class="code" href="structgpuip_1_1_buffer.html" title="A chunk of memory allocated on the GPU.">Buffer</a>
+<a name="l00042"></a>00042 {
 <a name="l00044"></a>00044 <span class="preprocessor">#ifdef _GPUIP_PYTHON_BINDINGS</span>
-<a name="l00045"></a>00045 <span class="preprocessor"></span>    <span class="keyword">typedef</span> boost::shared_ptr&lt;Kernel&gt; Ptr;
+<a name="l00045"></a>00045 <span class="preprocessor"></span>    <span class="keyword">typedef</span> boost::shared_ptr&lt;Buffer&gt; <a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">Ptr</a>;
 <a name="l00046"></a>00046 <span class="preprocessor">#else</span>
-<a name="l00047"></a>00047 <span class="preprocessor"></span>    <span class="keyword">typedef</span> std::tr1::shared_ptr&lt;Kernel&gt; Ptr;
+<a name="l00047"></a><a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6">00047</a> <span class="preprocessor"></span>    <span class="keyword">typedef</span> std::tr1::shared_ptr&lt;Buffer&gt; <a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">Ptr</a>;
 <a name="l00048"></a>00048 <span class="preprocessor">#endif</span>
-<a name="l00049"></a>00049 <span class="preprocessor"></span>    <a class="code" href="structgpuip_1_1_kernel.html">Kernel</a>(<span class="keyword">const</span> std::string &amp; name);
-<a name="l00050"></a>00050     std::string name;
-<a name="l00051"></a>00051     std::string code;
-<a name="l00052"></a>00052     std::vector&lt;std::pair&lt;Buffer::Ptr,std::string&gt; &gt; inBuffers;
-<a name="l00053"></a>00053     std::vector&lt;std::pair&lt;Buffer::Ptr,std::string&gt; &gt; outBuffers;
-<a name="l00054"></a>00054     std::vector&lt;Parameter&lt;int&gt; &gt; paramsInt;
-<a name="l00055"></a>00055     std::vector&lt;Parameter&lt;float&gt; &gt; paramsFloat;
-<a name="l00056"></a>00056 };
-<a name="l00057"></a>00057 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00058"></a><a class="code" href="classgpuip_1_1_base.html">00058</a> <span class="keyword">class </span><a class="code" href="classgpuip_1_1_base.html">Base</a>
-<a name="l00059"></a>00059 {
-<a name="l00060"></a>00060   <span class="keyword">public</span>:
-<a name="l00061"></a>00061 <span class="preprocessor">#ifdef _GPUIP_PYTHON_BINDINGS</span>
-<a name="l00062"></a>00062 <span class="preprocessor"></span>    <span class="keyword">typedef</span> boost::shared_ptr&lt;Base&gt; Ptr;
-<a name="l00063"></a>00063 <span class="preprocessor">#else</span>
-<a name="l00064"></a>00064 <span class="preprocessor"></span>    <span class="keyword">typedef</span> std::tr1::shared_ptr&lt;Base&gt; Ptr;
-<a name="l00065"></a>00065 <span class="preprocessor">#endif</span>
-<a name="l00066"></a>00066 <span class="preprocessor"></span>    
-<a name="l00067"></a>00067     <span class="keyword">static</span> Ptr Create(GpuEnvironment env);
-<a name="l00068"></a>00068     
-<a name="l00069"></a>00069     <span class="keyword">virtual</span> ~<a class="code" href="classgpuip_1_1_base.html">Base</a>() {}
-<a name="l00070"></a>00070 
-<a name="l00071"></a>00071     <span class="keyword">static</span> <span class="keywordtype">bool</span> CanCreateGpuEnvironment(GpuEnvironment env);
-<a name="l00072"></a>00072     
-<a name="l00073"></a>00073     GpuEnvironment GetGpuEnvironment()<span class="keyword"> const</span>
-<a name="l00074"></a>00074 <span class="keyword">    </span>{
-<a name="l00075"></a>00075         <span class="keywordflow">return</span> _env;
-<a name="l00076"></a>00076     }
+<a name="l00049"></a>00049 <span class="preprocessor"></span>
+<a name="l00050"></a><a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672">00050</a>     <span class="keyword">enum</span> <a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672">CopyOperation</a>{
+<a name="l00052"></a><a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672a4fbffe708b1fe7b831c84148e51b501c">00052</a>         <a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672a4fbffe708b1fe7b831c84148e51b501c">COPY_TO_GPU</a>,
+<a name="l00054"></a><a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672aec10357928834f05a65b4caba10052a2">00054</a>         <a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672aec10357928834f05a65b4caba10052a2">COPY_FROM_GPU</a> };
+<a name="l00055"></a>00055 
+<a name="l00057"></a><a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50">00057</a>     <span class="keyword">enum</span> <a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50" title="Supported data types.">Type</a>{
+<a name="l00059"></a><a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50a050f1571358a51dbc8209d41fa7ee4a9">00059</a>         <a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50a050f1571358a51dbc8209d41fa7ee4a9">UNSIGNED_BYTE</a>,
+<a name="l00060"></a>00060         
+<a name="l00062"></a><a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50a1c4f27953d071f7767278a7bfe100a52">00062</a>         <a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50a1c4f27953d071f7767278a7bfe100a52">HALF</a>,
+<a name="l00063"></a>00063 
+<a name="l00066"></a><a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50ae971aacbcbe139e845fb90521f1e72a8">00066</a>         <a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50ae971aacbcbe139e845fb90521f1e72a8">FLOAT</a> };
+<a name="l00067"></a>00067     
+<a name="l00068"></a>00068     <a class="code" href="structgpuip_1_1_buffer.html" title="A chunk of memory allocated on the GPU.">Buffer</a>(<span class="keyword">const</span> std::string &amp; <a class="code" href="structgpuip_1_1_buffer.html#ab2c5d7ae5b064652f09ce09ea8eafc39" title="Unique identifying name.">name</a>, <a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50" title="Supported data types.">Type</a> type, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="structgpuip_1_1_buffer.html#aad893e2e8f72f34e12f2f1e2a8070984" title="Channels of data per pixel.">channels</a>);
+<a name="l00069"></a>00069 
+<a name="l00074"></a><a class="code" href="structgpuip_1_1_buffer.html#ab2c5d7ae5b064652f09ce09ea8eafc39">00074</a>     <span class="keyword">const</span> std::string <a class="code" href="structgpuip_1_1_buffer.html#ab2c5d7ae5b064652f09ce09ea8eafc39" title="Unique identifying name.">name</a>;
+<a name="l00075"></a>00075     
+<a name="l00076"></a>00076     <a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50" title="Supported data types.">Type</a> type;
 <a name="l00077"></a>00077 
-<a name="l00078"></a>00078     Buffer::Ptr CreateBuffer(<span class="keyword">const</span> std::string &amp; name,
-<a name="l00079"></a>00079                              Buffer::Type type,
-<a name="l00080"></a>00080                              <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> channels);
-<a name="l00081"></a>00081 
-<a name="l00082"></a>00082     Kernel::Ptr CreateKernel(<span class="keyword">const</span> std::string &amp; name);
-<a name="l00083"></a>00083     
-<a name="l00084"></a>00084     Kernel::Ptr GetKernel(<span class="keyword">const</span> std::string &amp; name);
-<a name="l00085"></a>00085 
-<a name="l00086"></a>00086     <span class="keywordtype">void</span> SetDimensions(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> width, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> height);
-<a name="l00087"></a>00087 
-<a name="l00088"></a>00088     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> GetWidth()<span class="keyword"> const</span>
-<a name="l00089"></a>00089 <span class="keyword">    </span>{
-<a name="l00090"></a>00090         <span class="keywordflow">return</span> _w;
-<a name="l00091"></a>00091     }
-<a name="l00092"></a>00092 
-<a name="l00093"></a>00093     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> GetHeight()<span class="keyword"> const</span>
-<a name="l00094"></a>00094 <span class="keyword">    </span>{
-<a name="l00095"></a>00095         <span class="keywordflow">return</span> _h;
-<a name="l00096"></a>00096     }
-<a name="l00097"></a>00097 
-<a name="l00098"></a>00098     <span class="keyword">virtual</span> <span class="keywordtype">double</span> Allocate(std::string * err) = 0;
-<a name="l00099"></a>00099 
-<a name="l00100"></a>00100     <span class="keyword">virtual</span> <span class="keywordtype">double</span> Build(std::string * err) = 0;
-<a name="l00101"></a>00101 
-<a name="l00102"></a>00102     <span class="keyword">virtual</span> <span class="keywordtype">double</span> Process(std::string * err) = 0;
-<a name="l00103"></a>00103 
-<a name="l00104"></a>00104     <span class="keyword">virtual</span> <span class="keywordtype">double</span> Copy(<span class="keyword">const</span> std::string &amp; buffer,
-<a name="l00105"></a>00105                       Buffer::CopyOperation op,
-<a name="l00106"></a>00106                       <span class="keywordtype">void</span> * data,
-<a name="l00107"></a>00107                       std::string * err) = 0;
-<a name="l00108"></a>00108 
-<a name="l00109"></a>00109     <span class="keyword">virtual</span> std::string GetBoilerplateCode(Kernel::Ptr kernel) <span class="keyword">const</span> = 0;
-<a name="l00110"></a>00110                
-<a name="l00111"></a>00111   <span class="keyword">protected</span>:
-<a name="l00112"></a>00112     <a class="code" href="classgpuip_1_1_base.html">Base</a>(GpuEnvironment env);
-<a name="l00113"></a>00113 
-<a name="l00114"></a>00114     GpuEnvironment _env;
-<a name="l00115"></a>00115     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> _w; <span class="comment">// width</span>
-<a name="l00116"></a>00116     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> _h; <span class="comment">// height</span>
-<a name="l00117"></a>00117     std::map&lt;std::string, Buffer::Ptr&gt; _buffers;
-<a name="l00118"></a>00118     std::vector&lt;Kernel::Ptr&gt; _kernels;
+<a name="l00082"></a><a class="code" href="structgpuip_1_1_buffer.html#aad893e2e8f72f34e12f2f1e2a8070984">00082</a>     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="structgpuip_1_1_buffer.html#aad893e2e8f72f34e12f2f1e2a8070984" title="Channels of data per pixel.">channels</a>;
+<a name="l00083"></a>00083 };
+<a name="l00084"></a>00084 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00089"></a>00089 <span class="comment"></span><span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;
+<a name="l00090"></a><a class="code" href="structgpuip_1_1_parameter.html">00090</a> <span class="keyword">struct </span><a class="code" href="structgpuip_1_1_parameter.html" title="A parameter has a name and a value.">Parameter</a>
+<a name="l00091"></a>00091 {
+<a name="l00092"></a>00092     <a class="code" href="structgpuip_1_1_parameter.html" title="A parameter has a name and a value.">Parameter</a>(<span class="keyword">const</span> std::string &amp; n, T v) : name(n), value(v) {}
+<a name="l00093"></a>00093     std::string name;
+<a name="l00094"></a>00094     T value;
+<a name="l00095"></a>00095 };
+<a name="l00096"></a>00096 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00101"></a><a class="code" href="structgpuip_1_1_kernel.html">00101</a> <span class="comment"></span><span class="keyword">struct </span><a class="code" href="structgpuip_1_1_kernel.html">Kernel</a>
+<a name="l00102"></a>00102 {
+<a name="l00104"></a>00104 <span class="preprocessor">#ifdef _GPUIP_PYTHON_BINDINGS</span>
+<a name="l00105"></a>00105 <span class="preprocessor"></span>    <span class="keyword">typedef</span> boost::shared_ptr&lt;Kernel&gt; <a class="code" href="structgpuip_1_1_kernel.html#a93adaf0a6f5e397f0d5714eb5ffd2589" title="Smart pointer.">Ptr</a>;
+<a name="l00106"></a>00106 <span class="preprocessor">#else</span>
+<a name="l00107"></a><a class="code" href="structgpuip_1_1_kernel.html#a93adaf0a6f5e397f0d5714eb5ffd2589">00107</a> <span class="preprocessor"></span>    <span class="keyword">typedef</span> std::tr1::shared_ptr&lt;Kernel&gt; <a class="code" href="structgpuip_1_1_kernel.html#a93adaf0a6f5e397f0d5714eb5ffd2589" title="Smart pointer.">Ptr</a>;
+<a name="l00108"></a>00108 <span class="preprocessor">#endif</span>
+<a name="l00109"></a>00109 <span class="preprocessor"></span>
+<a name="l00113"></a><a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html">00113</a>     <span class="keyword">struct </span><a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html" title="Tells a kernel which buffers to use in the argument list.">BufferLink</a>
+<a name="l00114"></a>00114     {
+<a name="l00115"></a>00115         <a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html" title="Tells a kernel which buffers to use in the argument list.">BufferLink</a>(<a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">Buffer::Ptr</a> buffer_, <span class="keyword">const</span> std::string &amp; name_);
+<a name="l00116"></a>00116         
+<a name="l00118"></a><a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html#afd92a74300dce2b59eba8be8a42d1731">00118</a>         <a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">Buffer::Ptr</a> <a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html#afd92a74300dce2b59eba8be8a42d1731" title="Buffer to be used in the kernel arguments list.">buffer</a>;
 <a name="l00119"></a>00119 
-<a name="l00120"></a>00120     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> _GetBufferSize(Buffer::Ptr buffer) <span class="keyword">const</span>;
-<a name="l00121"></a>00121   
-<a name="l00122"></a>00122   <span class="keyword">private</span>:
-<a name="l00123"></a>00123     <a class="code" href="classgpuip_1_1_base.html">Base</a>();
-<a name="l00124"></a>00124     <a class="code" href="classgpuip_1_1_base.html">Base</a>(<span class="keyword">const</span> <a class="code" href="classgpuip_1_1_base.html">Base</a> &amp;);
-<a name="l00125"></a>00125     <span class="keywordtype">void</span> operator=(<span class="keyword">const</span> <a class="code" href="classgpuip_1_1_base.html">Base</a> &amp;);
-<a name="l00126"></a>00126 };
-<a name="l00127"></a>00127 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00128"></a>00128 } <span class="comment">//end namespace gpuip</span>
-<a name="l00129"></a>00129 <span class="comment">//----------------------------------------------------------------------------//</span>
-<a name="l00130"></a>00130 <span class="preprocessor">#endif</span>
+<a name="l00123"></a><a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html#abb951b2c26c73abe42d80d73c9a72a38">00123</a>         std::string <a class="code" href="structgpuip_1_1_kernel_1_1_buffer_link.html#abb951b2c26c73abe42d80d73c9a72a38" title="The name of buffer in kernel arguments list.">name</a>;
+<a name="l00124"></a>00124     };
+<a name="l00125"></a>00125     <a class="code" href="structgpuip_1_1_kernel.html">Kernel</a>(<span class="keyword">const</span> std::string &amp; <a class="code" href="structgpuip_1_1_kernel.html#a09eb821d09abfc08a06bf1ce48c32579" title="Unique identifying name.">name</a>);
+<a name="l00126"></a>00126 
+<a name="l00132"></a><a class="code" href="structgpuip_1_1_kernel.html#a09eb821d09abfc08a06bf1ce48c32579">00132</a>     <span class="keyword">const</span> std::string <a class="code" href="structgpuip_1_1_kernel.html#a09eb821d09abfc08a06bf1ce48c32579" title="Unique identifying name.">name</a>;
+<a name="l00133"></a>00133 
+<a name="l00137"></a><a class="code" href="structgpuip_1_1_kernel.html#af4599990b87f861796a0a130b32822dc">00137</a>     std::string <a class="code" href="structgpuip_1_1_kernel.html#af4599990b87f861796a0a130b32822dc" title="Kernel code.">code</a>;
+<a name="l00138"></a>00138 
+<a name="l00142"></a><a class="code" href="structgpuip_1_1_kernel.html#af43fa190f2d1608f64f30c6e927a091b">00142</a>     std::vector&lt;BufferLink&gt; <a class="code" href="structgpuip_1_1_kernel.html#af43fa190f2d1608f64f30c6e927a091b" title="Buffers used for input data. Can not be modified.">inBuffers</a>;
+<a name="l00143"></a>00143 
+<a name="l00147"></a><a class="code" href="structgpuip_1_1_kernel.html#a9f5b78ef7c5595fd831904f75acbabfd">00147</a>     std::vector&lt;BufferLink&gt; <a class="code" href="structgpuip_1_1_kernel.html#a9f5b78ef7c5595fd831904f75acbabfd" title="Buffers used to output data. Can not be read from.">outBuffers</a>;
+<a name="l00148"></a>00148 
+<a name="l00152"></a><a class="code" href="structgpuip_1_1_kernel.html#a89fcc2823ff6e9a30b9a415a1d74e9ec">00152</a>     std::vector&lt;Parameter&lt;int&gt; &gt; <a class="code" href="structgpuip_1_1_kernel.html#a89fcc2823ff6e9a30b9a415a1d74e9ec" title="Integer parameters.">paramsInt</a>;
+<a name="l00153"></a>00153 
+<a name="l00157"></a><a class="code" href="structgpuip_1_1_kernel.html#afaa2de49d9d74d418ad94df5770c026e">00157</a>     std::vector&lt;Parameter&lt;float&gt; &gt; <a class="code" href="structgpuip_1_1_kernel.html#afaa2de49d9d74d418ad94df5770c026e" title="Float parameters.">paramsFloat</a>;
+<a name="l00158"></a>00158 };
+<a name="l00159"></a>00159 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00204"></a><a class="code" href="classgpuip_1_1_image_processor.html">00204</a> <span class="comment"></span><span class="keyword">class </span><a class="code" href="classgpuip_1_1_image_processor.html" title="Example:.">ImageProcessor</a>
+<a name="l00205"></a>00205 {
+<a name="l00206"></a>00206   <span class="keyword">public</span>:
+<a name="l00208"></a>00208 <span class="preprocessor">#ifdef _GPUIP_PYTHON_BINDINGS</span>
+<a name="l00209"></a>00209 <span class="preprocessor"></span>    <span class="keyword">typedef</span> boost::shared_ptr&lt;ImageProcessor&gt; <a class="code" href="classgpuip_1_1_image_processor.html#ae371dfdd8da86a33075b7eebb3445245" title="Smart pointer.">Ptr</a>;
+<a name="l00210"></a>00210 <span class="preprocessor">#else</span>
+<a name="l00211"></a><a class="code" href="classgpuip_1_1_image_processor.html#ae371dfdd8da86a33075b7eebb3445245">00211</a> <span class="preprocessor"></span>    <span class="keyword">typedef</span> std::tr1::shared_ptr&lt;ImageProcessor&gt; <a class="code" href="classgpuip_1_1_image_processor.html#ae371dfdd8da86a33075b7eebb3445245" title="Smart pointer.">Ptr</a>;
+<a name="l00212"></a>00212 <span class="preprocessor">#endif</span>
+<a name="l00213"></a>00213 <span class="preprocessor"></span>
+<a name="l00215"></a>00215     <span class="keyword">static</span> <a class="code" href="classgpuip_1_1_image_processor.html#ae371dfdd8da86a33075b7eebb3445245" title="Smart pointer.">ImageProcessor::Ptr</a> <a class="code" href="classgpuip_1_1_image_processor.html#ac23b654456200ed44f4e9dde5b9d344b" title="Factory function to create an ImageProcessor entity.">Create</a>(<a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9">GpuEnvironment</a> env);
+<a name="l00216"></a>00216     
+<a name="l00217"></a>00217     <span class="keyword">virtual</span> ~<a class="code" href="classgpuip_1_1_image_processor.html" title="Example:.">ImageProcessor</a>() {}
+<a name="l00218"></a>00218 
+<a name="l00220"></a>00220     <span class="keyword">static</span> <span class="keywordtype">bool</span> <a class="code" href="classgpuip_1_1_image_processor.html#aad47031a66662b0d57c6f6606f9f5adc" title="Check if gpuip was compiled with a GpuEnvironment.">CanCreate</a>(<a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9">GpuEnvironment</a> env);
+<a name="l00221"></a>00221 
+<a name="l00223"></a><a class="code" href="classgpuip_1_1_image_processor.html#aa2f74f70f7d06195271e77f79bfd57cc">00223</a>     <a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9">GpuEnvironment</a> <a class="code" href="classgpuip_1_1_image_processor.html#aa2f74f70f7d06195271e77f79bfd57cc" title="Returns the current GpuEnvironment.">Environment</a>()<span class="keyword"> const</span>
+<a name="l00224"></a>00224 <span class="keyword">    </span>{
+<a name="l00225"></a>00225         <span class="keywordflow">return</span> _env;
+<a name="l00226"></a>00226     }
+<a name="l00227"></a>00227 
+<a name="l00229"></a>00229     <span class="keywordtype">void</span> <a class="code" href="classgpuip_1_1_image_processor.html#ac0f52c8340e2f37b6b394fddc8b2d48f" title="Set the dimensions of algorithms. Must be set explicitly.">SetDimensions</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> width, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> height);
+<a name="l00230"></a>00230 
+<a name="l00232"></a><a class="code" href="classgpuip_1_1_image_processor.html#af178c4bd38d29d4d139e6fef8c5094f4">00232</a>     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classgpuip_1_1_image_processor.html#af178c4bd38d29d4d139e6fef8c5094f4" title="Returns the images width in number of pixels.">Width</a>()<span class="keyword"> const</span>
+<a name="l00233"></a>00233 <span class="keyword">    </span>{
+<a name="l00234"></a>00234         <span class="keywordflow">return</span> _w;
+<a name="l00235"></a>00235     }
+<a name="l00236"></a>00236 
+<a name="l00238"></a><a class="code" href="classgpuip_1_1_image_processor.html#ad0f44f317cea52964f6f4a27412f833b">00238</a>     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> <a class="code" href="classgpuip_1_1_image_processor.html#ad0f44f317cea52964f6f4a27412f833b" title="Returns the images height in number of pixels.">Height</a>()<span class="keyword"> const</span>
+<a name="l00239"></a>00239 <span class="keyword">    </span>{
+<a name="l00240"></a>00240         <span class="keywordflow">return</span> _h;
+<a name="l00241"></a>00241     }
+<a name="l00242"></a>00242 
+<a name="l00255"></a>00255     <a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">Buffer::Ptr</a> <a class="code" href="classgpuip_1_1_image_processor.html#adb49fe4b624a7069fa28e74e1d9f26e2" title="Creates a Buffer object with allocation info.">CreateBuffer</a>(<span class="keyword">const</span> std::string &amp; name,
+<a name="l00256"></a>00256                              <a class="code" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50" title="Supported data types.">Buffer::Type</a> type,
+<a name="l00257"></a>00257                              <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> channels);
+<a name="l00258"></a>00258 
+<a name="l00272"></a>00272     <a class="code" href="structgpuip_1_1_kernel.html#a93adaf0a6f5e397f0d5714eb5ffd2589" title="Smart pointer.">Kernel::Ptr</a> <a class="code" href="classgpuip_1_1_image_processor.html#ab200af94aa91ff1cd69af66e889ab85c" title="Creates and registeres a Kernel object.">CreateKernel</a>(<span class="keyword">const</span> std::string &amp; name);
+<a name="l00273"></a>00273 
+<a name="l00283"></a>00283     <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code" href="classgpuip_1_1_image_processor.html#ad4c138cbe134e8b7711c0823833fca52" title="Allocates needed memory on the GPU.">Allocate</a>(std::string * error);
+<a name="l00284"></a>00284 
+<a name="l00292"></a>00292     <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code" href="classgpuip_1_1_image_processor.html#ac3bf309a09affaa38cbefab39a462b34" title="Compiles the Kernel::Code for each Kernel object.">Build</a>(std::string * error);
+<a name="l00293"></a>00293 
+<a name="l00302"></a>00302     <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code" href="classgpuip_1_1_image_processor.html#aa51bd65aa23a0bb1dd3eeafffd0a84d2" title="Runs all of the image processing kernels.">Run</a>(std::string * error);
+<a name="l00303"></a>00303 
+<a name="l00316"></a>00316     <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code" href="classgpuip_1_1_image_processor.html#a188faf5eacb77919b9a1f148288a6b5e" title="Data tranfser from the CPU and the GPU.">Copy</a>(<a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">Buffer::Ptr</a> buffer,
+<a name="l00317"></a>00317                         <a class="code" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672">Buffer::CopyOperation</a> operation,
+<a name="l00318"></a>00318                         <span class="keywordtype">void</span> * data,
+<a name="l00319"></a>00319                         std::string * error);
+<a name="l00320"></a>00320 
+<a name="l00330"></a>00330     <span class="keyword">virtual</span> std::string <a class="code" href="classgpuip_1_1_image_processor.html#a8a0f0d141299c02a294d9915ccd085d3" title="Returns a boilerplate code for a given kernel.">BoilerplateCode</a>(<a class="code" href="structgpuip_1_1_kernel.html#a93adaf0a6f5e397f0d5714eb5ffd2589" title="Smart pointer.">Kernel::Ptr</a> kernel) <span class="keyword">const</span>;
+<a name="l00331"></a>00331                
+<a name="l00332"></a>00332   <span class="keyword">protected</span>:
+<a name="l00333"></a>00333     <a class="code" href="classgpuip_1_1_image_processor.html" title="Example:.">ImageProcessor</a>(<a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9">GpuEnvironment</a> env);
+<a name="l00334"></a>00334 
+<a name="l00335"></a>00335     <span class="keyword">const</span> <a class="code" href="namespacegpuip.html#a92717e2d0fa5f7711b91e00a5049eec9">GpuEnvironment</a> _env;
+<a name="l00336"></a>00336     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> _w; <span class="comment">// width</span>
+<a name="l00337"></a>00337     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> _h; <span class="comment">// height</span>
+<a name="l00338"></a>00338     std::map&lt;std::string, Buffer::Ptr&gt; _buffers;
+<a name="l00339"></a>00339     std::vector&lt;Kernel::Ptr&gt; _kernels;
+<a name="l00340"></a>00340 
+<a name="l00341"></a>00341     <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> _BufferSize(<a class="code" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6" title="Smart pointer.">Buffer::Ptr</a> buffer) <span class="keyword">const</span>;
+<a name="l00342"></a>00342   
+<a name="l00343"></a>00343   <span class="keyword">private</span>:
+<a name="l00344"></a>00344     <a class="code" href="classgpuip_1_1_image_processor.html" title="Example:.">ImageProcessor</a>();
+<a name="l00345"></a>00345     <a class="code" href="classgpuip_1_1_image_processor.html" title="Example:.">ImageProcessor</a>(<span class="keyword">const</span> <a class="code" href="classgpuip_1_1_image_processor.html" title="Example:.">ImageProcessor</a> &amp;);
+<a name="l00346"></a>00346     <span class="keywordtype">void</span> operator=(<span class="keyword">const</span> <a class="code" href="classgpuip_1_1_image_processor.html" title="Example:.">ImageProcessor</a> &amp;);
+<a name="l00347"></a>00347 };
+<a name="l00348"></a>00348 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00349"></a>00349 } <span class="comment">//end namespace gpuip</span>
+<a name="l00350"></a>00350 <span class="comment">//----------------------------------------------------------------------------//</span>
+<a name="l00351"></a>00351 <span class="preprocessor">#endif</span>
 </pre></div></div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Data Structures</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Files</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(8)"><span class="SelectionMark">&nbsp;</span>Enumerator</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(9)"><span class="SelectionMark">&nbsp;</span>Defines</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -185,7 +225,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 19 Aug 2014 for gpuip by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 20 Aug 2014 for gpuip by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

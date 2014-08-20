@@ -18,7 +18,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="tabs">
     <ul>
       <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
-      <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
+      <li><a href="namespaces.html"><span>Namespaces</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
@@ -37,38 +38,42 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   </div>
   <div class="tabs">
     <ul>
-      <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
+      <li><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
       <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
+      <li><a href="functions.html"><span>Data&nbsp;Fields</span></a></li>
     </ul>
   </div>
-  <div class="navpath"><b>gpuip</b>::<a class="el" href="classgpuip_1_1_c_u_d_a_impl.html">CUDAImpl</a>
+  <div class="navpath"><a class="el" href="namespacegpuip.html">gpuip</a>::<a class="el" href="classgpuip_1_1_c_u_d_a_impl.html">CUDAImpl</a>
   </div>
 </div>
 <div class="contents">
-<h1>gpuip::CUDAImpl Class Reference</h1><!-- doxytag: class="gpuip::CUDAImpl" --><!-- doxytag: inherits="gpuip::Base" --><div class="dynheader">
+<h1>gpuip::CUDAImpl Class Reference</h1><!-- doxytag: class="gpuip::CUDAImpl" --><!-- doxytag: inherits="gpuip::ImageProcessor" --><div class="dynheader">
 Inheritance diagram for gpuip::CUDAImpl:</div>
 <div class="dynsection">
  <div class="center">
   <img src="classgpuip_1_1_c_u_d_a_impl.gif" usemap="#gpuip::CUDAImpl_map" alt=""/>
   <map id="gpuip::CUDAImpl_map" name="gpuip::CUDAImpl_map">
-<area href="classgpuip_1_1_base.html" alt="gpuip::Base" shape="rect" coords="0,0,106,24"/>
+<area href="classgpuip_1_1_image_processor.html" alt="gpuip::ImageProcessor" shape="rect" coords="0,0,140,24"/>
 </map>
  </div>
 </div>
-
-<p><a href="classgpuip_1_1_c_u_d_a_impl-members.html">List of all members.</a></p>
 <table border="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="2"><h2>Public Member Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa3398f6d4b328d5e79dcb52f46f091dc"></a><!-- doxytag: member="gpuip::CUDAImpl::Allocate" ref="aa3398f6d4b328d5e79dcb52f46f091dc" args="(std::string *err)" -->
-virtual double&nbsp;</td><td class="memItemRight" valign="bottom"><b>Allocate</b> (std::string *err)</td></tr>
+virtual double&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgpuip_1_1_c_u_d_a_impl.html#aa3398f6d4b328d5e79dcb52f46f091dc">Allocate</a> (std::string *err)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Allocates needed memory on the GPU. <br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa5ea3393e19d6de6be8b1098dfd332b1"></a><!-- doxytag: member="gpuip::CUDAImpl::Build" ref="aa5ea3393e19d6de6be8b1098dfd332b1" args="(std::string *err)" -->
-virtual double&nbsp;</td><td class="memItemRight" valign="bottom"><b>Build</b> (std::string *err)</td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a47489f9a8efc898b94981b4f330b33b5"></a><!-- doxytag: member="gpuip::CUDAImpl::Process" ref="a47489f9a8efc898b94981b4f330b33b5" args="(std::string *err)" -->
-virtual double&nbsp;</td><td class="memItemRight" valign="bottom"><b>Process</b> (std::string *err)</td></tr>
+virtual double&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgpuip_1_1_c_u_d_a_impl.html#aa5ea3393e19d6de6be8b1098dfd332b1">Build</a> (std::string *err)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Compiles the Kernel::Code for each <a class="el" href="structgpuip_1_1_kernel.html">Kernel</a> object. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a722cb287d3efa4bf6b977f8083a3eca6"></a><!-- doxytag: member="gpuip::CUDAImpl::Run" ref="a722cb287d3efa4bf6b977f8083a3eca6" args="(std::string *err)" -->
+virtual double&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgpuip_1_1_c_u_d_a_impl.html#a722cb287d3efa4bf6b977f8083a3eca6">Run</a> (std::string *err)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Runs all of the image processing kernels. <br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abfe734d72c6993286b1c10ba6aceabee"></a><!-- doxytag: member="gpuip::CUDAImpl::Copy" ref="abfe734d72c6993286b1c10ba6aceabee" args="(const std::string &amp;buffer, Buffer::CopyOperation op, void *data, std::string *err)" -->
-virtual double&nbsp;</td><td class="memItemRight" valign="bottom"><b>Copy</b> (const std::string &amp;buffer, Buffer::CopyOperation op, void *data, std::string *err)</td></tr>
+virtual double&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgpuip_1_1_c_u_d_a_impl.html#abfe734d72c6993286b1c10ba6aceabee">Copy</a> (const std::string &amp;buffer, <a class="el" href="structgpuip_1_1_buffer.html#a4ffe240b6e507de03788a9bfb4ac1672">Buffer::CopyOperation</a> op, void *data, std::string *err)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Data tranfser from the CPU and the GPU. <br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a7254290e6e054dfca29b349a7282aa0a"></a><!-- doxytag: member="gpuip::CUDAImpl::GetBoilerplateCode" ref="a7254290e6e054dfca29b349a7282aa0a" args="(Kernel::Ptr kernel) const " -->
-virtual std::string&nbsp;</td><td class="memItemRight" valign="bottom"><b>GetBoilerplateCode</b> (Kernel::Ptr kernel) const </td></tr>
+virtual std::string&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgpuip_1_1_c_u_d_a_impl.html#a7254290e6e054dfca29b349a7282aa0a">GetBoilerplateCode</a> (<a class="el" href="structgpuip_1_1_kernel.html#a93adaf0a6f5e397f0d5714eb5ffd2589">Kernel::Ptr</a> kernel) const </td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Test. <br/></td></tr>
 <tr><td colspan="2"><h2>Protected Member Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6ef8ccd7c3d5e13c95685f470eca0b62"></a><!-- doxytag: member="gpuip::CUDAImpl::_LaunchKernel" ref="a6ef8ccd7c3d5e13c95685f470eca0b62" args="(Kernel &amp;kernel, const CUfunction &amp;cudaKernel, std::string *err)" -->
 bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>_LaunchKernel</b> (<a class="el" href="structgpuip_1_1_kernel.html">Kernel</a> &amp;kernel, const CUfunction &amp;cudaKernel, std::string *err)</td></tr>
@@ -76,6 +81,10 @@ bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>_LaunchKernel</b> (<a
 void&nbsp;</td><td class="memItemRight" valign="bottom"><b>_StartTimer</b> ()</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a59da549a61228d990728f484402cec43"></a><!-- doxytag: member="gpuip::CUDAImpl::_StopTimer" ref="a59da549a61228d990728f484402cec43" args="()" -->
 double&nbsp;</td><td class="memItemRight" valign="bottom"><b>_StopTimer</b> ()</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac4a8a4ed023eb31ec0102725484114fb"></a><!-- doxytag: member="gpuip::CUDAImpl::_FreeBuffers" ref="ac4a8a4ed023eb31ec0102725484114fb" args="(std::string *err)" -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>_FreeBuffers</b> (std::string *err)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a22baf5bbc6d798a72d65588a2533ac44"></a><!-- doxytag: member="gpuip::CUDAImpl::_UnloadModule" ref="a22baf5bbc6d798a72d65588a2533ac44" args="(std::string *err)" -->
+bool&nbsp;</td><td class="memItemRight" valign="bottom"><b>_UnloadModule</b> (std::string *err)</td></tr>
 <tr><td colspan="2"><h2>Protected Attributes</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a9b3106817f14570c94e76bc36ff7c6a6"></a><!-- doxytag: member="gpuip::CUDAImpl::_cudaKernels" ref="a9b3106817f14570c94e76bc36ff7c6a6" args="" -->
 std::vector&lt; CUfunction &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>_cudaKernels</b></td></tr>
@@ -100,7 +109,7 @@ std::map&lt; std::string, float * &gt;&nbsp;</td><td class="memItemRight" valign
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Data Structures</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(6)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(7)"><span class="SelectionMark">&nbsp;</span>Enumerator</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -109,7 +118,7 @@ std::map&lt; std::string, float * &gt;&nbsp;</td><td class="memItemRight" valign
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 19 Aug 2014 for gpuip by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 20 Aug 2014 for gpuip by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>
