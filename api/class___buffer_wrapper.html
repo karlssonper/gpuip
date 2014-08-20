@@ -39,6 +39,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <ul>
       <li><a href="annotated.html"><span>Class&nbsp;List</span></a></li>
       <li><a href="hierarchy.html"><span>Class&nbsp;Hierarchy</span></a></li>
+      <li><a href="functions.html"><span>Class&nbsp;Members</span></a></li>
     </ul>
   </div>
 </div>
@@ -48,11 +49,11 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table border="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="2"><h2>Public Member Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6de82bd959469a80798356e8c26c1ca5"></a><!-- doxytag: member="_BufferWrapper::_BufferWrapper" ref="a6de82bd959469a80798356e8c26c1ca5" args="(gpuip::Buffer::Ptr b)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>_BufferWrapper</b> (gpuip::Buffer::Ptr b)</td></tr>
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>_BufferWrapper</b> (<a class="el" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6">gpuip::Buffer::Ptr</a> b)</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a1ac231ceb3ccb49021a788992a6f5b47"></a><!-- doxytag: member="_BufferWrapper::name" ref="a1ac231ceb3ccb49021a788992a6f5b47" args="() const " -->
 std::string&nbsp;</td><td class="memItemRight" valign="bottom"><b>name</b> () const </td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a3bd22f59d179a78584dce224590fb283"></a><!-- doxytag: member="_BufferWrapper::type" ref="a3bd22f59d179a78584dce224590fb283" args="() const " -->
-gpuip::Buffer::Type&nbsp;</td><td class="memItemRight" valign="bottom"><b>type</b> () const </td></tr>
+<a class="el" href="structgpuip_1_1_buffer.html#a9407553207a5d0e9c0c3b2a97e0eeb50">gpuip::Buffer::Type</a>&nbsp;</td><td class="memItemRight" valign="bottom"><b>type</b> () const </td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac332de5c16e40b8ad4713f06f3434706"></a><!-- doxytag: member="_BufferWrapper::channels" ref="ac332de5c16e40b8ad4713f06f3434706" args="() const " -->
 unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>channels</b> () const </td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a969271d5cd8b44197e23d79b1a7ebdbb"></a><!-- doxytag: member="_BufferWrapper::Read" ref="a969271d5cd8b44197e23d79b1a7ebdbb" args="(const std::string &amp;filename)" -->
@@ -65,7 +66,7 @@ std::string&nbsp;</td><td class="memItemRight" valign="bottom"><b>Write</b> (con
 std::string&nbsp;</td><td class="memItemRight" valign="bottom"><b>WriteMT</b> (const std::string &amp;filename, int numThreads)</td></tr>
 <tr><td colspan="2"><h2>Public Attributes</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2436e9c4acf6a2f8cb9c496392da58ca"></a><!-- doxytag: member="_BufferWrapper::buffer" ref="a2436e9c4acf6a2f8cb9c496392da58ca" args="" -->
-gpuip::Buffer::Ptr&nbsp;</td><td class="memItemRight" valign="bottom"><b>buffer</b></td></tr>
+<a class="el" href="structgpuip_1_1_buffer.html#a0bf29eeb1623140a57dac2673b7a6ef6">gpuip::Buffer::Ptr</a>&nbsp;</td><td class="memItemRight" valign="bottom"><b>buffer</b></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a13dd6c464b0ac7393b7ef30f0cd2ca2c"></a><!-- doxytag: member="_BufferWrapper::data" ref="a13dd6c464b0ac7393b7ef30f0cd2ca2c" args="" -->
 np::ndarray&nbsp;</td><td class="memItemRight" valign="bottom"><b>data</b></td></tr>
 </table>
@@ -78,7 +79,7 @@ np::ndarray&nbsp;</td><td class="memItemRight" valign="bottom"><b>data</b></td><
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&nbsp;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&nbsp;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&nbsp;</span>Variables</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&nbsp;</span>Typedefs</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&nbsp;</span>Enumerations</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(5)"><span class="SelectionMark">&nbsp;</span>Enumerator</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -87,7 +88,7 @@ np::ndarray&nbsp;</td><td class="memItemRight" valign="bottom"><b>data</b></td><
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 19 Aug 2014 for gpuip by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 20 Aug 2014 for gpuip by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>
