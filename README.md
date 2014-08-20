@@ -4,7 +4,7 @@ gpuip
 Gpuip is a C++ cross-platform framework for Image Processing on the GPU architechure. It tries to simplify the image processing pipeline on the GPU and make it more generic across the thre most common environments: OpenCL, CUDA and OpenGL GLSL. It provides a simple interface to copy data from and to the GPU and makes it easy to compile and run GPU kernel code. 
 
 ### API
-The online API documentation [can be found here.] (http://karlssonper.github.io/gpuip/api/classgpuip_1_1_base.html)
+The online API documentation [can be found here.] (http://karlssonper.github.io/gpuip/api/)
 
 ### pygpuip
 The gpuip library comes with optional python bindings to the C++ code. The python bindings have I/O operations included with .exr and .png support (and .jpeg, .tiff and .tga if dev libraries are found at build time). Numpy arrays are used to tranfser data to/from the GPU.
