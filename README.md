@@ -115,4 +115,10 @@ The following examples are included the `examples` directory (can be run with `b
 
 ### Tests ###
 
-todo, add how to run tests
+To run all tests, run `ctest` from the `build` directory.
+
+```
+test_cpp          // Test C++ api
+test_py           // Test Python bindings
+test_performance  // Tests the performance, compare against CPU 
+```
