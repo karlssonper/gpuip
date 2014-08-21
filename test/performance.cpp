@@ -13,9 +13,8 @@
 
 inline std::string GetKernelCode(const std::string & filename)
 {
-    std::ifstream t(filename.c_str());
     std::stringstream buffer;
-    buffer << t.rdbuf();
+    buffer << std::ifstream(filename.c_str()).rdbuf();
     return buffer.str();
 }
 
@@ -80,7 +79,9 @@ void LerpCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                           const unsigned int width,
                           const unsigned int height)
 {
-#ifdef _GPUIP_TEST_WITH_OPENMP
+#ifndef _GPUIP_TEST_WITH_OPENMP
+    return;
+#endif
     double time = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
         std::clock_t start = TimerStartOMP();
@@ -97,7 +98,6 @@ void LerpCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
         time += double(TimerStopOMP(start)*1000.0);
     }
     printf("CPU MT: %.1lf ms.\n", time/NUM_TESTS);
-#endif
 }
 
 void BoxBlurCPU(const std::vector<Imf::Rgba> & A,
@@ -139,7 +139,9 @@ void BoxBlurCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                              const unsigned int width,
                              const unsigned int height)
 {
-#ifdef _GPUIP_TEST_WITH_OPENMP
+#ifndef _GPUIP_TEST_WITH_OPENMP
+    return;
+#endif
     double time = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
         std::clock_t start = TimerStartOMP();
@@ -169,7 +171,6 @@ void BoxBlurCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
         time += double(TimerStopOMP(start)*1000.0);
     }
     printf("CPU MT: %.1lf ms.\n", time/NUM_TESTS);
-#endif
 }
 
 void GaussianBlurCPU(const std::vector<Imf::Rgba> & A,
@@ -214,7 +215,9 @@ void GaussianBlurCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                                   const unsigned int width,
                                   const unsigned int height)
 {
-#ifdef _GPUIP_TEST_WITH_OPENMP
+#ifndef _GPUIP_TEST_WITH_OPENMP
+    return;
+#endif
     double time = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
         std::clock_t start = TimerStartOMP();
@@ -247,7 +250,6 @@ void GaussianBlurCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
     }
     
     printf("CPU MT: %.1lf ms.\n", time/NUM_TESTS);
-#endif
 }
 
 void GaussianBlurSeparableCPU(const std::vector<Imf::Rgba> & A,
@@ -314,7 +316,9 @@ void GaussianBlurSeparableCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                                            unsigned int width,
                                            unsigned int height)
 {
-#ifdef _GPUIP_TEST_WITH_OPENMP
+#ifndef _GPUIP_TEST_WITH_OPENMP
+    return;
+#endif
     double time = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
         std::clock_t start = TimerStartOMP();
@@ -367,7 +371,6 @@ void GaussianBlurSeparableCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
         time += double(TimerStopOMP(start)*1000.0);
     }
     printf("CPU MT: %.1lf ms.\n", time/NUM_TESTS);
-#endif
 }
 
 void GaussianBlurSeparableGPU(gpuip::GpuEnvironment env,
