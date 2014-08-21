@@ -414,3 +414,23 @@ configure_file(
     IMMEDIATE @ONLY)
 add_custom_target(uninstall
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+
+#CPack
+set(CPACK_GENERATOR "RPM")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Per Karlsson <per@karlssonper.com>")
+#set(CPACK_INSTALL_CMAKE_PROJECTS ${CMAKE_CURRENT_BINARY_DIR};gpuip;gpuip;/)
+set(CPACK_SOURCE_IGNORE_FILES 
+  /examples/
+  examples
+  /images/
+  images
+  images/
+  images/*
+  examples/images
+  examples/images/
+  /examples/images/)
+  
+set(CPACK_RPM_PACKAGE_REQUIRES "python >= 2.6.0, cmake >= 2.8, OpenEXR-devel")
+#SET(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+#SET(CPACK_RPM_COMPONENT_INSTALL ON)
+include(CPack)
