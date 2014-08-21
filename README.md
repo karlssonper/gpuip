@@ -86,11 +86,11 @@ BUILD_THIRD_PARTY_LIBS     // Build and link missing third party libraries
 BUILD_SHARED_LIB           // Make gpuip a shared library
 BUILD_WITH_OPENCL          // Support OpenCL (if found)
 BUILD_WITH_CUDA            // Support CUDA (if found)
-BUILD_WITH_GLSL           // Support GLSL (if found)
-BUILD_PYTHON_BINDINGS     // Build Python bindings
+BUILD_WITH_GLSL            // Support GLSL (if found)
+BUILD_PYTHON_BINDINGS      // Build Python bindings
 BUILD_TESTS                // Build unit tests
 BUILD_DOCS                 // Generate Doxygen documenation
-DOWNLOAD_EXAMPLES_IMAGES  // Download  examples input images
+DOWNLOAD_EXAMPLES_IMAGES   // Download  examples input images
 ```
 
 ### Third party libraries
