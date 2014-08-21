@@ -1,5 +1,6 @@
 build
 doc/html
 doc/man
-examples/output_images
 thirdparty
+*.exr
+*.png

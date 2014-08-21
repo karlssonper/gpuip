@@ -20,6 +20,7 @@ option(BUILD_WITH_GLSL "GLSL" ON)
 option(BUILD_PYTHON_BINDINGS "PYTHON" ON)
 option(BUILD_TESTS "Build test cases" ON)
 option(BUILD_DOCS "Build documentation" OFF)
+option(DOWNLOAD_EXAMPLES_IMAGES "Download examples input images" ON)
 
 # We use the external project module to build third party libraries
 include(ExternalProject)
@@ -33,6 +34,7 @@ set(GIT_REPO_LIBPNG https://github.com/coapp-packages/libpng.git)
 set(GIT_REPO_ZLIB https://github.com/madler/zlib.git)
 set(GIT_REPO_OPENEXR https://github.com/karlssonper/openexr.git)
 set(GIT_REPO_CIMG https://github.com/hassemlal/CImg.git)
+set(GIT_REPO_EXAMPLES_IMAGES https://github.com/karlssonper/gpuip-examples-images.git)
 
 # Set default build type to release (if not specified)
 if(NOT CMAKE_BUILD_TYPE)
@@ -381,4 +383,12 @@ endif()
 
 if(BUILD_DOCS)
 	add_subdirectory(doc)
+endif()
+
+if(DOWNLOAD_EXAMPLES_IMAGES)
+  message(STATUS "${Cyan}Adding examples_images target${ColorReset}")
+		ExternalProject_Add(examples_images
+		  GIT_REPOSITORY ${GIT_REPO_EXAMPLES_IMAGES}
+		  INSTALL_DIR ${GPUIP_ROOT_DIR}
+		  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
 endif()

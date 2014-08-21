@@ -1,0 +1,7 @@
+This directory contains the input images used in the examples.
+
+If this directory is empty, make sure the CMake option DOWNLOAD_EXAMPLES_IMAGEs 
+is set to ON.
+
+You can also download the images yourself at:
+https://github.com/karlssonper/gpuip-examples-images
