@@ -51,6 +51,7 @@ optional arguments:
   
 * bin/gpuip
   * [`Qt`] (http://qt-project.org/) *GUI (optional)*
+  * [`PIL`] (https://pypi.python.org/pypi/Pillow) *GUI icons (optional, needed at build)*
   * [`PySide`] (http://qt-project.org/wiki/PySide) *Qt python bindings*
   
 

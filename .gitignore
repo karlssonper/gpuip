@@ -4,3 +4,5 @@ doc/man
 thirdparty
 *.exr
 *.png
+*.pyc
+python/icons.py

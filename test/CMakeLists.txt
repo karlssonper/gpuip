@@ -25,7 +25,6 @@ endif()
 
 # Add python test
 if(BUILD_PYTHON_BINDINGS)
-  find_package(PythonInterp REQUIRED)
   configure_file(test.py ../src/test.py COPYONLY)
   add_test(NAME test_py COMMAND ${PYTHON_EXECUTABLE} ../src/test.py)
 endif()

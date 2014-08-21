@@ -155,6 +155,7 @@ if(BUILD_PYTHON_BINDINGS)
 	add_definitions(-D_GPUIP_PYTHON_BINDINGS)
 
 	# Python
+	find_package(PythonInterp REQUIRED)
 	find_package(PythonLibs REQUIRED)
 	include_directories(${PYTHON_INCLUDE_DIR})
 	list(APPEND GPUIP_PYTHON_LIBRARIES ${PYTHON_LIBRARIES})
