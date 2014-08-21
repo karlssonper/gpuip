@@ -359,18 +359,18 @@ if(BUILD_PYTHON_BINDINGS)
 			-DBUILD_SHARED_LIBS=OFF
 			-DBUILD_BIN=OFF
 			-DBUILD_TESTS=OFF)
+		  string(REPLACE "." "_" OPENEXR_VERSION_UNDERSCORE ${OPENEXR_VERSION})
+		  set(VER -${OPENEXR_VERSION_UNDERSCORE})
+		  # Need to merge static libs in unix (complains about missings refs)
 		  if(UNIX)
 			add_custom_target(merge_openexr DEPENDS openexr
-			  COMMAND ar x libIex-2_1.a && ar r libIlmImf-2_1.a *.o
+			  COMMAND ar x libIex${VER}.a && ar r libIlmImf${VER}.a *.o
 			  WORKING_DIRECTORY ${THIRD_PARTY_DIR}/lib)
 			list(APPEND THIRD_PARTY_TARGETS merge_openexr)
 		  endif(UNIX)
-
 		  list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}Half${LIB_SUFFIX})
 		  list(APPEND GPUIP_TEST_LIBRARIES ${LIB_PREFIX}Half${LIB_SUFFIX})  
 		  set(OPENEXR_LIBS Iex IexMath IlmImf IlmThread Imath)
-		  string(REPLACE "." "_" OPENEXR_VERSION_UNDERSCORE ${OPENEXR_VERSION})
-		  set(VER -${OPENEXR_VERSION_UNDERSCORE})
 		  foreach(_L ${OPENEXR_LIBS})
 			list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}${_L}${VER}${LIB_SUFFIX})
 			list(APPEND GPUIP_TEST_LIBRARIES ${LIB_PREFIX}${_L}${VER}${LIB_SUFFIX})
