@@ -6,6 +6,10 @@ project(gpuip)
 set(BOOST_VERSION 1.56)
 set(OPENEXR_VERSION 2.1)
 
+set(GPUIP_MAJOR_VERSION 0)
+set(GPUIP_MINOR_VERSION 1)
+set(GPUIP_VERSION ${GPUIP_MAJOR_VERSION}.${GPUIP_MINOR_VERSION})
+
 if(WIN32)
 	set(BUILD_LIB_DEFAULT OFF)
 else()
@@ -85,6 +89,7 @@ endif()
 find_package(CUDA)
 if(CUDA_FOUND AND BUILD_WITH_CUDA)
 	message(STATUS "${Green}Generating build with CUDA...${ColorReset}")
+	message(${CUDA_LIBRARIES} )
 	find_package(CUDADriver REQUIRED)
 	include_directories(${CUDA_INCLUDE_DIRS})
 	list(APPEND GPUIP_LIBRARIES ${CUDA_LIBRARIES} ${CUDA_DRIVER_LIBRARY})
@@ -119,7 +124,7 @@ if(OPENGL_FOUND AND BUILD_WITH_GLSL)
 		list(APPEND THIRD_PARTY_TARGETS glfw)
 		list(APPEND GPUIP_LIBRARIES ${LIB_PREFIX}glfw3${LIB_SUFFIX})
 		if(UNIX)
-		  list(APPEND GPUIP_LIBRARIES X11 Xrandr Xxf86vm Xcursor)
+		  list(APPEND GPUIP_LIBRARIES X11 Xrandr Xi Xxf86vm Xcursor)
 		endif()
 	endif()
 	if(APPLE)
@@ -342,6 +347,7 @@ if(BUILD_PYTHON_BINDINGS)
 	find_package(OpenEXR)
 	if(OPENEXR_FOUND)
 		include_directories(${OPENEXR_INCLUDE_PATHS})
+		include_directories(${OPENEXR_INCLUDE_PATHS}/OpenEXR)
 		list(APPEND GPUIP_PYTHON_LIBRARIES ${OPENEXR_LIBRARIES})
 		list(APPEND GPUIP_TEST_LIBRARIES ${OPENEXR_LIBRARIES})
 	  elseif(BUILD_THIRD_PARTY_LIBS)
@@ -416,21 +422,20 @@ add_custom_target(uninstall
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 #CPack
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Framework for Image Processing on the GPU")
+if(CUDA_FOUND AND BUILD_WITH_CUDA)
+  set(PACKAGE_NAME "gpuip-cuda")
+else()
+  set(PACKAGE_NAME "gpuip")
+endif()
+set(CPACK_PACKAGE_NAME ${PACKAGE_NAME})
+
+set(CPACK_PACKAGE_VERSION ${VERSION})
+set(CPACK_COMPONENTS_ALL devel python bin)
+set(CPACK_PACKAGE_FILE_NAME ${PACKAGE_NAME}-${GPUIP_VERSION})
+set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
+
 set(CPACK_GENERATOR "RPM")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Per Karlsson <per@karlssonper.com>")
-#set(CPACK_INSTALL_CMAKE_PROJECTS ${CMAKE_CURRENT_BINARY_DIR};gpuip;gpuip;/)
-set(CPACK_SOURCE_IGNORE_FILES 
-  /examples/
-  examples
-  /images/
-  images
-  images/
-  images/*
-  examples/images
-  examples/images/
-  /examples/images/)
-  
-set(CPACK_RPM_PACKAGE_REQUIRES "python >= 2.6.0, cmake >= 2.8, OpenEXR-devel")
-#SET(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
-#SET(CPACK_RPM_COMPONENT_INSTALL ON)
+set(CPACK_RPM_COMPONENT_INSTALL ON)
+set(CPACK_RPM_PACKAGE_GROUP "Applications/Engineering")
 include(CPack)

@@ -6,3 +6,4 @@ thirdparty
 *.png
 *.pyc
 python/icons.py
+python/gpuip

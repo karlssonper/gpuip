@@ -45,8 +45,8 @@ else()
 endif()
 add_library(gpuip ${LIBRARY_TYPE} ${SOURCE})
 target_link_libraries(gpuip ${GPUIP_LIBRARIES})
-install(TARGETS gpuip DESTINATION lib)
-install(FILES gpuip.h DESTINATION include)
+install(TARGETS gpuip DESTINATION lib COMPONENT devel)
+install(FILES gpuip.h DESTINATION include COMPONENT devel)
 if (THIRD_PARTY_TARGETS)
   add_dependencies(gpuip ${THIRD_PARTY_TARGETS})
 endif()
@@ -69,7 +69,7 @@ if(BUILD_PYTHON_BINDINGS)
     ${PYTHON_EXECUTABLE} -c
     "from distutils.sysconfig import get_python_lib; print get_python_lib()"
     OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
-  install(TARGETS pygpuip DESTINATION ${PYTHON_SITE_PACKAGES})
+  install(TARGETS pygpuip DESTINATION ${PYTHON_SITE_PACKAGES} COMPONENT python)
 endif()
 
 

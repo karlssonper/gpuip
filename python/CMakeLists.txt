@@ -6,10 +6,11 @@ add_custom_target(generateIcons ALL
   WORKING_DIRECTORY ${GPUIP_ROOT_DIR}/python/icons)
 
 file(GLOB PYTHON_FILES "*.py")
-install(FILES ${PYTHON_FILES} ${PYTHON_ICONS_FILE} DESTINATION gpuip)
+install(FILES ${PYTHON_FILES} ${PYTHON_ICONS_FILE} DESTINATION gpuip
+  COMPONENT bin)
 install(FILES gpuip.py DESTINATION gpuip
   PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
-  OWNER_READ GROUP_READ WORLD_READ )
+  OWNER_READ GROUP_READ WORLD_READ COMPONENT bin)
 
 if(NOT WIN32)
   # Create symlink in CMAKE_INSTALL_PREFIX/bin
@@ -17,7 +18,7 @@ if(NOT WIN32)
   add_custom_target(symlink ALL 
 	ln -sf ${GPUIP_PY} gpuip
 	WORKING_DIRECTORY ${GPUIP_ROOT_DIR}/python)
-  install(FILES gpuip DESTINATION bin)
+  install(FILES gpuip DESTINATION bin COMPONENT bin)
 endif()
 
 

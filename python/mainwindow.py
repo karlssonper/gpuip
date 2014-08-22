@@ -307,7 +307,7 @@ class MainWindow(QtGui.QMainWindow):
             editor = self.kernelWidgets[kernel.name].codeEditor
             if skipDialog and str(editor.toPlainText()) != "":
                 return
-            code = self.ip.GetBoilerplateCode(kernel)
+            code = self.ip.BoilerplateCode(kernel)
             editor.clear()
             editor.setText(code)
 
