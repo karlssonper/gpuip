@@ -10,7 +10,7 @@ endif()
 set(SOURCE gpuip)
 
 # Build with OpenCL
-if(OPENCL_FOUND AND BUILD_WITH_OPENCL)
+if(OpenCL_FOUND AND BUILD_WITH_OPENCL)
   add_definitions(-D_GPUIP_OPENCL)
   set(SOURCE ${SOURCE} opencl)
 endif()
@@ -18,13 +18,6 @@ endif()
 # Build with CUDA
 if(CUDA_FOUND AND BUILD_WITH_CUDA)
   add_definitions(-D_GPUIP_CUDA)
-  find_program(NVCC_BIN NAMES nvcc)
-  add_definitions(-DNVCC_BIN="\\"${NVCC_BIN}\\"")
-  if(CUDA_HELPER_MATH_FOUND)
-    add_definitions(-DCUDA_HELPER_DIR="\\"${CUDA_HELPER_MATH_DIR}\\"")
-  else(CUDA_HELPER_MATH_FOUND)
-    message(STATUS "CUDA Helper math not included")
-  endif(CUDA_HELPER_MATH_FOUND)
   set(SOURCE ${SOURCE} cuda)
 endif()
 

@@ -76,16 +76,16 @@ void LerpCPU(const std::vector<Imf::Rgba> & A,
 void LerpCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                           const std::vector<Imf::Rgba> & B,
                           std::vector<Imf::Rgba> & C,
-                          const unsigned int width,
-                          const unsigned int height)
+                          const int width,
+                          const int height)
 {
 #ifdef _GPUIP_TEST_WITH_OPENMP
     double time = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
         std::clock_t start = TimerStartOMP();
 #pragma omp parallel for
-        for(unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
+        for(int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
                 const size_t idx = x + width * y;
                 C[idx].r = (1-ALPHA) * A[idx].r + ALPHA * B[idx].r;
                 C[idx].g = (1-ALPHA) * A[idx].g + ALPHA * B[idx].g;
@@ -135,8 +135,8 @@ void BoxBlurCPU(const std::vector<Imf::Rgba> & A,
 
 void BoxBlurCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                              std::vector<Imf::Rgba> & B,
-                             const unsigned int width,
-                             const unsigned int height)
+                             const int width,
+                             const int height)
 {
 #ifdef _GPUIP_TEST_WITH_OPENMP
     double time = 0;
@@ -144,8 +144,8 @@ void BoxBlurCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
         std::clock_t start = TimerStartOMP();
     
 #pragma omp parallel for
-        for(unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
+        for( int y = 0; y < height; ++y) {
+            for ( int x = 0; x < width; ++x) {
                 Imf::Rgba out;
                 int count = 0;
                 for(int j = y - BLUR_N; j <= y + BLUR_N; ++j)  {
@@ -210,16 +210,16 @@ void GaussianBlurCPU(const std::vector<Imf::Rgba> & A,
 
 void GaussianBlurCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                                   std::vector<Imf::Rgba> & B,
-                                  const unsigned int width,
-                                  const unsigned int height)
+                                  const int width,
+                                  const int height)
 {
 #ifdef _GPUIP_TEST_WITH_OPENMP
     double time = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
         std::clock_t start = TimerStartOMP();
 #pragma omp parallel for
-        for(unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
+        for(int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
                 Imf::Rgba out;
                 float totWeight = 0;
                 const float invdx2 = 1.0/(width*width);
@@ -310,16 +310,16 @@ void GaussianBlurSeparableCPU(const std::vector<Imf::Rgba> & A,
 void GaussianBlurSeparableCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
                                            std::vector<Imf::Rgba> & B,
                                            std::vector<Imf::Rgba> & C,
-                                           unsigned int width,
-                                           unsigned int height)
+                                           const int width,
+                                           const int height)
 {
 #ifdef _GPUIP_TEST_WITH_OPENMP
     double time = 0;
     for (int test = 0; test < NUM_TESTS; ++test) {
         std::clock_t start = TimerStartOMP();
 #pragma omp parallel for
-        for(unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
+        for(int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
                 Imf::Rgba out;
                 float totWeight = 0;
                 const float invdx2 = 1.0/(width*width);
@@ -341,8 +341,8 @@ void GaussianBlurSeparableCPUMultiThreaded(const std::vector<Imf::Rgba> & A,
             }
         }
 #pragma omp parallel for
-        for(unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
+        for(int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
                 Imf::Rgba out;
                 float totWeight = 0;
                 const float invdx2 = 1.0/(width*width);

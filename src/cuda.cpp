@@ -1,6 +1,8 @@
 #include "cuda.h"
 #include "cuda_error.h"
+#include "helper_math.cuh"
 #include <fstream>
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 //----------------------------------------------------------------------------//
@@ -60,6 +62,38 @@ double CUDAImpl::Allocate(std::string * err)
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
+int _execPipe(const char* cmd, std::string * err) {
+#ifdef __unix__
+    FILE* pipe = popen(cmd, "r");
+#else
+    FILE* pipe = _popen(cmd, "r");
+#endif
+    if (!pipe) {
+        (*err) += "Could not execute command";
+        (*err) += std::string(cmd);
+        return 1;
+    }
+    char buffer[128];
+    std::string result = "";
+    while(!feof(pipe)) {
+    	if(fgets(buffer, 128, pipe) != NULL)
+    		result += buffer;
+    }
+#ifdef __unix__
+    int exit_status = pclose(pipe);
+#else
+    int exit_status = _pclose(pipe);
+#endif
+    if (exit_status) {
+        (*err) += result;
+    }
+    return exit_status;
+}
+inline void _removeFile(const char * filename)
+{
+    std::string command = std::string("rm ") + std::string(filename);
+    system(command.c_str());
+}
 double CUDAImpl::Build(std::string * err)
 {
     _StartTimer();
@@ -67,11 +101,20 @@ double CUDAImpl::Build(std::string * err)
     if(!_UnloadModule(err)) {
         return GPUIP_ERROR;
     }
+
+    const char * file_helper_math_h = ".helper_math.h";
+    const char * file_temp_cu = ".temp.cu";
+    const char * file_temp_ptx = ".temp.ptx";
+    
+    // Includes vector float operations such as mult, add etc
+    std::ofstream out_helper(file_helper_math_h);
+    out_helper << get_cuda_helper_math();
+    out_helper.close();
     
     // Create temporary file to compile
-    std::ofstream out(".temp.cu");
+    std::ofstream out(file_temp_cu);
 #ifdef CUDA_HELPER_DIR
-    out << "#include <helper_math.h>\n";
+    out << "#include <" << file_helper_math_h << ">\n";
 #endif
     out << "extern \"C\" { \n"; // To avoid function name mangling 
     for(size_t i = 0; i < _kernels.size(); ++i) {
@@ -81,28 +124,41 @@ double CUDAImpl::Build(std::string * err)
     out.close();
 
     std::stringstream ss;
-#ifndef NVCC_BIN
-#  define NVCC_BIN nvcc
+    const char * cuda_bin_path = getenv("CUDA_BIN_PATH");
+    if (cuda_bin_path  != NULL) {
+        ss << cuda_bin_path << "/nvcc";
+    } else {
+        ss << "nvcc";
+    }
+    ss << " -ptx " << file_temp_cu << " -o " << file_temp_ptx
+       << " --Wno-deprecated-gpu-targets";
+    if(sizeof(void *) == 4) {
+        ss << " -m32";
+    } else {
+        ss << " -m64";
+    }
+#ifdef _WIN32
+    const char * cl_bin_path = getenv("CL_BIN_PATH");
+    if (cl_bin_path != NULL) {
+        ss << " -ccbin \"" << cl_bin_path << "\"";
+    }
 #endif
-    ss << NVCC_BIN << " -ptx .temp.cu -o .temp.ptx --Wno-deprecated-gpu-targets";
-#ifdef CUDA_HELPER_DIR
-    // Includes vector float operations such as mult, add etc
-    ss << " -I " << CUDA_HELPER_DIR;
-#endif
-    
-    int nvcc_exit_status = system(ss.str().c_str());
+    std::string pipe_err;
+    int nvcc_exit_status = _execPipe(ss.str().c_str(), &pipe_err);
 
     // Cleanup temp text file
-    system("rm .temp.cu");
+    _removeFile(file_helper_math_h);
+    _removeFile(file_temp_cu);
     
     if (nvcc_exit_status) {
-        (*err) = "Cuda error: Could not compile kernels.";
+        (*err) = "Cuda error: Could not compile kernels.\n";
+        (*err) += pipe_err;
         return GPUIP_ERROR;
     }
 
     // Load cuda ptx from file
     CUresult c_err = cuModuleLoad(&_cudaModule, ".temp.ptx");
-    system("rm .temp.ptx");
+    _removeFile(file_temp_ptx);
     if (_cudaErrorLoadModule(c_err, err)) {
         return GPUIP_ERROR;
     }

@@ -78,10 +78,10 @@ else()
 endif()
 
 find_package(OpenCL)
-if(OPENCL_FOUND AND BUILD_WITH_OPENCL)
+if(OpenCL_FOUND AND BUILD_WITH_OPENCL)
 	message(STATUS "${Green}Generating build with OpenCL...${ColorReset}")
-	include_directories(${OPENCL_INCLUDE_DIRS})
-	list(APPEND GPUIP_LIBRARIES ${OPENCL_LIBRARIES})
+	include_directories(${OpenCL_INCLUDE_DIRS})
+	list(APPEND GPUIP_LIBRARIES ${OpenCL_LIBRARIES})
 else()
 	message(STATUS "${Yellow}OpenCL disabled .${ColorReset}")
 endif()
@@ -230,6 +230,7 @@ if(BUILD_PYTHON_BINDINGS)
 		if (NOT Boost_FOUND)
 			set(BOOST_NUMPY_DEPENDS DEPENDS boost_python)
 			set(BOOST_STATIC_LIBS_OPTIONS
+				-DCMAKE_CXX_FLAGS=-DBOOST_PYTHON_STATIC_LIB
 				-DBOOST_ROOT=${THIRD_PARTY_DIR}
 				-DBoost_USE_STATIC_LIBS=ON
 				-DBoost_USE_STATIC_RUNTIME=OFF
@@ -273,7 +274,7 @@ if(BUILD_PYTHON_BINDINGS)
 			list(APPEND GPUIP_TEST_LIBRARIES ${LIB_PREFIX}zlib${LIB_SUFFIX})
 		  else()
 			list(APPEND GPUIP_PYTHON_LIBRARIES ${LIB_PREFIX}zlibstatic${LIB_SUFFIX})
-			list(APPEND GPUIP_TEST_LIBRARIES ${LIB_PREFIX}zlib${LIB_SUFFIX})
+			list(APPEND GPUIP_TEST_LIBRARIES ${LIB_PREFIX}zlibstatic${LIB_SUFFIX})
 		  endif()
 		endif()
 	endif()
@@ -297,13 +298,14 @@ if(BUILD_PYTHON_BINDINGS)
 			PREFIX ${CMAKE_BINARY_DIR}/cimg
 			CONFIGURE_COMMAND "" 
 			BUILD_COMMAND ${cmake_bin} . 
-			-DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_DIR} -Wno-dev)
+			-DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_DIR} -Wno-dev
+		       INSTALL_COMMAND  ${cmake_bin} --build . --target ${CIMG_INSTALL_TARGET})
 		# Not too happy about this extra step. Much simpler would just be empty
 		# Configure/Build commands and a 'cp CImg.h ${THIRD_PARTY_DIR}/include'
 		# as install command. Worked fine in unix/mac but could'nt get the 'copy' 
 		# command in windows to work with the args list, hence this 'hack'
 		ExternalProject_Add_Step(cimg modify_CMakeLists
-			COMMAND echo "install(FILES CImg.h DESTINATION include)" > CMakeLists.txt
+			COMMAND echo install(FILES CImg.h DESTINATION include) > CMakeLists.txt
 			DEPENDEES configure
 			DEPENDERS build
 			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/cimg/src/cimg)

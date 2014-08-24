@@ -299,27 +299,31 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
     assert(ip->BoilerplateCode(kernelB) == std::string(boilerplateB));
     
     std::string err;
-    assert(ip->Allocate(&err) >= 0);
-    assert(ip->Allocate(&err) >= 0); //reiniting should not break things
+    std::cout << ip->Allocate(&err) << std::endl;
+     std::cout << err << std::endl;
+    //assert(ip->Allocate(&err) >= 0);
+    //assert(ip->Allocate(&err) >= 0); //reiniting should not break things
     
     std::vector<float> data_in(N);
     for(size_t i = 0; i < data_in.size(); ++i) {
         data_in[i] = i;
     }
-    assert(ip->Copy(b1, gpuip::Buffer::WRITE_DATA,
-                   data_in.data(), &err) >= 0);
+    std::cout << ip->Copy(b1, gpuip::Buffer::COPY_TO_GPU,
+                   data_in.data(), &err)  << std::endl;
+    std::cout << err << std::endl;
 
-    assert(ip->Build(&err) >= 0);
-    assert(ip->Build(&err) >= 0); // rebuilding should not break things
+    std::cout << ip->Build(&err)  << std::endl;
+    std::cout << ip->Build(&err)  << std::endl; // rebuilding should not break things
   
-    assert(ip->Run(&err) >= 0);
+    std::cout << ip->Run(&err)  << std::endl;
     
     std::vector<float> data_outA(N), data_outB(N), data_outC(N);
-    assert(ip->Copy(b1, gpuip::Buffer::READ_DATA,data_outA.data(),&err) >= 0);
-    assert(ip->Copy(b2, gpuip::Buffer::READ_DATA,data_outB.data(),&err) >= 0);
-    assert(ip->Copy(b3, gpuip::Buffer::READ_DATA,data_outC.data(),&err) >= 0);
+    std::cout << ip->Copy(b1, gpuip::Buffer::COPY_FROM_GPU,data_outA.data(),&err)  << std::endl;
+    std::cout << ip->Copy(b2, gpuip::Buffer::COPY_FROM_GPU,data_outB.data(),&err)  << std::endl;
+    std::cout << ip->Copy(b3, gpuip::Buffer::COPY_FROM_GPU,data_outC.data(),&err)  << std::endl;
 
     for(unsigned int i = 0; i < N; ++i) {
+        std::cout << data_outA[i] << " " << data_outB[i]  << " " << data_outC[i] << std::endl;
         // Check first kernel call, where B = A + 0.2, C = A + 0.25
         assert(equal(data_outB[i], data_in[i] + incA.value*0.1));
         assert(equal(data_outC[i], data_in[i] + incB.value));
