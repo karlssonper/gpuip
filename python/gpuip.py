@@ -184,5 +184,5 @@ if __name__ == "__main__":
     if args.nogui:
         runCommandLine(ipsettings, args.verbose)
     else:
-        runGUI(args.file, ipsettings)
+        runGUI(args.file if ipsettings else None, ipsettings)
 

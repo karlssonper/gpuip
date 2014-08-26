@@ -13,8 +13,7 @@ from PySide import QtGui, QtCore
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, path, settings = None):
         super(MainWindow, self).__init__()
-        self.path = path
-        self.setWindowTitle("gpuip")
+        self.setPath(path)
         self.setWindowIcon(icons.get("pug"))
         self.setStyleSheet(stylesheet.data)
         # Start in center of the screen, covering 80%
@@ -40,9 +39,17 @@ class MainWindow(QtGui.QMainWindow):
         self.needsAllocate = True
         self.needsImport = True
 
+    def setPath(self, path):
+        self.path = path
+        if path:
+            self.setWindowTitle("gpuip - %s" % self.path)
+        else:
+            self.setWindowTitle("gpuip")
+
     def new(self):
         dialog = newdialog.NewDialog(self)
         if dialog.exec_():
+            self.setPath(None)
             self.settings = dialog.getSettings()
             self.initFromSettings()
             self.log("Creating a new session")
@@ -56,6 +63,7 @@ class MainWindow(QtGui.QMainWindow):
             dialog = newdialog.NewDialog(self)
             dialog.initFromSettings(s)
             if dialog.exec_():
+                self.setPath(None)
                 self.settings = dialog.getSettings()
                 self.initFromSettings()
                 self.log("Creating new session from previous " + f[0])
@@ -67,18 +75,22 @@ class MainWindow(QtGui.QMainWindow):
             self.settings = settings.Settings()
             self.settings.read(f[0])
             self.initFromSettings()
+            self.setPath(f[0])
             self.log("Opening " + f[0])
 
     def save(self):
-        self.updateSettings()
-        self.settings.write(self.path)
-        self.log("Saved current session to %s" % self.path)
+        if self.path:
+            self.updateSettings()
+            self.settings.write(self.path)
+            self.log("Saved current session to %s" % self.path)
+        else:
+            self.saveAs()
 
     def saveAs(self):
         f = QtGui.QFileDialog.getSaveFileName(
             self, "Save",  QtCore.QDir.currentPath(), "ip (*ip)")
         if f[0]:
-            self.path = f[0]
+            self.setPath(f[0])
             self.save()
 
     def updateSettings(self):

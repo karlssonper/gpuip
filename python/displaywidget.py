@@ -98,13 +98,14 @@ class DisplayWidget(QtGui.QWidget):
             self.bufferComboBox.setCurrentIndex(idx)
    
     def onBufferSelectChange(self, value):
-        ndarray = self.buffers[str(value)].data
-        self.glWidget.copyDataToTexture(ndarray)
-        if ndarray.dtype == numpy.float32 or ndarray.dtype == numpy.float16:
-            self.slider.setEnabled(True)
-        else:
-            self.slider.setEnabled(False)
-        self.glWidget.glDraw()
+        if str(value) in self.buffers:
+            ndarray = self.buffers[str(value)].data
+            self.glWidget.copyDataToTexture(ndarray)
+            if ndarray.dtype == numpy.float32 or ndarray.dtype == numpy.float16:
+                self.slider.setEnabled(True)
+            else:
+                self.slider.setEnabled(False)
+            self.glWidget.glDraw()
 
     def onExposureChange(self):
         value = 0.1 * self.slider.value()
