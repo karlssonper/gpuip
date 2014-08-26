@@ -4,13 +4,18 @@
     <name>buffer1</name>
     <type>half</type>
     <channels>4</channels>
-    <input>images/GoldenGate.exr</input>
-    <output>output_images/gaussblur_separable_opencl.exr</output>
+    <input>images/bridge.exr</input>
   </buffer>
   <buffer>
     <name>buffer2</name>
     <type>half</type>
     <channels>4</channels>
+  </buffer>
+  <buffer>
+    <name>buffer3</name>
+    <type>half</type>
+    <channels>4</channels>
+    <output>output_images/blur.exr</output>
   </buffer>
   <kernel>
     <name>gaussian_blur_hor</name>
@@ -26,7 +31,7 @@
     <param>
       <name>n</name>
       <type>int</type>
-      <value>7</value>
+      <value>4</value>
       <default>1</default>
       <min>1</min>
       <max>16</max>
@@ -41,12 +46,12 @@
     </inbuffer>
     <outbuffer>
       <name>out</name>
-      <targetbuffer>buffer1</targetbuffer>
+      <targetbuffer>buffer3</targetbuffer>
     </outbuffer>
     <param>
       <name>n</name>
       <type>int</type>
-      <value>7</value>
+      <value>4</value>
       <default>1</default>
       <min>1</min>
       <max>16</max>

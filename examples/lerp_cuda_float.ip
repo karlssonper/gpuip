@@ -4,13 +4,13 @@
     <name>buffer1</name>
     <type>float</type>
     <channels>4</channels>
-    <input>images/GoldenGate.exr</input>
+    <input>images/bridge.exr</input>
   </buffer>
   <buffer>
     <name>buffer2</name>
     <type>float</type>
     <channels>4</channels>
-    <input>images/Ocean.exr</input>
+    <input>images/river.exr</input>
   </buffer>
   <buffer>
     <name>buffer3</name>

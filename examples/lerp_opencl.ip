@@ -4,13 +4,13 @@
     <name>buffer1</name>
     <type>half</type>
     <channels>4</channels>
-    <input>images/GoldenGate.exr</input>
+    <input>images/bridge.exr</input>
   </buffer>
   <buffer>
     <name>buffer2</name>
     <type>half</type>
     <channels>4</channels>
-    <input>images/Ocean.exr</input>
+    <input>images/river.exr</input>
   </buffer>
   <buffer>
     <name>buffer3</name>
@@ -36,7 +36,7 @@
     <param>
       <name>alpha</name>
       <type>float</type>
-      <value>0.1</value>
+      <value>0.74</value>
       <default>0.0</default>
       <min>0.0</min>
       <max>1.0</max>

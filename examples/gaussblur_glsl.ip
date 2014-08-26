@@ -4,7 +4,7 @@
     <name>buffer1</name>
     <type>half</type>
     <channels>4</channels>
-    <input>images/GoldenGate.exr</input>
+    <input>images/bridge.exr</input>
   </buffer>
   <buffer>
     <name>buffer2</name>
