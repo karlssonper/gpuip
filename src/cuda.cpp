@@ -137,9 +137,7 @@ double CUDAImpl::Build(std::string * err)
     
     // Create temporary file to compile
     std::ofstream out(file_temp_cu);
-#ifdef CUDA_HELPER_DIR
-    out << "#include <" << file_helper_math_h << ">\n";
-#endif
+    out << "#include \"" << file_helper_math_h << "\"\n";
     out << "extern \"C\" { \n"; // To avoid function name mangling 
     for(size_t i = 0; i < _kernels.size(); ++i) {
         out << _kernels[i]->code << "\n";
@@ -155,7 +153,8 @@ double CUDAImpl::Build(std::string * err)
         ss << "nvcc";
     }
     ss << " -ptx " << file_temp_cu << " -o " << file_temp_ptx
-       << " --Wno-deprecated-gpu-targets";
+       << " --Wno-deprecated-gpu-targets"
+       << " -include " << file_helper_math_h;
     if(sizeof(void *) == 4) {
         ss << " -m32";
     } else {
@@ -167,15 +166,16 @@ double CUDAImpl::Build(std::string * err)
         ss << " -ccbin \"" << cl_bin_path << "\"";
     }
 #endif
+    ss << " 2>&1" << std::endl; // get both standard output and error
     std::string pipe_err;
     int nvcc_exit_status = _execPipe(ss.str().c_str(), &pipe_err);
 
     // Cleanup temp text file
     _removeFile(file_helper_math_h);
     _removeFile(file_temp_cu);
-    
+        
     if (nvcc_exit_status) {
-        (*err) = "Cuda error: Could not compile kernels.\n";
+        (*err) = "Cuda error: Could not compile kernels:\n";
         (*err) += pipe_err;
         return GPUIP_ERROR;
     }
