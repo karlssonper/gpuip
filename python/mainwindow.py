@@ -7,6 +7,7 @@ import settings
 import icons
 import utils
 import pygpuip
+import os
 from PySide import QtGui, QtCore
 
 class MainWindow(QtGui.QMainWindow):
@@ -35,9 +36,6 @@ class MainWindow(QtGui.QMainWindow):
         self.settings = settings
         if self.settings:
             self.initFromSettings()
-        else:
-            self.new()
-
         self.needsBuild = True
         self.needsAllocate = True
         self.needsImport = True
@@ -111,11 +109,16 @@ class MainWindow(QtGui.QMainWindow):
 
         bufferNames = [b.name for b in self.settings.buffers]
         for b in self.settings.buffers:
+            bufinputpath = b.input
+            if bufinputpath != "" and not os.path.isfile(bufinputpath):
+                bufinputpath = ""
+                self.logError("Buffer %s input path not valid: %s" % 
+                              (b.name, b.input))
             self.buffersWidget.addBuffer(b.name, b.type,
-                                         b.channels, b.input, b.output)
+                                         b.channels, bufinputpath, b.output)
         self.buffersWidget.layout.addStretch()
 
-        refresh = True
+        setBoilerPlate = True
         self.kernelWidgets = {}
         for k in self.settings.kernels:
             w = kernelwidget.KernelWidget(self.kernelTabWidget,
@@ -131,9 +134,9 @@ class MainWindow(QtGui.QMainWindow):
 
             if k.code != "":
                 w.codeEditor.setText(k.code)
-                refresh = False
-        if refresh:
-            self.refreshBoilerplateCode(True)
+                setBoilerPlate = False
+        if setBoilerPlate:
+            self.setBoilerplateCode(True)
 
     def reset(self):
         self.logBrowser.clear()
@@ -224,15 +227,16 @@ class MainWindow(QtGui.QMainWindow):
 
     def interactiveProcess(self):
         if self.interactive:
-            # Run previous steps if necessary. If any fails, return function
-            if (self.needsBuild and not self.build()) or \
-               (self.needsAllocate and not self.allocate()) or \
-               (self.needsImport and not self.import_from_images()):
-                return False
             self.run()
 
     def run(self):
         self.updateSettings()
+
+        # Run previous steps if necessary. If any fails, return function
+        if (self.needsBuild and not self.build()) or \
+                (self.needsAllocate and not self.allocate()) or \
+                (self.needsImport and not self.import_from_images()):
+            return False
 
         self.log("Running kernels...")
 
@@ -292,11 +296,18 @@ class MainWindow(QtGui.QMainWindow):
     def toggleInteractive(self):
         self.interactive = not self.interactive
 
-    def refreshBoilerplateCode(self, skipDialog = False):
+    def refreshCodeFromFile(self):
+        self.settings.updateCode()
+        for k in self.settings.kernels:
+            editor = self.kernelWidgets[k.name].codeEditor
+            editor.clear()
+            editor.setText(k.code)
+
+    def setBoilerplateCode(self, skipDialog = False):
         if not skipDialog:
             ret = QtGui.QMessageBox.warning(
-                self, self.tr("Refresh Boilerplate Code"),
-                self.tr("Refreshing the boilerplate code will remove previous"+\
+                self, self.tr("Set Boilerplate Code"),
+                self.tr("Setting the boilerplate code will remove previous"+\
                         " code. \nDo you want to continue?"),
                 QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel,
                 QtGui.QMessageBox.Cancel)
@@ -374,8 +385,10 @@ class MainWindow(QtGui.QMainWindow):
         _addAction(QtGui.QIcon(""), "&Quit", "Ctrl+Q",
                    self.close, fileMenu, None),
         toolBar.addSeparator()
-        _addAction(icons.get("refresh"), "&Refresh Boilerplate Code", "Ctrl+R",
-                   self.refreshBoilerplateCode,editorMenu,toolBar),
+        _addAction(icons.get("refresh"), "&Refresh Code From File", "Ctrl+R",
+                   self.refreshCodeFromFile,editorMenu,toolBar),
+        _addAction(icons.get("boilerplate"), "&Set Boilerplate Code", "Ctrl+L",
+                   self.setBoilerplateCode,editorMenu,toolBar),
         toolBar.addSeparator()
         _addAction(icons.get("build"), "1. &Build", "Ctrl+B",
                    self.build, runMenu, toolBar),

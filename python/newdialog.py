@@ -141,6 +141,8 @@ class NewDialog(QtGui.QDialog):
 
             s.kernels.append(sk)
 
+        s.updateCode()
+
         return s
 
 class BufferGroupBox(QtGui.QGroupBox):

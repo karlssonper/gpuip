@@ -54,7 +54,7 @@ def terminate(msg):
 def getSettings(args):
     import settings
 
-    if not os.path.isfile(args.file):
+    if not args.file or not os.path.isfile(args.file):
         return None
 
     ipsettings = settings.Settings()
@@ -74,25 +74,28 @@ def getSettings(args):
                 terminate("gpuip error: No param %s found in kernel %s." \
                           % (paramName, kernelName))
 
-        # Change input buffers
-        if args.inbuffer:
-            for inb in args.inbuffer:
-                bufferName, path = inb[0], inb[1]
-                buffer = ipsettings.getBuffer(bufferName)
-                if buffer:
-                    buffer.input = path
-                else:
-                    terminate("gpuip error: No buffer %s found." % buffer)
+    # Change input buffers
+    if args.inbuffer:
+        for inb in args.inbuffer:
+            bufferName, path = inb[0], inb[1]
+            buffer = ipsettings.getBuffer(bufferName)
+            if buffer:
+                buffer.input = path
+                if not os.path.isfile(buffer.input):
+                    raise IOError("No such file: '%s'" % buffer.input)
+            else:
+                terminate("gpuip error: No buffer %s found." % buffer)
 
-        # Change output buffers
-        if args.outbuffer:
-            for outb in args.outbuffer:
-                bufferName, path = outb[0], outb[1]
-                buffer = ipsettings.getBuffer(bufferName)
-                if buffer:
-                    buffer.output = path
-                else:
-                    terminate("gpuip error: No buffer %s found." % bufferName)
+    # Change output buffers
+    if args.outbuffer:
+        for outb in args.outbuffer:
+            bufferName, path = outb[0], outb[1]
+            buffer = ipsettings.getBuffer(bufferName)
+            if buffer:
+                buffer.output = path
+                os.makedirs(os.path.dirname(os.path.realpath(path)))
+            else:
+                terminate("gpuip error: No buffer %s found." % bufferName)
 
     return ipsettings
 

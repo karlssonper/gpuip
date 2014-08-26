@@ -2,6 +2,7 @@ from xml.dom import minidom
 import pygpuip
 import numpy
 import utils
+import os
 
 class Settings(object):
     class Buffer(object):
@@ -36,7 +37,7 @@ class Settings(object):
             self.params = []
             self.inBuffers = []
             self.outBuffers = []
-
+            
         def getParam(self, name):
             for p in self.params:
                 if p.name == name:
@@ -60,8 +61,14 @@ class Settings(object):
                 return b
         return None
 
+    def updateCode(self):
+        for k in self.kernels:
+            if os.path.isfile(k.code_file):
+                k.code = open(k.code_file).read()
+
     def read(self, xml_file):
         xmldom = minidom.parse(xml_file)
+        path = os.path.realpath(os.path.dirname(xml_file))
 
         # Environment
         self.environment = str(self.data(
@@ -74,9 +81,11 @@ class Settings(object):
                                      self.data(b, "type"),
                                      utils.safeEval(self.data(b, "channels")))
             if b.getElementsByTagName("input"):
-                buffer.input = self.data(b, "input")
+                buffer.input = os.path.join(path,self.data(b, "input"))
             if b.getElementsByTagName("output"):
-                buffer.output = self.data(b, "output")
+                buffer.output = os.path.join(path,self.data(b, "output"))
+                if not os.path.exists(os.path.dirname(buffer.output)):
+                    os.makedirs(os.path.dirname(buffer.output))
             self.buffers.append(buffer)
 
         # Kernels
@@ -84,7 +93,7 @@ class Settings(object):
             kernel = Settings.Kernel(self.data(k, "name"),
                                      self.data(k, "code_file"))
 
-            kernel.code = open(kernel.code_file, "r").read()
+            kernel.code = open(os.path.join(path,kernel.code_file), "r").read()
 
             # In Buffers
             for inb in k.getElementsByTagName("inbuffer"):
@@ -113,6 +122,7 @@ class Settings(object):
             self.kernels.append(kernel)
 
     def write(self, xml_file):
+        path = os.path.realpath(os.path.dirname(xml_file))
         doc = minidom.Document()
         root = doc.createElement("gpuip")
 
@@ -138,7 +148,8 @@ class Settings(object):
         paramAttrs = ["name", "type", "value", "default", "min", "max"]
         for k in self.kernels:
              # Write kernel code to file
-            open(k.code_file, "w").write(k.code.replace("\t","    "))
+            code_file_path = os.path.join(path,k.code_file)
+            open(code_file_path, "w").write(k.code.replace("\t","    "))
 
             kernelNode = doc.createElement("kernel")
             root.appendChild(kernelNode)
