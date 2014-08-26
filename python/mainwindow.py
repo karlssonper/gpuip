@@ -297,11 +297,18 @@ class MainWindow(QtGui.QMainWindow):
         self.interactive = not self.interactive
 
     def refreshCodeFromFile(self):
-        self.settings.updateCode()
-        for k in self.settings.kernels:
-            editor = self.kernelWidgets[k.name].codeEditor
-            editor.clear()
-            editor.setText(k.code)
+        ret = QtGui.QMessageBox.warning(
+                self, self.tr("Refresh Code From File"),
+                self.tr("Refreshing the code will not save current"+\
+                        " code. \nDo you want to continue?"),
+                QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel,
+                QtGui.QMessageBox.Cancel)
+        if ret != QtGui.QMessageBox.StandardButton.Cancel:
+            self.settings.updateCode()
+            for k in self.settings.kernels:
+                editor = self.kernelWidgets[k.name].codeEditor
+                editor.clear()
+                editor.setText(k.code)
 
     def setBoilerplateCode(self, skipDialog = False):
         if not skipDialog:
