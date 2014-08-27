@@ -334,6 +334,7 @@ if(BUILD_PYTHON_BINDINGS)
 			DEPENDEES configure
 			DEPENDERS build
 			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/cimg/src/cimg)
+		  list(APPEND THIRD_PARTY_TARGETS cimg)
 	endif()
 
 	# PNG
