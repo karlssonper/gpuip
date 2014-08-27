@@ -295,5 +295,11 @@ BOOST_PYTHON_MODULE(pygpuip)
                  &gp::ImageProcessorWrapper::BoilerplateCode);
 
     bp::def("CanCreateGpuEnvironment",&gpuip::ImageProcessor::CanCreate);
+    
+    std::stringstream ss;
+#ifdef GPUIP_VERSION
+    ss << GPUIP_VERSION;
+#endif
+    bp::scope().attr("__version__") = ss.str();std::string("lol");
 }
 //----------------------------------------------------------------------------//

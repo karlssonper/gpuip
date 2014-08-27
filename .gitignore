@@ -1,6 +1,7 @@
 build
 doc/html
 doc/man
+doc/Doxyfile
 thirdparty
 *.exr
 *.png
