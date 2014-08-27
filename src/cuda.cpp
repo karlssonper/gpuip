@@ -113,10 +113,10 @@ int _execPipe(const char* cmd, std::string * err) {
     }
     return exit_status;
 }
-inline void _removeFile(const char * filename)
+inline int _removeFile(const char * filename)
 {
     std::string command = std::string("rm ") + std::string(filename);
-    system(command.c_str());
+    return system(command.c_str());
 }
 double CUDAImpl::Build(std::string * err)
 {
