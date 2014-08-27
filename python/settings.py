@@ -90,10 +90,9 @@ class Settings(object):
 
         # Kernels
         for k in xmldom.getElementsByTagName("kernel"):
-            kernel = Settings.Kernel(self.data(k, "name"),
-                                     self.data(k, "code_file"))
-
-            kernel.code = open(os.path.join(path,kernel.code_file), "r").read()
+            kernel = Settings.Kernel(
+                self.data(k, "name"),
+                os.path.join(path, self.data(k, "code_file")))
 
             # In Buffers
             for inb in k.getElementsByTagName("inbuffer"):
@@ -120,6 +119,8 @@ class Settings(object):
                 param.value = utils.safeEval(self.data(p, "value"),type)
                 kernel.params.append(param)
             self.kernels.append(kernel)
+
+        self.updateCode()
 
     def write(self, xml_file):
         path = os.path.realpath(os.path.dirname(xml_file))
