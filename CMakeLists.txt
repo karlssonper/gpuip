@@ -77,6 +77,12 @@ endif()
 
 set(GPUIP_ROOT_DIR ${CMAKE_SOURCE_DIR})
 
+#Useful when building binary releases on cloud servers with limited RAM
+if(GPUIP_MIN_HEAPSIZE)
+  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} 
+	"--param ggc-min-expand=0 --param ggc-min-heapsize=${GPUIP_MIN_HEAPSIZE}")
+endif()
+
 # Local cmake find modules can be found in the cmake folder
 set(CMAKE_MODULE_PATH ${GPUIP_ROOT_DIR}/cmake)
 
