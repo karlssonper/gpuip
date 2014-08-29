@@ -456,21 +456,15 @@ configure_file(
 add_custom_target(uninstall
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-#CPack
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Framework for Image Processing on the GPU")
-if(CUDA_FOUND AND BUILD_WITH_CUDA)
-  set(PACKAGE_NAME "gpuip-cuda")
-else()
-  set(PACKAGE_NAME "gpuip")
+if(CPACK_GENERATOR)
+  if(CUDA_FOUND AND BUILD_WITH_CUDA)
+	set(CPACK_PACKAGE_NAME "gpuip-cuda")
+  else()
+	set(CPACK_PACKAGE_NAME "gpuip")
+  endif()
+  configure_file("${GPUIP_ROOT_DIR}/cpack/CMakeCPackOptions.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/CMakeCPackOptions.cmake")
+  set(CPACK_PROJECT_CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/CMakeCPackOptions.cmake")
+  include(CPack)
 endif()
-set(CPACK_PACKAGE_NAME ${PACKAGE_NAME})
 
-set(CPACK_PACKAGE_VERSION ${VERSION})
-set(CPACK_COMPONENTS_ALL devel python bin)
-set(CPACK_PACKAGE_FILE_NAME ${PACKAGE_NAME}-${GPUIP_VERSION})
-set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
-
-set(CPACK_GENERATOR "RPM")
-set(CPACK_RPM_COMPONENT_INSTALL ON)
-set(CPACK_RPM_PACKAGE_GROUP "Applications/Engineering")
-include(CPack)
