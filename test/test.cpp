@@ -1,27 +1,3 @@
-/*
-The MIT License (MIT)
-
-Copyright (c) 2014 Per Karlsson
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-
 #include <gpuip.h>
 #include <cassert>
 #include <stdlib.h>
@@ -323,31 +299,27 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
     assert(ip->BoilerplateCode(kernelB) == std::string(boilerplateB));
     
     std::string err;
-    std::cout << ip->Allocate(&err) << std::endl;
-     std::cout << err << std::endl;
-    //assert(ip->Allocate(&err) >= 0);
-    //assert(ip->Allocate(&err) >= 0); //reiniting should not break things
+    assert(ip->Allocate(&err) >= 0);
+    assert(ip->Allocate(&err) >= 0); //reiniting should not break things
     
     std::vector<float> data_in(N);
     for(size_t i = 0; i < data_in.size(); ++i) {
         data_in[i] = i;
     }
-    std::cout << ip->Copy(b1, gpuip::Buffer::COPY_TO_GPU,
-                   data_in.data(), &err)  << std::endl;
-    std::cout << err << std::endl;
+    assert(ip->Copy(b1, gpuip::Buffer::WRITE_DATA,
+                   data_in.data(), &err) >= 0);
 
-    std::cout << ip->Build(&err)  << std::endl;
-    std::cout << ip->Build(&err)  << std::endl; // rebuilding should not break things
+    assert(ip->Build(&err) >= 0);
+    assert(ip->Build(&err) >= 0); // rebuilding should not break things
   
-    std::cout << ip->Run(&err)  << std::endl;
+    assert(ip->Run(&err) >= 0);
     
     std::vector<float> data_outA(N), data_outB(N), data_outC(N);
-    std::cout << ip->Copy(b1, gpuip::Buffer::COPY_FROM_GPU,data_outA.data(),&err)  << std::endl;
-    std::cout << ip->Copy(b2, gpuip::Buffer::COPY_FROM_GPU,data_outB.data(),&err)  << std::endl;
-    std::cout << ip->Copy(b3, gpuip::Buffer::COPY_FROM_GPU,data_outC.data(),&err)  << std::endl;
+    assert(ip->Copy(b1, gpuip::Buffer::READ_DATA,data_outA.data(),&err) >= 0);
+    assert(ip->Copy(b2, gpuip::Buffer::READ_DATA,data_outB.data(),&err) >= 0);
+    assert(ip->Copy(b3, gpuip::Buffer::READ_DATA,data_outC.data(),&err) >= 0);
 
     for(unsigned int i = 0; i < N; ++i) {
-        std::cout << data_outA[i] << " " << data_outB[i]  << " " << data_outC[i] << std::endl;
         // Check first kernel call, where B = A + 0.2, C = A + 0.25
         assert(equal(data_outB[i], data_in[i] + incA.value*0.1));
         assert(equal(data_outC[i], data_in[i] + incB.value));

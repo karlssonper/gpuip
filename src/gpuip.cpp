@@ -24,38 +24,38 @@ SOFTWARE.
 
 #include "gpuip.h"
 //----------------------------------------------------------------------------//
-namespace gpuip {
-//----------------------------------------------------------------------------//
 #ifdef _GPUIP_OPENCL
-ImageProcessor * CreateOpenCL();
+#include "opencl.h"
 #endif
 //----------------------------------------------------------------------------//
 #ifdef _GPUIP_CUDA
-ImageProcessor * CreateCUDA();
+#include "cuda.h"
 #endif
 //----------------------------------------------------------------------------//
 #ifdef _GPUIP_GLSL
-ImageProcessor * CreateGLSL();
+#include "glsl.h"
 #endif
+//----------------------------------------------------------------------------//
+namespace gpuip {
 //----------------------------------------------------------------------------//
 ImageProcessor::Ptr ImageProcessor::Create(GpuEnvironment env)
 {
     switch(env) {
         case OpenCL:
 #ifdef _GPUIP_OPENCL
-            return ImageProcessor::Ptr(CreateOpenCL());
+            return ImageProcessor::Ptr(new OpenCLImpl());
 #else
             throw std::logic_error("gpuip was not built with OpenCL");
 #endif
         case CUDA:
 #ifdef _GPUIP_CUDA
-            return ImageProcessor::Ptr(CreateCUDA());
+            return ImageProcessor::Ptr(new CUDAImpl());
 #else
             throw std::logic_error("gpuip was not built with CUDA");
 #endif
         case GLSL:
 #ifdef _GPUIP_GLSL
-            return ImageProcessor::Ptr(CreateGLSL());
+            return ImageProcessor::Ptr(new GLSLImpl());
 #else
             throw std::logic_error("gpuip was not built with GLSL");
 #endif

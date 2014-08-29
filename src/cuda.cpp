@@ -36,11 +36,6 @@ inline int _cudaGetMaxGflopsDeviceId();
 //----------------------------------------------------------------------------//
 inline std::string _GetTypeStr(Buffer::Ptr buffer);
 //----------------------------------------------------------------------------//
-ImageProcessor * CreateCUDA()
-{
-    return new CUDAImpl();
-}
-//----------------------------------------------------------------------------//
 CUDAImpl::CUDAImpl()
         : ImageProcessor(CUDA), _cudaBuild(false)
 {

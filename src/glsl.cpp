@@ -35,11 +35,6 @@ inline GLenum _GetFormat(const Buffer::Ptr & b);
 //----------------------------------------------------------------------------//
 inline GLenum _GetInternalFormat(const Buffer::Ptr & b);
 //----------------------------------------------------------------------------//
-ImageProcessor * CreateGLSL()
-{
-    return new GLSLImpl();
-}
-//----------------------------------------------------------------------------//
 GLSLImpl::GLSLImpl()
         : ImageProcessor(gpuip::GLSL), _glewInit(false),_glContextCreated(false)
 {
@@ -48,7 +43,7 @@ GLSLImpl::GLSLImpl()
 GLSLImpl::~GLSLImpl()
 {
     _DeleteBuffers();
-    
+      
     // Delete shader programs
     for(size_t i = 0; i < _programs.size(); ++i) {
         glDeleteProgram(_programs[i]);
