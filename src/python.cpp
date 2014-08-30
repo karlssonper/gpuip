@@ -141,6 +141,14 @@ class KernelWrapper : public gpuip::Kernel
 class ImageProcessorWrapper
 {
   public:
+    ImageProcessorWrapper(const std::string & sharedLibrary)
+            : _ip(gpuip::ImageProcessor::Create(sharedLibrary))
+    {
+        if (_ip.get() ==  NULL) {
+            throw std::runtime_error("Could not create gpuip imageProcessor.");
+        }
+    }
+    
     ImageProcessorWrapper(gpuip::GpuEnvironment env)
             : _ip(gpuip::ImageProcessor::Create(env))
     {
@@ -168,16 +176,6 @@ class ImageProcessorWrapper
     void SetDimensions(unsigned int width, unsigned int height)
     {
         _ip->SetDimensions(width,height);
-    }
-
-    unsigned int Width() const
-    {
-        return _ip->Width();
-    }
-
-    unsigned int Height() const
-    {
-        return _ip->Height();
     }
     
     std::string Allocate()
@@ -229,7 +227,7 @@ class ImageProcessorWrapper
 //----------------------------------------------------------------------------//
 } //end namespace gpuip
 //----------------------------------------------------------------------------//
-BOOST_PYTHON_MODULE(pygpuip)
+BOOST_PYTHON_MODULE(_pygpuip)
 {
     namespace gp = gpuip::python;
 
@@ -279,9 +277,8 @@ BOOST_PYTHON_MODULE(pygpuip)
             boost::shared_ptr<gp::ImageProcessorWrapper> >
             ("ImageProcessor",
              bp::init<gpuip::GpuEnvironment>())
+            .def(bp::init<std::string>())
             .def("SetDimensions", &gp::ImageProcessorWrapper::SetDimensions)
-            .add_property("width", &gp::ImageProcessorWrapper::Width)
-            .add_property("height", &gp::ImageProcessorWrapper::Height)
             .def("CreateBuffer", &gp::ImageProcessorWrapper::CreateBuffer)
             .def("CreateKernel", &gp::ImageProcessorWrapper::CreateKernel)
             .def("Allocate", &gp::ImageProcessorWrapper::Allocate)
@@ -294,12 +291,17 @@ BOOST_PYTHON_MODULE(pygpuip)
             .def("BoilerplateCode",
                  &gp::ImageProcessorWrapper::BoilerplateCode);
 
-    bp::def("CanCreateGpuEnvironment",&gpuip::ImageProcessor::CanCreate);
+    bool (*CanCreateEnum)(gpuip::GpuEnvironment) =
+            &gpuip::ImageProcessor::CanCreate;
+    bool (*CanCreateString)(const std::string &) =
+            &gpuip::ImageProcessor::CanCreate;
+    bp::def("CanCreateGpuEnvironment",CanCreateEnum);
+    bp::def("CanCreateGpuEnvironment",CanCreateString);
     
     std::stringstream ss;
 #ifdef GPUIP_VERSION
     ss << GPUIP_VERSION;
 #endif
-    bp::scope().attr("__version__") = ss.str();std::string("lol");
+    bp::scope().attr("__version__") = ss.str();
 }
 //----------------------------------------------------------------------------//

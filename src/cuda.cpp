@@ -30,6 +30,11 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 //----------------------------------------------------------------------------//
+extern "C" {
+    gpuip::ImplInterface * CreateImpl() { return new gpuip::CUDAImpl(); }
+    void DeleteImpl(gpuip::ImplInterface * impl) { delete impl; }
+}
+//----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
 inline int _cudaGetMaxGflopsDeviceId();
@@ -37,7 +42,7 @@ inline int _cudaGetMaxGflopsDeviceId();
 inline std::string _GetTypeStr(Buffer::Ptr buffer);
 //----------------------------------------------------------------------------//
 CUDAImpl::CUDAImpl()
-        : ImageProcessor(CUDA), _cudaBuild(false)
+        : _cudaBuild(false)
 {
     if (cudaSetDevice(_cudaGetMaxGflopsDeviceId()) != cudaSuccess) {
         throw std::logic_error("gpuip::CUDAImpl() could not set device id");

@@ -24,9 +24,7 @@ SOFTWARE.
 
 #include "io_wrapper.h"
 #include "gpuip.h"
-#ifdef __APPLE__
 #define cimg_OS 0
-#endif
 #include <CImg.h>
 #include <boost/numpy.hpp>
 #include <boost/python.hpp>

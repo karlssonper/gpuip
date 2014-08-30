@@ -107,8 +107,6 @@ endif()
 find_package(OpenCL)
 if(OpenCL_FOUND AND BUILD_WITH_OPENCL)
 	message(STATUS "${Green}Generating build with OpenCL...${ColorReset}")
-	include_directories(${OpenCL_INCLUDE_DIRS})
-	list(APPEND GPUIP_LIBRARIES ${OpenCL_LIBRARIES})
 else()
 	message(STATUS "${Yellow}OpenCL disabled .${ColorReset}")
 endif()
@@ -117,23 +115,23 @@ find_package(CUDA)
 if(CUDA_FOUND AND BUILD_WITH_CUDA)
   message(STATUS "${Green}Generating build with CUDA...${ColorReset}")
   find_package(CUDADriver REQUIRED)
-  include_directories(${CUDA_INCLUDE_DIRS})
-  list(APPEND GPUIP_LIBRARIES ${CUDA_LIBRARIES} ${CUDA_DRIVER_LIBRARY})
 else()
   message(STATUS "${Yellow}CUDA disabled .${ColorReset}")
 endif()
 
 find_package(OpenGL)
+set(GPUIP_OPENGL_LIBRARIES)
+set(OPENGL_THIRD_PARTY_TARGETS)
 if(OPENGL_FOUND AND BUILD_WITH_GLSL)
 	message(STATUS "${Green}Generating build with GLSL...${ColorReset}")
 	include_directories(${OPENGL_INCLUDE_DIRS})
-	list(APPEND GPUIP_LIBRARIES ${OPENGL_LIBRARIES})
+	list(APPEND GPUIP_OPENGL_LIBRARIES ${OPENGL_LIBRARIES})
 
 	# GLFW
 	find_package(GLFW)
 	if(GLFW_FOUND)
 		include_directories(${GLFW_INCLUDE_DIRS})
-		list(APPEND GPUIP_LIBRARIES ${GLFW_LIBRARIES})
+		list(APPEND GPUIP_OPENGL_LIBRARIES ${GLFW_LIBRARIES})
 	elseif(BUILD_THIRD_PARTY_LIBS)
 		message(STATUS "${Cyan}Adding third party target glfw${ColorReset}")
 		ExternalProject_Add(glfw
@@ -146,14 +144,14 @@ if(OPENGL_FOUND AND BUILD_WITH_GLSL)
 			-DGLFW_BUILD_TESTS=OFF
 			-DGLFW_BUILD_DOCS=OFF
 			-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
-		list(APPEND THIRD_PARTY_TARGETS glfw)
-		list(APPEND GPUIP_LIBRARIES ${LIB_PREFIX}glfw3${LIB_SUFFIX})
+		list(APPEND OPENGL_THIRD_PARTY_TARGETS glfw)
+		list(APPEND GPUIP_OPENGL_LIBRARIES ${LIB_PREFIX}glfw3${LIB_SUFFIX})
 		if(UNIX AND NOT APPLE)
-		  list(APPEND GPUIP_LIBRARIES X11 Xrandr Xi Xxf86vm Xcursor)
+		  list(APPEND GPUIP_OPENGL_LIBRARIES X11 Xrandr Xi Xxf86vm Xcursor)
 		endif()
 	endif()
 	if(APPLE)
-		list(APPEND GPUIP_LIBRARIES
+		list(APPEND GPUIP_OPENGL_LIBRARIES
 			"-framework Cocoa" "-framework CoreVideo" "-framework IOKit")
 	endif()
 
@@ -161,20 +159,21 @@ if(OPENGL_FOUND AND BUILD_WITH_GLSL)
 	find_package(GLEW)
 	if(GLEW_FOUND)
 		include_directories(${GLEW_INCLUDE_DIRS})
-		list(APPEND GPUIP_LIBRARIES ${GLEW_LIBRARY})
+		list(APPEND GPUIP_OPENGL_LIBRARIES ${GLEW_LIBRARY})
 	elseif(BUILD_THIRD_PARTY_LIBS)
 		message(STATUS "${Cyan}Adding third party target glew${ColorReset}")
 		ExternalProject_Add(glew
 			INSTALL_DIR ${THIRD_PARTY_DIR}
 			GIT_REPOSITORY ${GIT_REPO_GLEW}
 			CMAKE_ARGS
+			-DCMAKE_C_FLAGS=-fPIC
 			-DCMAKE_BUILD_TYPE=Release
 			-DONLY_LIBS=TRUE
 			-Dglew-cmake_BUILD_SHARED=OFF
 			-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
 		add_definitions(-DGLEW_STATIC)
-		list(APPEND THIRD_PARTY_TARGETS glew)
-		list(APPEND GPUIP_LIBRARIES ${LIB_PREFIX}glew${LIB_SUFFIX})
+		list(APPEND OPENGL_THIRD_PARTY_TARGETS glew)
+		list(APPEND GPUIP_OPENGL_LIBRARIES ${LIB_PREFIX}glew${LIB_SUFFIX})
 	endif()
 else()
 	message(STATUS "${Yellow}GLSL disabled .${ColorReset}")

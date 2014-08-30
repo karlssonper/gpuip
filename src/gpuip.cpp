@@ -21,74 +21,59 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
 #include "gpuip.h"
-//----------------------------------------------------------------------------//
-#ifdef _GPUIP_OPENCL
-#include "opencl.h"
-#endif
-//----------------------------------------------------------------------------//
-#ifdef _GPUIP_CUDA
-#include "cuda.h"
-#endif
-//----------------------------------------------------------------------------//
-#ifdef _GPUIP_GLSL
-#include "glsl.h"
-#endif
+#include "implinterface.h"
+#include <dlfcn.h>
+#include <sstream>
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-ImageProcessor::Ptr ImageProcessor::Create(GpuEnvironment env)
+inline const char * _GetSharedLibraryFilename(GpuEnvironment env)
 {
     switch(env) {
         case OpenCL:
-#ifdef _GPUIP_OPENCL
-            return ImageProcessor::Ptr(new OpenCLImpl());
-#else
-            throw std::logic_error("gpuip was not built with OpenCL");
-#endif
+            return "libgpuipOpenCL.so";
         case CUDA:
-#ifdef _GPUIP_CUDA
-            return ImageProcessor::Ptr(new CUDAImpl());
-#else
-            throw std::logic_error("gpuip was not built with CUDA");
-#endif
+            return "libgpuipCUDA.so";
         case GLSL:
-#ifdef _GPUIP_GLSL
-            return ImageProcessor::Ptr(new GLSLImpl());
-#else
-            throw std::logic_error("gpuip was not built with GLSL");
-#endif
+            return "libgpuipGLSL.so";
         default:
-            std::cerr << "gpuip error: Could not create env" << std::endl;
-            return ImageProcessor::Ptr();
+            return "#error enum does not have setup";
     }
+}
+//----------------------------------------------------------------------------//
+ImageProcessor::Ptr ImageProcessor::Create(GpuEnvironment env)
+{
+    return ImageProcessor::Ptr(
+        new ImageProcessor(_GetSharedLibraryFilename(env)));
+}
+//----------------------------------------------------------------------------//
+ImageProcessor::Ptr ImageProcessor::Create(const std::string & sharedLibrary)
+{
+    return ImageProcessor::Ptr(new ImageProcessor(sharedLibrary.c_str()));
 }
 //----------------------------------------------------------------------------//
 bool ImageProcessor::CanCreate(GpuEnvironment env)
 {
-    switch(env) {
-        case OpenCL:
-#ifdef _GPUIP_OPENCL
-            return true;
-#else
-            return false;
-#endif
-        case CUDA:
-#ifdef _GPUIP_CUDA
-            return true;
-#else
-            return false;
-#endif
-        case GLSL:
-#ifdef _GPUIP_GLSL
-            return true;
-#else
-            return false;
-#endif
-        default:
-            return false;
+    return ImageProcessor::CanCreate(_GetSharedLibraryFilename(env));
+}
+//----------------------------------------------------------------------------//
+bool ImageProcessor::CanCreate(const std::string & filename)
+{
+    void * handle = dlopen(filename.c_str(), RTLD_NOW);
+    if (handle == NULL) {
+        std::cerr << "rov" << std::endl;
     }
+
+    if (dlsym(handle, "CreateImpl")) {
+        std::cerr << dlerror() << std::endl;
+    }
+    
+    if (handle != NULL && dlsym(handle, "CreateImpl") != NULL) {
+        dlclose(handle);
+        return true;
+    } 
+    return false;
 }
 //----------------------------------------------------------------------------//
 Buffer::Buffer(const std::string & name_, Type type_, unsigned int channels_)
@@ -106,53 +91,87 @@ Kernel::BufferLink::BufferLink(Buffer::Ptr buffer_, const std::string & name_)
 {
 }
 //----------------------------------------------------------------------------//
-ImageProcessor::ImageProcessor(GpuEnvironment env)
-        : _env(env), _w(0), _h(0)
+ImageProcessor::ImageProcessor(const char * filename)
+        : _dynamicLibObj(NULL), _impl(NULL)
 {
-    
+    // Open shared library
+    _dynamicLibObj = dlopen(filename, RTLD_NOW);
+    if (_dynamicLibObj == NULL) {
+        std::stringstream ss;
+        ss << "Could not open shared library " << filename << "\n";
+        const char * err = dlerror();
+        if (err) {
+            ss << err;
+        }
+        throw std::runtime_error(ss.str().c_str());
+    }
+  
+    // Look for CreateImpl symbol
+    void* loadSym = dlsym(_dynamicLibObj, "CreateImpl");
+    if(loadSym == NULL) {
+        std::stringstream ss;
+        ss << "No CreateImpl function in shared library " << filename << "\n";
+        const char * err = dlerror();
+        if (err) {
+            ss << err;
+        }
+        throw std::runtime_error(ss.str().c_str());
+    }
+
+    // Create implementation object
+    _impl = reinterpret_cast<CreateImplFunc>(loadSym)();
+    if (_impl == NULL) {
+        std::stringstream ss;
+        ss << "Could not create gpuip impl from shared library " << filename;
+        throw std::runtime_error(ss.str().c_str());
+    }
 }
 //----------------------------------------------------------------------------//
-Buffer::Ptr
-ImageProcessor::CreateBuffer(const std::string & name,
-                             Buffer::Type type,
-                             unsigned int channels)
+ImageProcessor::~ImageProcessor()
 {
-    if (_buffers.find(name) == _buffers.end()) {
-        Buffer::Ptr p = Buffer::Ptr(new Buffer(name, type, channels));
-        _buffers[name] = p;
-        return p;
-    } else {
-        std::cerr << "gpuip error: Buffer named " << name
-                  << " already exists. Skipping..." << std::endl;
-        return Buffer::Ptr(new Buffer(name, type, channels));
+    // Look for CreateImpl symbol
+    void* loadSym = dlsym(_dynamicLibObj, "DeleteImpl");
+    if(loadSym == NULL) {
+        throw std::runtime_error("No DeleteImpl function in shared library");
     }
+
+    // Delete implementation
+    reinterpret_cast<DeleteImplFunc>(loadSym)(_impl);
+
+    // Close shared library
+    dlclose(_dynamicLibObj);
+}
+//----------------------------------------------------------------------------//
+Buffer::Ptr ImageProcessor::CreateBuffer(const std::string & name,
+                                         Buffer::Type type,
+                                         unsigned int channels)
+{
+    return _impl->CreateBuffer(name, type, channels);
 }
 //----------------------------------------------------------------------------//
 Kernel::Ptr ImageProcessor::CreateKernel(const std::string & name)
 {
-    _kernels.push_back(Kernel::Ptr(new Kernel(name)));
-    return _kernels.back();
+    return _impl->CreateKernel(name);
 }
 //----------------------------------------------------------------------------//
 void ImageProcessor::SetDimensions(unsigned int width, unsigned int height)
 {
-    _w = width;
-    _h = height;
+    _impl->SetDimensions(width, height);
 }
 //----------------------------------------------------------------------------//
 double ImageProcessor::Allocate(std::string * error)
 {
-    throw std::logic_error("'Allocate' not implemented in subclass");
+    return _impl->Allocate(error);
 }
 //----------------------------------------------------------------------------//
 double ImageProcessor::Build(std::string * error)
 {
-    throw std::logic_error("'Build' not implemented in subclass");
+    return _impl->Build(error);
 }
 //----------------------------------------------------------------------------//
 double ImageProcessor::Run(std::string * error)
 {
-    throw std::logic_error("'Run' not implemented in subclass");
+    return _impl->Run(error);
 }
 //----------------------------------------------------------------------------//
 double ImageProcessor::Copy(Buffer::Ptr buffer,
@@ -160,29 +179,12 @@ double ImageProcessor::Copy(Buffer::Ptr buffer,
                             void * data,
                             std::string * error)
 {
-    throw std::logic_error("'Copy' not implemented in subclass");
+    return _impl->Copy(buffer, operation, data, error);
 }
 //----------------------------------------------------------------------------//
 std::string ImageProcessor::BoilerplateCode(Kernel::Ptr kernel) const
 {
-    throw std::logic_error("'BoilerplateCode' not implemented in subclass");
-}
-//----------------------------------------------------------------------------//
-unsigned int  ImageProcessor::_BufferSize(Buffer::Ptr buffer) const
-{
-    unsigned int bpp = 0; // bytes per pixel
-    switch(buffer->type) {
-        case Buffer::UNSIGNED_BYTE:
-            bpp = buffer->channels;
-            break;
-        case Buffer::HALF:
-            bpp = sizeof(float)/2 * buffer->channels;
-            break;
-        case Buffer::FLOAT:
-            bpp = sizeof(float) * buffer->channels;
-            break;
-    }
-    return bpp * _w * _h;
+    return _impl->BoilerplateCode(kernel);
 }
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

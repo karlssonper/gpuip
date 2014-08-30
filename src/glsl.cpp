@@ -27,6 +27,11 @@ SOFTWARE.
 #include "glcontext.h"
 #include <string.h>
 //----------------------------------------------------------------------------//
+extern "C" {
+    gpuip::ImplInterface * CreateImpl() { return new gpuip::GLSLImpl(); }
+    void DeleteImpl(gpuip::ImplInterface * impl) { delete impl; }
+}
+//----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
 inline GLenum _GetType(const Buffer::Ptr & b);
@@ -36,7 +41,7 @@ inline GLenum _GetFormat(const Buffer::Ptr & b);
 inline GLenum _GetInternalFormat(const Buffer::Ptr & b);
 //----------------------------------------------------------------------------//
 GLSLImpl::GLSLImpl()
-        : ImageProcessor(gpuip::GLSL), _glewInit(false),_glContextCreated(false)
+        :  _glewInit(false),_glContextCreated(false)
 {
 }
 //----------------------------------------------------------------------------//

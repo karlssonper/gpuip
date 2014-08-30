@@ -200,32 +200,26 @@ class ImageProcessor
 
     /*! \brief Factory function to create an ImageProcessor entity. */
     static ImageProcessor::Ptr Create(GpuEnvironment env);
+
+     /*! \brief Factory function to create an ImageProcessor entity.
+
+       \param sharedLibrary shared library name of the plugin
+     */
+    static ImageProcessor::Ptr Create(const std::string & sharedLibrary);
     
-    virtual ~ImageProcessor() {}
+    virtual ~ImageProcessor();
 
     /*! \brief Check if gpuip was compiled with a GpuEnvironment. */
     static bool CanCreate(GpuEnvironment env);
 
-    /*! \brief Returns the current GpuEnvironment. */
-    GpuEnvironment Environment() const
-    {
-        return _env;
-    }
+    /*! \brief Check if gpuip was compiled with a GpuEnvironment.
+
+      \param sharedLibrary shared library name of the plugin
+    */
+    static bool CanCreate(const std::string & sharedLibrary);
 
     /*! \brief Set the dimensions of algorithms. Must be set explicitly. */
     void SetDimensions(unsigned int width, unsigned int height);
-
-    /*! \brief Returns the images width in number of pixels */
-    unsigned int Width() const
-    {
-        return _w;
-    }
-
-    /*! \brief Returns the images height in number of pixels */
-    unsigned int Height() const
-    {
-        return _h;
-    }
 
     /*! \brief Creates a Buffer object with allocation info
 
@@ -267,7 +261,7 @@ class ImageProcessor
       function can be called multiple times since it starts
       with resetting previous allocated memory.
     */
-    virtual double Allocate(std::string * error);
+    double Allocate(std::string * error);
 
     /*! \brief Compiles the Kernel::Code for each Kernel object.
       \param error if function fails, the explaining error string is stored here
@@ -276,7 +270,7 @@ class ImageProcessor
       Call this function once the Kernel::code has been set for all kernels.
       Can be called multiple times to rebuild the kernels.
     */
-    virtual double Build(std::string * error);
+    double Build(std::string * error);
 
     /*! \brief Runs all of the image processing kernels.
       \param error if function fails, the explaining error string is stored here
@@ -286,7 +280,7 @@ class ImageProcessor
       ImageProcessor::Build and ImageProcessor::Allocate must have called
       before this function.
     */
-    virtual double Run(std::string * error);
+    double Run(std::string * error);
 
     /*! \brief Data tranfser from the CPU and the GPU.
       \param buffer buffer on the gpu to copy to/from
@@ -300,10 +294,10 @@ class ImageProcessor
       ImageProcessor::Allocate must be called at least once before this
       function.
     */
-    virtual double Copy(Buffer::Ptr buffer,
-                        Buffer::CopyOperation operation,
-                        void * data,
-                        std::string * error);
+    double Copy(Buffer::Ptr buffer,
+                Buffer::CopyOperation operation,
+                void * data,
+                std::string * error);
 
     /*! \brief Returns a boilerplate code for a given kernel.
       \param kernel Kernel to be processed
@@ -314,20 +308,17 @@ class ImageProcessor
       since they remove some of the redundent code that is shared between
       all kernels. It also guarantees that the argument list is correct.
      */
-    virtual std::string BoilerplateCode(Kernel::Ptr kernel) const;
+    std::string BoilerplateCode(Kernel::Ptr kernel) const;
                
   protected:
-    ImageProcessor(GpuEnvironment env);
-
-    const GpuEnvironment _env;
-    unsigned int _w; // width
-    unsigned int _h; // height
-    std::map<std::string, Buffer::Ptr> _buffers;
-    std::vector<Kernel::Ptr> _kernels;
-
-    unsigned int _BufferSize(Buffer::Ptr buffer) const;
-  
+    ImageProcessor(const char * sharedLibraryFilename);
+     
   private:
+    void * _dynamicLibObj;
+    class ImplInterface * _impl;
+    typedef ImplInterface *(* CreateImplFunc)();
+    typedef void (* DeleteImplFunc)(ImplInterface *);
+    
     ImageProcessor();
     ImageProcessor(const ImageProcessor &);
     void operator=(const ImageProcessor &);

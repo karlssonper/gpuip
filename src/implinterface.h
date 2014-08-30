@@ -22,55 +22,52 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GPUIP_CUDA_H_
-#define GPUIP_CUDA_H_
+#ifndef GPUIP_IMPL_INTERFACE_H_
+#define GPUIP_IMPL_INTERFACE_H_
 //----------------------------------------------------------------------------//
-#include "implinterface.h"
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include "gpuip.h"
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-class CUDAImpl : public ImplInterface
+class ImplInterface
 {
   public:
-    CUDAImpl();
+    virtual ~ImplInterface() {}
 
-    virtual ~CUDAImpl();
-    
-    virtual double Allocate(std::string * err);
-    
-    virtual double Build(std::string * err);
+    Buffer::Ptr CreateBuffer(const std::string & name,
+                             Buffer::Type type,
+                             unsigned int channels);
 
-    virtual double Run(std::string * err);
+    Kernel::Ptr CreateKernel(const std::string & name);
+
+    void SetDimensions(unsigned int width, unsigned int height);
     
+    virtual double Allocate(std::string * error) = 0;
+
+    virtual double Build(std::string * error) = 0;
+
+    virtual double Run(std::string * error) = 0;
+
     virtual double Copy(Buffer::Ptr buffer,
-                        Buffer::CopyOperation op,
+                        Buffer::CopyOperation operation,
                         void * data,
-                        std::string * err);
-
-    virtual std::string BoilerplateCode(Kernel::Ptr kernel) const;
+                        std::string * error) = 0;
     
+    virtual std::string BoilerplateCode(Kernel::Ptr kernel) const = 0;
+
   protected:
-    std::vector<CUfunction> _cudaKernels;
-    bool _cudaBuild;
-    CUmodule _cudaModule;
-    cudaEvent_t _start,_stop;
-    std::map<std::string, float*> _cudaBuffers;
+    ImplInterface();
     
-    bool _LaunchKernel(Kernel & kernel,
-                       const CUfunction & cudaKernel,
-                       std::string * err);
+    std::map<std::string, Buffer::Ptr> _buffers;
+    std::vector<Kernel::Ptr> _kernels;
 
-    void _StartTimer();
+    unsigned int _w; // width
+    unsigned int _h; // height
     
-    double _StopTimer();
+    unsigned int _BufferSize(Buffer::Ptr buffer) const;
 
-    bool _FreeBuffers(std::string * err);
-
-    bool _UnloadModule(std::string * err);
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip
-
+//----------------------------------------------------------------------------//
 #endif

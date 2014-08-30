@@ -26,10 +26,14 @@ SOFTWARE.
 #include "opencl_error.h"
 #include <ctime>
 //----------------------------------------------------------------------------//
+extern "C" {
+    gpuip::ImplInterface * CreateImpl() { return new gpuip::OpenCLImpl(); }
+    void DeleteImpl(gpuip::ImplInterface * impl) { delete impl; }
+}
+//----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
 OpenCLImpl::OpenCLImpl()
-        : ImageProcessor(OpenCL)
 {
     // Get Platform ID
     cl_platform_id platform_id;

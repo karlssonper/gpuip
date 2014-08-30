@@ -25,12 +25,12 @@ SOFTWARE.
 #ifndef GPUIP_GLSL_H_
 #define GPUIP_GLSL_H_
 //----------------------------------------------------------------------------//
-#include "gpuip.h"
+#include "implinterface.h"
 #include <GL/glew.h>
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-class GLSLImpl : public ImageProcessor
+class GLSLImpl : public ImplInterface
 {
   public:
     GLSLImpl();

@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef GPUIP_OPENCL_H_
 #define GPUIP_OPENCL_H_
 //----------------------------------------------------------------------------//
-#include "gpuip.h"
+#include "implinterface.h"
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -34,7 +34,7 @@ SOFTWARE.
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-class OpenCLImpl : public ImageProcessor
+class OpenCLImpl : public ImplInterface
 {
   public:
     OpenCLImpl();
