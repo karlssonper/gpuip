@@ -306,35 +306,37 @@ if(BUILD_PYTHON_BINDINGS)
 
 	# CImg
 	find_path(CIMG_INCLUDE_DIR NAMES CImg.h
-		PATHS ${CIMG_INCLUDE_DIR} $ENV{CIMG_INCLUDE_DIR})
+	  PATHS ${CIMG_INCLUDE_DIR} $ENV{CIMG_INCLUDE_DIR})
 	if(CIMG_INCLUDE_DIR)
-		include_directories(${CIMG_INCLUDE_DIR})
+	  include_directories(${CIMG_INCLUDE_DIR})
 	else()
-		message(STATUS "${Cyan}Adding third party target cimg${ColorReset}")
-		if(WIN32)
-		  set(CIMG_INSTALL_TARGET INSTALL)
-		else()
-		  set(CIMG_INSTALL_TARGEt install)
-		endif()
+	  message(STATUS "${Cyan}Adding third party target cimg${ColorReset}")
+	  if(WIN32)
 		find_program(cmake_bin NAMES cmake)
 		ExternalProject_Add(cimg
-			GIT_REPOSITORY ${GIT_REPO_CIMG}
-			BUILD_IN_SOURCE 1
-			PREFIX ${CMAKE_BINARY_DIR}/cimg
-			CONFIGURE_COMMAND "" 
-			BUILD_COMMAND ${cmake_bin} . 
-			-DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_DIR} -Wno-dev
-		       INSTALL_COMMAND  ${cmake_bin} --build . --target ${CIMG_INSTALL_TARGET})
-		# Not too happy about this extra step. Much simpler would just be empty
-		# Configure/Build commands and a 'cp CImg.h ${THIRD_PARTY_DIR}/include'
-		# as install command. Worked fine in unix/mac but could'nt get the 'copy' 
-		# command in windows to work with the args list, hence this 'hack'
+		  GIT_REPOSITORY ${GIT_REPO_CIMG}
+		  BUILD_IN_SOURCE 1
+		  PREFIX ${CMAKE_BINARY_DIR}/cimg
+		  CONFIGURE_COMMAND "" 
+		  BUILD_COMMAND ${cmake_bin} . 
+		  -DCMAKE_INSTALL_PREFIX=${THIRD_PARTY_DIR} -Wno-dev
+		  INSTALL_COMMAND  ${cmake_bin} --build . --target INSTALL)
+		# Could not get cp to work in windows, ugly workaround
 		ExternalProject_Add_Step(cimg modify_CMakeLists
-			COMMAND echo install(FILES CImg.h DESTINATION include) > CMakeLists.txt
-			DEPENDEES configure
-			DEPENDERS build
-			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/cimg/src/cimg)
-		  list(APPEND THIRD_PARTY_TARGETS cimg)
+		  COMMAND echo install(FILES CImg.h DESTINATION include) > CMakeLists.txt
+		  DEPENDEES configure
+		  DEPENDERS build
+		  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/cimg/src/cimg)
+		list(APPEND THIRD_PARTY_TARGETS cimg)
+	  else()
+		ExternalProject_Add(cimg
+		  GIT_REPOSITORY ${GIT_REPO_CIMG}
+		  BUILD_IN_SOURCE 1
+		  PREFIX ${CMAKE_BINARY_DIR}/cimg
+		  CONFIGURE_COMMAND "" 
+		  BUILD_COMMAND ""
+		  INSTALL_COMMAND cp CImg.h ${THIRD_PARTY_DIR}/include)
+	  endif()
 	endif()
 
 	# PNG
