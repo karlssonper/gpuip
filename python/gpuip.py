@@ -14,7 +14,7 @@ except:
 def getCommandLineArguments():
     # Command line arguments
     desc = "Framework for Image Processing on the GPU"
-    parser = parsermodule(desc)
+    parser = parsermodule(description=desc)
     parser.add_argument("-f", "--file",
                         help="Image Processing file *.ip")
     parser.add_argument("-p", "--param",
