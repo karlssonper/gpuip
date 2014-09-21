@@ -46,10 +46,13 @@ inline bool _cudaErrorGetFunction(CUresult c_err, std::string * err,
     return false;
 }
 //----------------------------------------------------------------------------//
-inline bool _cudaErrorMalloc(cudaError_t c_err, std::string * err)
+inline bool _cudaErrorGetTexRef(CUresult c_err, std::string * err,
+                                const std::string & buffer_name)
 {
-    if (c_err != cudaSuccess) {
-        (*err) += "Cuda: error when allocating buffers\n";
+    if (c_err != CUDA_SUCCESS) {
+        (*err) += "Cuda: Error, could not find texture named ";
+        (*err) += buffer_name;
+        (*err) += "\n";
         switch(c_err) {
             //TODO: add cases here
             default:
@@ -60,10 +63,13 @@ inline bool _cudaErrorMalloc(cudaError_t c_err, std::string * err)
     return false;
 }
 //----------------------------------------------------------------------------//
-inline bool _cudaErrorFree(cudaError_t c_err, std::string * err)
+inline bool _cudaErrorMemAlloc(CUresult c_err, std::string * err,
+                               const std::string & buffer_name)
 {
-    if (c_err != cudaSuccess) {
-        (*err) += "Cuda: error when releasing buffers\n";
+    if (c_err != CUDA_SUCCESS) {
+        (*err) += "Cuda: Error, could not allocate memory for buffer named ";
+        (*err) += buffer_name;
+        (*err) += "\n";
         switch(c_err) {
             //TODO: add cases here
             default:
@@ -74,28 +80,44 @@ inline bool _cudaErrorFree(cudaError_t c_err, std::string * err)
     return false;
 }
 //----------------------------------------------------------------------------//
-inline bool _cudaErrorCopy(cudaError_t c_err, std::string * err,
+inline bool _cudaErrorMemFree(CUresult c_err, std::string * err,
+                              const std::string & buffer_name)
+{
+    if (c_err != CUDA_SUCCESS) {
+        (*err) += "Cuda: Error, could not free memory for buffer named ";
+        (*err) += buffer_name;
+        (*err) += "\n";
+        switch(c_err) {
+            //TODO: add cases here
+            default:
+                break;
+        }
+        return true;
+    }
+    return false;
+}
+//----------------------------------------------------------------------------//
+inline bool _cudaErrorCopy(CUresult c_err, std::string * err,
                            const std::string & buffer, Buffer::CopyOperation op)
 {
-    if (c_err != cudaSuccess) {
+    if (c_err != CUDA_SUCCESS) {
         (*err) += "CUDA: error when copying data ";
         (*err) += op == Buffer::COPY_FROM_GPU ? "FROM" : "TO";
         (*err) += " buffer ";
         (*err) += buffer;
         switch(c_err) {
-            case cudaErrorInvalidValue:
+            case CUDA_ERROR_DEINITIALIZED:
+                (*err) += ". Deintialized.\n";
+                break;
+            case CUDA_ERROR_NOT_INITIALIZED:
+                (*err) += ". Not intialized.\n";
+                break;
+            case CUDA_ERROR_INVALID_CONTEXT:
+                (*err) += ". Invalid context.\n";
+                break;
+            case CUDA_ERROR_INVALID_VALUE:
                 (*err) += ". Invalid value.\n";
                 break;
-            case cudaErrorInvalidDevicePointer:
-                (*err) += ". Invalid device pointer.\n";
-                break;
-            case cudaErrorInvalidMemcpyDirection:
-                (*err) += ". Invalid Memcpy direction.\n";
-                break;
-            case cudaErrorIllegalAddress:
-                (*err) += ". Illegal address.\n";
-                break;
-                //TODO: add cases here
             default: {
                 (*err) += ". Unknown error enum: ";
                 std::stringstream ss;

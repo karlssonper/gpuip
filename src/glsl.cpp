@@ -92,7 +92,7 @@ void GLSLImpl::_DeleteBuffers()
 {
     std::map<std::string, GLuint>::iterator itt;
     if (!_fbos.empty()) {
-        glDeleteRenderbuffers(1, &_rboId);
+        glDeleteRenderbuffers(_rbos.size(), _rbos.data());
         glDeleteBuffers(_fbos.size(),_fbos.data());
     }
     for(itt = _textures.begin(); itt != _textures.end(); ++itt) {
@@ -104,6 +104,10 @@ void GLSLImpl::_DeleteBuffers()
 //----------------------------------------------------------------------------//
 double GLSLImpl::Allocate(std::string * err)
 {
+    if(!_ValidateBuffers(err)) {
+        return GPUIP_ERROR;
+    }
+    
     if (!_glewInit && !_InitGLEW(err)) {
         return GPUIP_ERROR;
     }
@@ -132,7 +136,7 @@ double GLSLImpl::Allocate(std::string * err)
         // Allocate memory on gpu (needed to bind framebuffer)
         Buffer::Ptr b = it->second;
         glTexImage2D(GL_TEXTURE_2D, 0, _GetInternalFormat(b),
-                     _w, _h, 0, _GetFormat(b), _GetType(b), 0);
+                     b->width, b->height, 0, _GetFormat(b), _GetType(b), 0);
         
         _textures[it->second->name] = texID;
 
@@ -143,15 +147,10 @@ double GLSLImpl::Allocate(std::string * err)
             
     // Create FBOs
     _fbos.reserve(_kernels.size());
+    _rbos.reserve(_kernels.size());
     glGenFramebuffers(_kernels.size(), _fbos.data());
-
-    // Create a renderbuffer object to store depth info
-    GLuint _rboId;
-    glGenRenderbuffers(1, &_rboId);
-    glBindRenderbuffer(GL_RENDERBUFFER, _rboId);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, _w, _h);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
+    glGenRenderbuffers(_kernels.size(), _rbos.data());
+        
     // Attach the textures to FBOs color attachment points
     for(size_t i = 0; i < _kernels.size(); ++i) {
         glBindFramebuffer(GL_FRAMEBUFFER, _fbos[i]);
@@ -162,8 +161,13 @@ double GLSLImpl::Allocate(std::string * err)
         }
        
         // attach the renderbuffer to depth attachment point
+        glBindRenderbuffer(GL_RENDERBUFFER, _rbos[i]);
+        const unsigned int w = _kernels[i]->outBuffers.front().buffer->width;
+        const unsigned int h = _kernels[i]->outBuffers.front().buffer->height;
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                  GL_RENDERBUFFER, _rboId);
+                                  GL_RENDERBUFFER, _rbos[i]);
         if (_glErrorFramebuffer(err)) {
             return GPUIP_ERROR;
         }
@@ -173,7 +177,7 @@ double GLSLImpl::Allocate(std::string * err)
     // Create and build quad vbo
     glGenBuffers(1, &_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-    float vertices[] = {0,0,1,0,1,1,0,1};
+    const float vertices[] = {0,0,1,0,1,1,0,1};
     glBufferData(GL_ARRAY_BUFFER, 32, vertices, GL_STATIC_DRAW);
     
     return _StopTimer();
@@ -181,6 +185,10 @@ double GLSLImpl::Allocate(std::string * err)
 //----------------------------------------------------------------------------//
 double GLSLImpl::Build(std::string * err)
 {
+    if(!_ValidateKernels(err)) {
+        return GPUIP_ERROR;
+    }
+    
     if (!_glewInit) {
         _InitGLEW(err);
     }
@@ -203,7 +211,7 @@ double GLSLImpl::Build(std::string * err)
             "}";
 
     _vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-    int length = strlen(vert_shader_code);
+    const int length = strlen(vert_shader_code);
     glShaderSource(_vertexShaderID, 1, &vert_shader_code, &length);
     glCompileShader(_vertexShaderID);
     
@@ -233,19 +241,12 @@ double GLSLImpl::Run(std::string * err)
 {
     _StartTimer();
     
-    glPushAttrib( GL_VIEWPORT_BIT );
-    
-    // Set the viewport to match the width and height
-    glViewport(0, 0, _w, _h);
-    
     for(size_t i = 0; i < _kernels.size(); ++i) {
         if (!_DrawQuad(*_kernels[i].get(), _fbos[i], _programs[i], err)) {
             return GPUIP_ERROR;
         }
     }
 
-    // Reset back to the previous viewport
-    glPopAttrib();
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
@@ -261,7 +262,7 @@ double GLSLImpl::Copy(Buffer::Ptr b,
     } else if (op == Buffer::COPY_TO_GPU) {
         glBindTexture(GL_TEXTURE_2D, _textures[b->name]);
         glTexImage2D(GL_TEXTURE_2D, 0, _GetInternalFormat(b),
-                     _w, _h, 0, _GetFormat(b), _GetType(b), data);
+                     b->width, b->height, 0, _GetFormat(b), _GetType(b), data);
     }
     if (_glErrorCopy(err, b->name, op)) {
         return GPUIP_ERROR;
@@ -302,7 +303,15 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
                          GLuint fbo,
                          GLuint program,
                          std::string * error)
-{   
+{
+    glPushAttrib( GL_VIEWPORT_BIT );
+    
+    // Set the viewport to match the width and height
+    const unsigned int width = kernel.outBuffers.front().buffer->width;
+    const unsigned int height = kernel.outBuffers.front().buffer->height;
+    glViewport(0, 0, width, height);
+
+    
     // Bind framebuffer and clear previous content
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -334,7 +343,7 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
         loc = glGetUniformLocation(program, kernel.paramsFloat[i].name.c_str());
         glUniform1f(loc, kernel.paramsFloat[i].value);
     }
-    glUniform1f(glGetUniformLocation(program, "dx"), 1.0f/_w);
+    glUniform1f(glGetUniformLocation(program, "dx"), 1.0f/width);
 
     // Save current active texture 
     GLint activeTexture;
@@ -367,6 +376,8 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
     // Back to old active texture
     glActiveTexture(activeTexture);
 
+    // Reset back to the previous viewport
+    glPopAttrib();
     return true;
 }
 //----------------------------------------------------------------------------//

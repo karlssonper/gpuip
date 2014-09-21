@@ -55,9 +55,9 @@ class GLSLImpl : public ImageProcessor
     bool _glContextCreated;
     GLint64 _timer;
     GLuint _vbo;
-    GLuint _rboId;
     GLuint _vertexShaderID;
     std::vector<GLuint> _fbos;
+    std::vector<GLuint> _rbos;
     std::vector<GLuint> _programs;
     std::map<std::string, GLuint> _textures;
 

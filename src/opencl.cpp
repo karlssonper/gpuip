@@ -71,6 +71,10 @@ OpenCLImpl::~OpenCLImpl()
 //----------------------------------------------------------------------------//
 double OpenCLImpl::Allocate(std::string * err)
 {
+    if(!_ValidateBuffers(err)) {
+        return GPUIP_ERROR;
+    }
+    
     const std::clock_t start = std::clock();
 
     if(!_ReleaseBuffers(err)) {
@@ -80,9 +84,22 @@ double OpenCLImpl::Allocate(std::string * err)
     cl_int cl_err;
     std::map<std::string,Buffer::Ptr>::const_iterator it;
     for (it = _buffers.begin(); it != _buffers.end(); ++it) {
+        cl_mem_flags memFlags;
+   
+        switch(_GetBufferReadWriteType(it->second)) {
+            case BUFFER_READ_ONLY:
+                memFlags = CL_MEM_WRITE_ONLY;
+                break;
+            case BUFFER_WRITE_ONLY:
+                memFlags = CL_MEM_READ_ONLY;
+                break;
+            case BUFFER_READ_AND_WRITE:
+            default:
+                memFlags = CL_MEM_READ_WRITE;
+        }
+      
         _clBuffers[it->second->name] = clCreateBuffer(
-            _ctx, CL_MEM_READ_WRITE,
-            _BufferSize(it->second), NULL, &cl_err);
+            _ctx, memFlags,_BufferSize(it->second), NULL, &cl_err);
         if (_clErrorInitBuffers(cl_err, err)) {
             return GPUIP_ERROR;
         }
@@ -92,6 +109,9 @@ double OpenCLImpl::Allocate(std::string * err)
 //----------------------------------------------------------------------------//
 double OpenCLImpl::Build(std::string * error)
 {
+    if(!_ValidateKernels(error)) {
+        return GPUIP_ERROR;
+    }
     const std::clock_t start = std::clock();
 
     if(!_ReleaseKernels(error)) {
@@ -206,15 +226,17 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     }
 
     // Set width and height parameters
-    cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),&_w);
-    cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),&_h);
+    const unsigned int width = kernel.outBuffers.front().buffer->width;
+    const unsigned int height = kernel.outBuffers.front().buffer->height;
+    cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),&width);
+    cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),&height);
 
     // It should be fine to check once all the arguments have been set
     if (_clErrorSetKernelArg(cl_err, err, kernel.name)) {
         return GPUIP_ERROR;
     }
     
-    const size_t global_work_size[] = { _w, _h };    
+    const size_t global_work_size[] = { width, height };
     cl_err = clEnqueueNDRangeKernel(_queue, clKernel, 2, NULL,
                                     global_work_size, NULL, 0, NULL, &event);
 

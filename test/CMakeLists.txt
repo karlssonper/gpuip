@@ -29,6 +29,10 @@ add_executable(test_cpp test)
 target_link_libraries(test_cpp gpuip)
 add_test(NAME test_cpp COMMAND test_cpp)
 
+add_executable(test_textures textures)
+target_link_libraries(test_textures gpuip)
+add_test(NAME test_textures COMMAND test_textures)
+
 set(GPUIP_TEST_IMAGE ${GPUIP_ROOT_DIR}/examples/images/bridge.exr)
 if(GPUIP_TEST_LIBRARIES AND 
 	(EXISTS ${GPUIP_TEST_IMAGE} OR DOWNLOAD_EXAMPLES_IMAGES))

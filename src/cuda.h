@@ -56,8 +56,9 @@ class CUDAImpl : public ImageProcessor
     bool _cudaBuild;
     CUmodule _cudaModule;
     cudaEvent_t _start,_stop;
-    std::map<std::string, float*> _cudaBuffers;
-    
+    std::map<std::string, CUdeviceptr> _cudaBuffers;
+    std::map<std::string, CUtexref> _cudaTextures;
+    std::map<std::string, size_t> _cudaPitch;
     bool _LaunchKernel(Kernel & kernel,
                        const CUfunction & cudaKernel,
                        std::string * err);

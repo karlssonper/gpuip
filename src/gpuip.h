@@ -57,7 +57,8 @@ enum GpuEnvironment {
 
     /*! <a href="http://www.opengl.org/">
       GLSL, OpenGL Shading Language by Khronos Group.</a> */
-    GLSL };
+    GLSL
+};
 //----------------------------------------------------------------------------//
 /*!
   \struct Buffer
@@ -78,7 +79,8 @@ struct Buffer
         /*! Copy data from CPU to GPU */
         COPY_TO_GPU,
         /*! Copy data from GPU to CPU */
-        COPY_FROM_GPU };
+        COPY_FROM_GPU
+    };
 
     /*! \brief Supported data types */
     enum Type{
@@ -90,9 +92,14 @@ struct Buffer
 
         /*! 32 bits per channel. Used in exr images, typically when half is
           not supported in the current environemnt. */
-        FLOAT };
+        FLOAT
+    };
     
-    Buffer(const std::string & name, Type type, unsigned int channels);
+    Buffer(const std::string & name,
+           Type type,
+           unsigned int width,
+           unsigned int height,
+           unsigned int channels);
 
     /*! \brief Unique identifying name.
 
@@ -102,11 +109,25 @@ struct Buffer
     
     Type type;
 
+    /*! \brief Number of pixels width. */
+    unsigned int width;
+
+    /*! \brief Number of pixels height. */
+    unsigned int height;
+
     /*! \brief Channels of data per pixel.
 
       A typical RGBA image has 4 channels. Gpuip buffers  with 2 or 3 channels
       have not been tested as much as 1 or 4 channel buffers. */
     unsigned int channels;
+
+    /*! \brief Use special texture memory on GPU. Default is off
+
+      Reading Texture memory can be faster since it has a separate cache.
+      Texture buffers have coordinates between [0,1] (usefull when sampling
+      from a buffer with unknown width).
+     */
+    bool isTexture;
 };
 //----------------------------------------------------------------------------//
 /*!
@@ -212,27 +233,14 @@ class ImageProcessor
         return _env;
     }
 
-    /*! \brief Set the dimensions of algorithms. Must be set explicitly. */
-    void SetDimensions(unsigned int width, unsigned int height);
-
-    /*! \brief Returns the images width in number of pixels */
-    unsigned int Width() const
-    {
-        return _w;
-    }
-
-    /*! \brief Returns the images height in number of pixels */
-    unsigned int Height() const
-    {
-        return _h;
-    }
-
     /*! \brief Creates a Buffer object with allocation info
 
       \param name Unique identifying name of buffer
       \param type per channel data type
+      \param width number of pixels width
+      \param height number of pixels height
       \param channels number of channels of data per pixel
-
+      
       \return A smart pointer to new registered Buffer object
       
       This is the only way a buffer can be registered to an ImageProcessor.
@@ -241,6 +249,8 @@ class ImageProcessor
      */
     Buffer::Ptr CreateBuffer(const std::string & name,
                              Buffer::Type type,
+                             unsigned int width,
+                             unsigned int height,
                              unsigned int channels);
 
     /*! \brief Creates and registeres a Kernel object.
@@ -320,13 +330,23 @@ class ImageProcessor
     ImageProcessor(GpuEnvironment env);
 
     const GpuEnvironment _env;
-    unsigned int _w; // width
-    unsigned int _h; // height
     std::map<std::string, Buffer::Ptr> _buffers;
     std::vector<Kernel::Ptr> _kernels;
 
     unsigned int _BufferSize(Buffer::Ptr buffer) const;
-  
+
+    enum _BufferReadWriteType {
+        BUFFER_NOT_USED      = 0,
+        BUFFER_READ_ONLY     = 1,
+        BUFFER_WRITE_ONLY    = 2,
+        BUFFER_READ_AND_WRITE = 3
+    };
+    _BufferReadWriteType _GetBufferReadWriteType(Buffer::Ptr buffer);
+
+    bool _ValidateBuffers(std::string * error);
+
+    bool _ValidateKernels(std::string * error);
+    
   private:
     ImageProcessor();
     ImageProcessor(const ImageProcessor &);

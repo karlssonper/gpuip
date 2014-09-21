@@ -406,11 +406,13 @@ void GaussianBlurSeparableGPU(gpuip::GpuEnvironment env,
     }
 
     gpuip::ImageProcessor::Ptr ip(gpuip::ImageProcessor::Create(env));
-    ip->SetDimensions(width, height);
-
-    gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::Buffer::HALF, 4);
-    gpuip::Buffer::Ptr b2 = ip->CreateBuffer("b2", gpuip::Buffer::HALF, 4);
-    gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF, 4);
+    
+    gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::Buffer::HALF,
+                                             width, height, 4);
+    gpuip::Buffer::Ptr b2 = ip->CreateBuffer("b2", gpuip::Buffer::HALF,
+                                             width, height, 4);
+    gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF,
+                                             width, height, 4);
 
     gpuip::Kernel::Ptr kernelA = ip->CreateKernel("gaussian_blur_hor");
     kernelA->code = codeHor;
@@ -459,11 +461,13 @@ void BlurGPU(gpuip::GpuEnvironment env,
     }
 
     gpuip::ImageProcessor::Ptr ip(gpuip::ImageProcessor::Create(env));
-    ip->SetDimensions(width, height);
-
-    gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::Buffer::HALF, 4);
-    gpuip::Buffer::Ptr b2 = ip->CreateBuffer("b2", gpuip::Buffer::HALF, 4);
-    gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF, 4);
+   
+    gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::Buffer::HALF,
+                                             width, height, 4);
+    gpuip::Buffer::Ptr b2 = ip->CreateBuffer("b2", gpuip::Buffer::HALF,
+                                             width, height, 4);
+    gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF,
+                                             width, height, 4);
 
     gpuip::Kernel::Ptr kernel = ip->CreateKernel(blur);
     kernel->code = code;
@@ -504,11 +508,13 @@ void LerpGPU(gpuip::GpuEnvironment env,
     }
 
     gpuip::ImageProcessor::Ptr ip(gpuip::ImageProcessor::Create(env));
-    ip->SetDimensions(width, height);
-
-    gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::Buffer::HALF, 4);
-    gpuip::Buffer::Ptr b2 = ip->CreateBuffer("b2", gpuip::Buffer::HALF, 4);
-    gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF, 4);    
+    
+    gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::Buffer::HALF,
+                                             width, height, 4);
+    gpuip::Buffer::Ptr b2 = ip->CreateBuffer("b2", gpuip::Buffer::HALF,
+                                             width, height, 4);
+    gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF,
+                                             width, height, 4);    
     
     gpuip::Kernel::Ptr kernel = ip->CreateKernel("lerp");
     kernel->code = code;

@@ -63,20 +63,72 @@ CUDAImpl::~CUDAImpl()
 //----------------------------------------------------------------------------//
 double CUDAImpl::Allocate(std::string * err)
 {
+    if(!_ValidateBuffers(err)) {
+        return GPUIP_ERROR;
+    }
+    
     _StartTimer();
 
     if (!_FreeBuffers(err)) {
         return GPUIP_ERROR;
     }
-    
+
+    CUresult result;
     std::map<std::string,Buffer::Ptr>::const_iterator it;
     for(it = _buffers.begin(); it != _buffers.end(); ++it) {
-        _cudaBuffers[it->second->name] = NULL;
-        cudaError_t c_err = cudaMalloc(&_cudaBuffers[it->second->name],
-                                       _BufferSize(it->second));
-        if(_cudaErrorMalloc(c_err, err)) {
-            return GPUIP_ERROR;
+        CUdeviceptr dptr;
+        
+        // If tagged as texture, get texture handle
+        if(it->second->isTexture) {
+            if (!_cudaBuild) {
+                (*err) += "CUDA error: Need to build kernel code ";
+                (*err) += "before allocating.\n";
+                return GPUIP_ERROR;
+            }
+
+            size_t pitch;
+            result = cuMemAllocPitch(&dptr, &pitch,
+                                     it->second->width * 4,
+                                     it->second->height, 4);
+            _cudaPitch[it->second->name] = pitch;
+            if(_cudaErrorMemAlloc(result, err, it->second->name)) {
+                return GPUIP_ERROR;
+            }
+            
+            CUtexref texRef;
+            result = cuModuleGetTexRef(&texRef, _cudaModule,
+                                                it->second->name.c_str());
+            if(_cudaErrorGetTexRef(result, err,it->second->name)) {
+                return GPUIP_ERROR;
+            }
+
+            CUDA_ARRAY_DESCRIPTOR desc;
+            desc.Format = CU_AD_FORMAT_FLOAT;
+            desc.Width = it->second->width;
+            desc.Height = it->second->height;
+            desc.NumChannels = it->second->channels;
+            CUresult res;
+            res = cuTexRefSetAddress2D(texRef, &desc, dptr, pitch);
+            if(res != CUDA_SUCCESS) {
+                std::cout << CU_DEVICE_ATTRIBUTE_TEXTURE_PITCH_ALIGNMENT << std::endl;
+                std::cout << CU_DEVICE_ATTRIBUTE_TEXTURE_ALIGNMENT << std::endl;
+                std::cout << "NOOOO" << res <<  std::endl;
+            };
+            //todo not * 4
+            
+            cuTexRefSetFlags(texRef, CU_TRSF_NORMALIZED_COORDINATES);
+            cuTexRefSetAddressMode(texRef, 0, CU_TR_ADDRESS_MODE_CLAMP);
+            cuTexRefSetAddressMode(texRef, 1, CU_TR_ADDRESS_MODE_CLAMP);
+            cuTexRefSetFilterMode(texRef, CU_TR_FILTER_MODE_LINEAR);
+                        
+            _cudaTextures[it->second->name] = texRef;
+        } else {
+            result = cuMemAlloc(&dptr, _BufferSize(it->second));
+            if(_cudaErrorMemAlloc(result, err, it->second->name)) {
+                return GPUIP_ERROR;
+            }
         }
+        _cudaBuffers[it->second->name] = dptr;
     }
     return _StopTimer();
 }
@@ -115,6 +167,10 @@ inline int _removeFile(const char * filename)
 }
 double CUDAImpl::Build(std::string * err)
 {
+    if(!_ValidateKernels(err)) {
+        return GPUIP_ERROR;
+    }
+    
     _StartTimer();
 
     if(!_UnloadModule(err)) {
@@ -133,9 +189,36 @@ double CUDAImpl::Build(std::string * err)
     // Create temporary file to compile
     std::ofstream out(file_temp_cu);
     out << "#include \"" << file_helper_math_h << "\"\n";
-    out << "extern \"C\" { \n"; // To avoid function name mangling 
+    out << "extern \"C\" { \n"; // To avoid function name mangling
+
+    // Buffers tagged as textures
+    std::map<std::string,Buffer::Ptr>::const_iterator it;
+    for(it = _buffers.begin(); it != _buffers.end(); ++it) {
+        if(it->second->isTexture) {
+            out << "texture<";
+            out << "float";
+            out << ",2> " << it->second->name << ";\n";
+        }
+    }
+    
+    // Kernels
     for(size_t i = 0; i < _kernels.size(); ++i) {
+        //Defines for input buffers taggad as textures
+        std::vector<std::string> definedTextures;
+        for(size_t j = 0; j < _kernels[i]->inBuffers.size(); ++j) {
+            if (_kernels[i]->inBuffers[j].buffer->isTexture) {
+                definedTextures.push_back(_kernels[i]->inBuffers[j].name);
+                out << "#define " << definedTextures.back()
+                    << " " << _kernels[i]->inBuffers[j].buffer->name << "\n";
+            }
+        }
+        
         out << _kernels[i]->code << "\n";
+
+        //Undef buffers tagged as textures
+        for(size_t j = 0; j < definedTextures.size(); ++j) {
+            out << "#undef " << definedTextures[j] << "\n";
+        }
     }
     out << "}"; // End the extern C bracket
     out.close();
@@ -167,7 +250,7 @@ double CUDAImpl::Build(std::string * err)
 
     // Cleanup temp text file
     _removeFile(file_helper_math_h);
-    _removeFile(file_temp_cu);
+    //_removeFile(file_temp_cu);
         
     if (nvcc_exit_status) {
         (*err) = "Cuda error: Could not compile kernels:\n";
@@ -214,16 +297,36 @@ double CUDAImpl::Copy(Buffer::Ptr buffer,
                       std::string * err)
 {
     _StartTimer();
-    cudaError_t e = cudaSuccess;
+    CUresult c_err = CUDA_SUCCESS;
     const size_t size = _BufferSize(buffer);
     if (op == Buffer::COPY_FROM_GPU) {
-        e =cudaMemcpy(data, _cudaBuffers[buffer->name],
-                      size, cudaMemcpyDeviceToHost);
+        c_err = cuMemcpyDtoH(data, _cudaBuffers[buffer->name], size);
     } else if (op == Buffer::COPY_TO_GPU) {
-        e = cudaMemcpy(_cudaBuffers[buffer->name],data,
-                       size, cudaMemcpyHostToDevice);
+        if(buffer->isTexture) {
+            const CUDA_MEMCPY2D cpy = {
+                0,
+                0,
+                CU_MEMORYTYPE_HOST,
+                data,
+                0,
+                0,
+                0,
+
+                0,
+                0,
+                CU_MEMORYTYPE_DEVICE,
+                0,
+                _cudaBuffers[buffer->name],
+                0,
+                _cudaPitch[buffer->name],
+                buffer->width*4,
+                buffer->height};
+            cuMemcpy2D(&cpy);
+        } else {
+            c_err = cuMemcpyHtoD(_cudaBuffers[buffer->name], data, size);
+        }
     }
-    if (_cudaErrorCopy(e, err, buffer->name, op)) {
+    if (_cudaErrorCopy(c_err, err, buffer->name, op)) {
         return GPUIP_ERROR;
     }
     return _StopTimer();
@@ -237,16 +340,23 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
     CUresult c_err;
     int paramOffset = 0;
     for(size_t i = 0; i < kernel.inBuffers.size(); ++i) {
-        c_err = cuParamSetv(cudaKernel, paramOffset,
-                            &_cudaBuffers[kernel.inBuffers[i].buffer->name],
-                            sizeof(void*));
-        paramOffset += sizeof(void *);
+        if (kernel.inBuffers[i].buffer->isTexture) {
+            // Make texture available in kernel
+            c_err = cuParamSetTexRef(
+                cudaKernel, CU_PARAM_TR_DEFAULT,
+                _cudaTextures[kernel.inBuffers[i].buffer->name]);
+        } else {            
+            c_err = cuParamSetv(cudaKernel, paramOffset,
+                                &_cudaBuffers[kernel.inBuffers[i].buffer->name],
+                                sizeof(CUdeviceptr));
+            paramOffset += sizeof(CUdeviceptr);
+        }
     }
     for(size_t i = 0; i < kernel.outBuffers.size(); ++i) {
         c_err = cuParamSetv(cudaKernel, paramOffset,
                             &_cudaBuffers[kernel.outBuffers[i].buffer->name],
-                            sizeof(void*));
-        paramOffset += sizeof(void *);
+                            sizeof(CUdeviceptr));
+        paramOffset += sizeof(CUdeviceptr);
     }
     for(size_t i = 0; i < kernel.paramsInt.size(); ++i) {
         c_err = cuParamSetv(cudaKernel, paramOffset,
@@ -259,9 +369,11 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
         paramOffset += sizeof(float);
     }
     // int and width parameters
-    c_err = cuParamSetv(cudaKernel, paramOffset, &_w, sizeof(int));
+    int width = kernel.outBuffers.front().buffer->width;
+    int height = kernel.outBuffers.front().buffer->height;
+    c_err = cuParamSetv(cudaKernel, paramOffset, &width, sizeof(int));
     paramOffset += sizeof(int);
-    c_err = cuParamSetv(cudaKernel, paramOffset, &_h, sizeof(int));
+    c_err = cuParamSetv(cudaKernel, paramOffset, &height, sizeof(int));
     paramOffset += sizeof(int);
     
     // It should be fine to check once all the arguments have been set
@@ -275,8 +387,8 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
     }
 
     // Launch the CUDA kernel
-    const int nBlocksHor = _w / 16 + 1;
-    const int nBlocksVer = _h / 16 + 1;
+    const int nBlocksHor = width / 16 + 1;
+    const int nBlocksVer = width / 16 + 1;
     cuFuncSetBlockShape(cudaKernel, 16, 16, 1);
     c_err = cuLaunchGrid(cudaKernel, nBlocksHor, nBlocksVer);
     if (_cudaErrorLaunchKernel(c_err, err, kernel.name)) {
@@ -294,18 +406,30 @@ std::string CUDAImpl::BoilerplateCode(Kernel::Ptr kernel) const
     ss << ",\n" << std::string(kernel->name.size() + 1, ' ');
     const std::string indent = ss.str();
     ss.str("");
-   
+
+    // Textures
+    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
+        if(kernel->inBuffers[i].buffer->isTexture) {
+            ss << "//texture<float,2> " << kernel->inBuffers[i].name
+               << "; defined globally, do not uncomment.\n";
+        }
+    }
+    
     ss << "__global__ void\n" << kernel->name << "(";
 
     bool first = true;
 
     for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;
-        const std::string & name = kernel->inBuffers[i].buffer->name;
-        ss << "const " << _GetTypeStr(_buffers.find(name)->second)
-           << " * " << kernel->inBuffers[i].name
-           << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");   }
+        if(!kernel->inBuffers[i].buffer->isTexture) {
+            ss << (first ? "" : indent);
+            first = false;
+            const std::string & name = kernel->inBuffers[i].buffer->name;
+            Buffer::Type type = _buffers.find(name)->second->type;
+            ss << "const " << _GetTypeStr(_buffers.find(name)->second)
+               << " * " << kernel->inBuffers[i].name
+               << (type == Buffer::HALF ? "_half" : "");
+        }
+    }
 
     for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
         ss << (first ? "" : indent);
@@ -463,15 +587,16 @@ double CUDAImpl::_StopTimer()
 //----------------------------------------------------------------------------//
 bool CUDAImpl::_FreeBuffers(std::string * err)
 {
-    cudaError_t c_err;
-    std::map<std::string, float*>::iterator itb;
+    CUresult c_err;
+    std::map<std::string, CUdeviceptr>::iterator itb;
     for(itb = _cudaBuffers.begin(); itb != _cudaBuffers.end(); ++itb) {
-        c_err = cudaFree(itb->second);
-        if (_cudaErrorFree(c_err, err)) {
+        c_err = cuMemFree(itb->second);
+        if (_cudaErrorMemFree(c_err, err, itb->first)) {
             return false;
         }
     }
     _cudaBuffers.clear();
+    _cudaTextures.clear(); // only handles, no need to free/delete memory
     return true;
 }
 //----------------------------------------------------------------------------//

@@ -1,5 +1,4 @@
 #include <gpuip.h>
-#include <cassert>
 #include <stdlib.h>
 #include <math.h>
 //----------------------------------------------------------------------------//
@@ -249,9 +248,23 @@ const char * glsl_boilerplateB = ""
 "    gl_FragData[0] = vec4(0,0,0,1);\n"
 "}";
 //----------------------------------------------------------------------------//
-inline bool equal(float a, float b)
+std::string err;
+//----------------------------------------------------------------------------//
+inline void correct(bool statement, const char * msg)
 {
-    return fabs(a-b) < 0.001;
+    if(!statement) {
+        throw std::runtime_error(std::string(msg));
+    }
+}
+//----------------------------------------------------------------------------//
+inline void correct(double execution_time)
+{
+    correct(execution_time >= 0, err.c_str());
+}
+//----------------------------------------------------------------------------//
+inline bool correct(float a, float b, const char * msg)
+{
+    correct(fabs(a-b) < 0.001, msg);
 }
 //----------------------------------------------------------------------------//
 void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
@@ -268,64 +281,61 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
     const unsigned int height = 4;
     const unsigned int N = width * height;
     gpuip::ImageProcessor::Ptr ip(gpuip::ImageProcessor::Create(env));
-    ip->SetDimensions(width, height);
 
-    gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::Buffer::FLOAT, 1);
-    gpuip::Buffer::Ptr b2 = ip->CreateBuffer("b2", gpuip::Buffer::FLOAT, 1);
-    gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::FLOAT, 1);
+    gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::Buffer::FLOAT,
+                                             width, height, 1);
+    gpuip::Buffer::Ptr b2 = ip->CreateBuffer("b2", gpuip::Buffer::FLOAT,
+                                             width, height, 1);
+    gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::FLOAT,
+                                             width, height, 1);
 
     gpuip::Kernel::Ptr kernelA = ip->CreateKernel("my_kernelA");
-    assert(kernelA.get() != NULL);
-    assert(kernelA->name == std::string("my_kernelA"));
+    correct(kernelA.get() != NULL, "kernel is null");
+    correct(kernelA->name == std::string("my_kernelA"), "kernel name mismatch");
     kernelA->code = codeA;
     kernelA->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"A"));
     kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"B"));
     kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"C"));
 
-
     const gpuip::Parameter<int> incA("incA", 2);
     const gpuip::Parameter<float> incB("incB", 0.25);
     kernelA->paramsInt.push_back(incA);
     kernelA->paramsFloat.push_back(incB);
-    assert(ip->BoilerplateCode(kernelA) == std::string(boilerplateA));
+    correct(ip->BoilerplateCode(kernelA) == boilerplateA,"boilerplate A wrong");
     
     gpuip::Kernel::Ptr kernelB = ip->CreateKernel("my_kernelB");
-    assert(kernelB.get() != NULL);
-    assert(kernelB->name == std::string("my_kernelB"));
+    correct(kernelB.get() != NULL, "kernel is null");
+    correct(kernelB->name == std::string("my_kernelB"), "kernel name mismatch");
     kernelB->code = codeB;
     kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b2,"B"));
     kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b3,"C"));
     kernelB->outBuffers.push_back(gpuip::Kernel::BufferLink(b1,"A"));
-    assert(ip->BoilerplateCode(kernelB) == std::string(boilerplateB));
+    correct(ip->BoilerplateCode(kernelB) == boilerplateB,"boilerplate B wrong");
     
-    std::string err;
-    assert(ip->Allocate(&err) >= 0);
-    assert(ip->Allocate(&err) >= 0); //reiniting should not break things
+    correct(ip->Allocate(&err) >= 0, err.c_str());
+    //reiniting should not break things
+    correct(ip->Allocate(&err) >= 0, err.c_str());
     
     std::vector<float> data_in(N);
     for(size_t i = 0; i < data_in.size(); ++i) {
         data_in[i] = i;
     }
-    assert(ip->Copy(b1, gpuip::Buffer::WRITE_DATA,
-                   data_in.data(), &err) >= 0);
+    correct(ip->Copy(b1, gpuip::Buffer::COPY_TO_GPU,data_in.data(), &err));
 
-    assert(ip->Build(&err) >= 0);
-    assert(ip->Build(&err) >= 0); // rebuilding should not break things
+    correct(ip->Build(&err));
+    correct(ip->Build(&err)); // rebuilding should not break things
   
-    assert(ip->Run(&err) >= 0);
+    correct(ip->Run(&err));
     
     std::vector<float> data_outA(N), data_outB(N), data_outC(N);
-    assert(ip->Copy(b1, gpuip::Buffer::READ_DATA,data_outA.data(),&err) >= 0);
-    assert(ip->Copy(b2, gpuip::Buffer::READ_DATA,data_outB.data(),&err) >= 0);
-    assert(ip->Copy(b3, gpuip::Buffer::READ_DATA,data_outC.data(),&err) >= 0);
-
+    correct(ip->Copy(b1, gpuip::Buffer::COPY_FROM_GPU,data_outA.data(), &err));
+    correct(ip->Copy(b2, gpuip::Buffer::COPY_FROM_GPU,data_outB.data(), &err));
+    correct(ip->Copy(b3, gpuip::Buffer::COPY_FROM_GPU,data_outC.data(),&err));
+            
     for(unsigned int i = 0; i < N; ++i) {
-        // Check first kernel call, where B = A + 0.2, C = A + 0.25
-        assert(equal(data_outB[i], data_in[i] + incA.value*0.1));
-        assert(equal(data_outC[i], data_in[i] + incB.value));
-
-        // Check second kernel call, where A = B + C
-        assert(equal(data_outA[i], data_outB[i] + data_outC[i]));
+        correct(data_outB[i], data_in[i]+incA.value*0.1, "b != a + incA * 0.1");
+        correct(data_outC[i], data_in[i] + incB.value, "c != a + incB");
+        correct(data_outA[i], data_outB[i] + data_outC[i],"a != b + c");
     }
     std::cout << "Test passed!" << std::endl;
 }

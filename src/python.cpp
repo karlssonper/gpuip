@@ -57,6 +57,36 @@ class BufferWrapper
     {
         return buffer->channels;
     }
+
+    bool isTexture() const
+    {
+        return buffer->isTexture;
+    }
+
+    void setIsTexture(bool isTexture)
+    {
+        buffer->isTexture = isTexture;
+    }
+
+    unsigned int width() const
+    {
+        return buffer->width;
+    }
+
+    void setWidth(unsigned int width)
+    {
+        buffer->width = width;
+    }
+
+    unsigned int height() const
+    {
+        return buffer->height;
+    }
+
+    void setHeight(unsigned int height)
+    {
+        buffer->height = height;
+    }
     
     std::string Read(const std::string & filename)
     {
@@ -157,29 +187,17 @@ class ImageProcessorWrapper
     }
 
     boost::shared_ptr<BufferWrapper> CreateBuffer(const std::string & name,
-                                                   gpuip::Buffer::Type type,
-                                                   unsigned int channels)
+                                                  gpuip::Buffer::Type type,
+                                                  unsigned int width,
+                                                  unsigned int height,
+                                                  unsigned int channels)
     {
-        gpuip::Buffer::Ptr ptr = _ip->CreateBuffer(name, type, channels);
+        gpuip::Buffer::Ptr ptr = _ip->CreateBuffer(name, type,
+                                                   width, height, channels);
         // safe since BufferWrapper doesnt hold any extra data
         return boost::shared_ptr<BufferWrapper>(new BufferWrapper(ptr));
     }
 
-    void SetDimensions(unsigned int width, unsigned int height)
-    {
-        _ip->SetDimensions(width,height);
-    }
-
-    unsigned int Width() const
-    {
-        return _ip->Width();
-    }
-
-    unsigned int Height() const
-    {
-        return _ip->Height();
-    }
-    
     std::string Allocate()
     {
         std::string err;
@@ -249,7 +267,13 @@ BOOST_PYTHON_MODULE(pygpuip)
             ("Buffer", bp::no_init)
             .add_property("name", &gp::BufferWrapper::name)
             .add_property("type", &gp::BufferWrapper::type)
-            .add_property("channels", &gp::BufferWrapper::channels) 
+            .add_property("channels", &gp::BufferWrapper::channels)
+            .add_property("isTexture", &gp::BufferWrapper::isTexture,
+                          &gp::BufferWrapper::setIsTexture)
+            .add_property("width", &gp::BufferWrapper::width,
+                          &gp::BufferWrapper::setWidth)
+            .add_property("height", &gp::BufferWrapper::height,
+                          &gp::BufferWrapper::setHeight)
             .def_readwrite("data", &gp::BufferWrapper::data)
             .def("Read", &gp::BufferWrapper::Read)
             .def("Read", &gp::BufferWrapper::ReadMT)
@@ -279,9 +303,6 @@ BOOST_PYTHON_MODULE(pygpuip)
             boost::shared_ptr<gp::ImageProcessorWrapper> >
             ("ImageProcessor",
              bp::init<gpuip::GpuEnvironment>())
-            .def("SetDimensions", &gp::ImageProcessorWrapper::SetDimensions)
-            .add_property("width", &gp::ImageProcessorWrapper::Width)
-            .add_property("height", &gp::ImageProcessorWrapper::Height)
             .def("CreateBuffer", &gp::ImageProcessorWrapper::CreateBuffer)
             .def("CreateKernel", &gp::ImageProcessorWrapper::CreateKernel)
             .def("Allocate", &gp::ImageProcessorWrapper::Allocate)

@@ -23,6 +23,9 @@ SOFTWARE.
 */
 
 #include "gpuip.h"
+#include <set>
+#include <algorithm>
+#include <sstream>
 //----------------------------------------------------------------------------//
 #ifdef _GPUIP_OPENCL
 #include "opencl.h"
@@ -91,8 +94,13 @@ bool ImageProcessor::CanCreate(GpuEnvironment env)
     }
 }
 //----------------------------------------------------------------------------//
-Buffer::Buffer(const std::string & name_, Type type_, unsigned int channels_)
-        : name(name_), type(type_), channels(channels_)
+Buffer::Buffer(const std::string & name_,
+               Type type_,
+               unsigned int width_,
+               unsigned int height_,
+               unsigned int channels_)
+        : name(name_), type(type_), width(width_), height(height_),
+          channels(channels_), isTexture(false)
 {
 }
 //----------------------------------------------------------------------------//
@@ -107,7 +115,7 @@ Kernel::BufferLink::BufferLink(Buffer::Ptr buffer_, const std::string & name_)
 }
 //----------------------------------------------------------------------------//
 ImageProcessor::ImageProcessor(GpuEnvironment env)
-        : _env(env), _w(0), _h(0)
+        : _env(env)
 {
     
 }
@@ -115,16 +123,19 @@ ImageProcessor::ImageProcessor(GpuEnvironment env)
 Buffer::Ptr
 ImageProcessor::CreateBuffer(const std::string & name,
                              Buffer::Type type,
+                             unsigned int width,
+                             unsigned int height,
                              unsigned int channels)
 {
     if (_buffers.find(name) == _buffers.end()) {
-        Buffer::Ptr p = Buffer::Ptr(new Buffer(name, type, channels));
+        Buffer::Ptr p = Buffer::Ptr(
+            new Buffer(name, type, width, height, channels));
         _buffers[name] = p;
         return p;
     } else {
         std::cerr << "gpuip error: Buffer named " << name
                   << " already exists. Skipping..." << std::endl;
-        return Buffer::Ptr(new Buffer(name, type, channels));
+        return Buffer::Ptr(new Buffer(name, type, width, height, channels));
     }
 }
 //----------------------------------------------------------------------------//
@@ -132,12 +143,6 @@ Kernel::Ptr ImageProcessor::CreateKernel(const std::string & name)
 {
     _kernels.push_back(Kernel::Ptr(new Kernel(name)));
     return _kernels.back();
-}
-//----------------------------------------------------------------------------//
-void ImageProcessor::SetDimensions(unsigned int width, unsigned int height)
-{
-    _w = width;
-    _h = height;
 }
 //----------------------------------------------------------------------------//
 double ImageProcessor::Allocate(std::string * error)
@@ -182,7 +187,197 @@ unsigned int  ImageProcessor::_BufferSize(Buffer::Ptr buffer) const
             bpp = sizeof(float) * buffer->channels;
             break;
     }
-    return bpp * _w * _h;
+    return bpp * buffer->width * buffer->height;
+}
+//----------------------------------------------------------------------------//
+ImageProcessor::_BufferReadWriteType ImageProcessor::_GetBufferReadWriteType(
+    Buffer::Ptr buf)
+{
+    bool read = false;
+    bool write = false; 
+    for(size_t i = 0; i < _kernels.size(); ++i) {
+        for(size_t j = 0; j < _kernels[i]->inBuffers.size(); ++j) {
+            if(_kernels[i]->inBuffers[j].buffer->name == buf->name) {
+                read = true;
+            }
+        }
+        for(size_t j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
+            if(_kernels[i]->outBuffers[j].buffer->name == buf->name) {
+                write = true;
+            }
+        }
+    }
+    
+    if(!read && !write) {
+        return BUFFER_NOT_USED;
+    } else if (read && !write) {
+        return BUFFER_READ_ONLY;
+    } else if (!read && write) {
+        return BUFFER_WRITE_ONLY;
+    } else {
+        return BUFFER_READ_AND_WRITE;
+    }
+}
+//----------------------------------------------------------------------------//
+bool ImageProcessor::_ValidateBuffers(std::string * error)
+{
+    std::map<std::string,Buffer::Ptr>::const_iterator it;
+    for(it = _buffers.begin(); it != _buffers.end(); ++it) {
+        const Buffer::Ptr & buffer = it->second;
+        if(buffer->name.empty()) {
+            (*error) += "Buffer name empty.\n";
+            return false;
+        }
+        if(!buffer->width) {
+            (*error) += buffer->name;
+            (*error) += " has width = 0.\n";
+            return false;
+        }
+        if(!buffer->height) {
+            (*error) += buffer->name;
+            (*error) += " has height = 0.\n";
+            return false;
+        }
+        if(buffer->channels < 1 || buffer->channels > 4) {
+            (*error) += buffer->name;
+            (*error) += " has channels outside range [1,4].\n";
+            return false;
+        }
+    }
+    return true;
+}
+//----------------------------------------------------------------------------//
+bool ImageProcessor::_ValidateKernels(std::string * err)
+{
+    std::stringstream ss;
+    ss << "gpuip error. kernel ";
+    for(size_t i = 0; i < _kernels.size(); ++i) {
+        const Kernel::Ptr & kernel = _kernels[i];
+        if(kernel->name.empty()) {
+            ss << "name empty.\n";
+            (*err) += ss.str();
+            return false;
+        }
+        if(kernel->code.empty()) {
+            ss << kernel->name << " code empty.\n";
+            (*err) += ss.str();
+            return false;
+        }
+
+        if(kernel->outBuffers.empty()) {
+            ss << kernel->name << " has no output buffer(s).\n";
+            (*err) += ss.str();
+            return false;
+        }
+        
+        std::set<std::string> inBuffers;
+        std::set<std::string> inBuffersName;
+        for(size_t j = 0; j < kernel->inBuffers.size(); ++j) {
+            if(!inBuffers.insert(kernel->inBuffers[j].buffer->name).second) {
+                ss << kernel->name << ": "
+                   << kernel->inBuffers[j].buffer->name
+                   << " used twice as input buffer.\n";
+                (*err) += ss.str();
+                return false;
+            }
+            if(!inBuffersName.insert(kernel->inBuffers[j].name).second) {
+                ss << kernel->name << ": "
+                   << kernel->inBuffers[j].name
+                   << " used twice as naming of input buffer.\n";
+                (*err) += ss.str();
+                return false;
+            }
+        }
+        
+        std::set<std::string> outBuffers;
+        std::set<std::string> outBuffersName;
+        for(size_t j = 0; j < kernel->outBuffers.size(); ++j) {
+            if(!outBuffers.insert(kernel->outBuffers[j].buffer->name).second) {
+                ss << kernel->name << ": "
+                   << kernel->outBuffers[j].buffer->name
+                   << " used twice as output buffer.\n";
+                (*err) += ss.str();
+                return false;
+            }
+            if(!outBuffersName.insert(kernel->outBuffers[j].name).second) {
+                ss << kernel->name << ": "
+                   << kernel->outBuffers[j].name
+                   << " used twice as naming of output buffer.\n";
+                (*err) += ss.str();
+                return false;
+            }
+        }
+        
+        std::set<std::string> buffersIntersect;
+        std::set_intersection(
+            inBuffers.begin(), inBuffers.end(),
+            outBuffers.begin(), outBuffers.end(),
+            std::inserter(buffersIntersect, buffersIntersect.begin()));
+        if(!buffersIntersect.empty()) {
+            ss << kernel->name << ": "
+               << *buffersIntersect.begin()
+               << " used as both input and output buffer.\n";
+            (*err) += ss.str();
+            return false;
+        }
+        
+        std::set<std::string> nameIntersect;
+        std::set_intersection(
+            inBuffersName.begin(), inBuffersName.end(),
+            outBuffersName.begin(), outBuffersName.end(),
+            std::inserter(nameIntersect, nameIntersect.begin()));
+        if(!nameIntersect.empty()) {
+            ss << kernel->name << ": "
+               << *nameIntersect.begin()
+               << " used as both input and output naming of buffers.\n";
+            (*err) += ss.str();
+            return false;
+        }
+        
+        const unsigned int width = kernel->outBuffers.front().buffer->width;
+        const unsigned int height = kernel->outBuffers.front().buffer->height;
+        for(size_t j = 1; j < kernel->outBuffers.size(); ++j) {
+            if(kernel->outBuffers[j].buffer->width != width) {
+                ss << kernel->name << ": output buffer "
+                   << kernel->outBuffers[j].buffer->name
+                   << " does not have the same width as the 1st output buffer "
+                   << kernel->outBuffers.front().buffer->name
+                   << ". " << kernel->outBuffers[j].buffer->width 
+                   << " vs " <<  width << ".\n";
+                (*err) += ss.str();
+                return false;
+            }
+            if(kernel->outBuffers[j].buffer->height != height) {
+                ss << kernel->name << ": output buffer "
+                   << kernel->outBuffers[j].buffer->name
+                   << " does not have the same height as the 1st output buffer "
+                   << kernel->outBuffers[j].buffer->name
+                   << ". " << kernel->outBuffers[j].buffer->height 
+                   << " vs " << height << ".\n";
+                (*err) += ss.str();
+                return false;
+            }
+        }
+      
+        std::set<std::string> paramsName;
+        for(size_t j = 0; j < kernel->paramsInt.size(); ++j) {
+            if(!paramsName.insert(kernel->paramsInt[j].name).second) {
+                ss << kernel->name << ": parameter name "
+                   << kernel->paramsInt[j].name << " used more than once.\n";
+                (*err) += ss.str();
+                return false;
+            }
+        }
+        for(size_t j = 0; j < kernel->paramsFloat.size(); ++j) {
+            if(!paramsName.insert(kernel->paramsFloat[j].name).second) {
+                ss << kernel->name << ": parameter name "
+                   << kernel->paramsFloat[j].name << " used more than once.\n";
+                (*err) += ss.str();
+                return false;
+            }
+        }
+    }
+    return true;
 }
 //----------------------------------------------------------------------------//
 } // end namespace gpuip
