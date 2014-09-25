@@ -35,7 +35,7 @@ class ImplInterface
     virtual ~ImplInterface() {}
 
     Buffer::Ptr CreateBuffer(const std::string & name,
-                             Buffer::Type type,
+                             Buffer::PixelType type,
                              unsigned int channels);
 
     Kernel::Ptr CreateKernel(const std::string & name);
@@ -63,23 +63,8 @@ class ImplInterface
 
     unsigned int _w; // width
     unsigned int _h; // height
-    
-    unsigned int _BufferSize(Buffer::Ptr buffer) const
-    {
-        unsigned int bpp = 0; // bytes per pixel
-        switch(buffer->type) {
-            case Buffer::UNSIGNED_BYTE:
-                bpp = buffer->channels;
-                break;
-            case Buffer::HALF:
-                bpp = sizeof(float)/2 * buffer->channels;
-                break;
-            case Buffer::FLOAT:
-                bpp = sizeof(float) * buffer->channels;
-                break;
-        }
-        return bpp * _w * _h;
-    }
+
+    unsigned int _BufferSize(Buffer::Ptr buffer) const;
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

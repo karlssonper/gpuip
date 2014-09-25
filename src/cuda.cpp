@@ -46,6 +46,46 @@ inline int _cudaGetMaxGflopsDeviceId();
 //----------------------------------------------------------------------------//
 inline std::string _GetTypeStr(const Buffer::Ptr & buffer);
 //----------------------------------------------------------------------------//
+inline int _removeFile(const char * filename);
+//----------------------------------------------------------------------------//
+int _execPipe(const char* cmd, std::string * err);
+//----------------------------------------------------------------------------//
+CUresult _SetBufferArgs(const CUfunction & cudaKernel,
+                        const std::vector<Kernel::BufferLink> & buffers,
+                        std::map<std::string, float*> & cudaBuffers,
+                        int & paramOffset);
+//----------------------------------------------------------------------------//
+template<typename T>
+CUresult _SetParamArgs(const CUfunction & cudaKernel,
+                       const std::vector<Parameter<T> > & params,
+                       int & paramOffset);
+//----------------------------------------------------------------------------//
+void _BoilerplateBufferArgs(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks,
+    const std::string & indent,
+    int & argcount,
+    bool input);
+//----------------------------------------------------------------------------//
+template<typename T>
+void _BoilerplateParamArgs(std::stringstream & ss,
+                           const std::vector<Parameter<T > > & params,
+                           const char * typenameStr,
+                           const std::string & indent,
+                           int & argcount);
+//----------------------------------------------------------------------------//
+void _BoilerplateHalfToFloat(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks);
+//----------------------------------------------------------------------------//
+void _BoilerplateKernelCode(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks);
+//----------------------------------------------------------------------------//
+void _BoilerplateFloatToHalf(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks);
+//----------------------------------------------------------------------------//
 CUDAImpl::CUDAImpl()
         : _cudaBuild(false)
 {
@@ -81,8 +121,8 @@ double CUDAImpl::Allocate(std::string * err)
     
     std::map<std::string,Buffer::Ptr>::const_iterator it;
     for(it = _buffers.begin(); it != _buffers.end(); ++it) {
-        _cudaBuffers[it->second->name] = NULL;
-        cudaError_t c_err = cudaMalloc(&_cudaBuffers[it->second->name],
+        _cudaBuffers[it->second->Name()] = NULL;
+        cudaError_t c_err = cudaMalloc(&_cudaBuffers[it->second->Name()],
                                        _BufferSize(it->second));
         if(_cudaErrorMalloc(c_err, err)) {
             return GPUIP_ERROR;
@@ -91,38 +131,6 @@ double CUDAImpl::Allocate(std::string * err)
     return _StopTimer();
 }
 //----------------------------------------------------------------------------//
-int _execPipe(const char* cmd, std::string * err) {
-#ifdef __unix__
-    FILE* pipe = popen(cmd, "r");
-#else
-    FILE* pipe = _popen(cmd, "r");
-#endif
-    if (!pipe) {
-        (*err) += "Could not execute command";
-        (*err) += std::string(cmd);
-        return 1;
-    }
-    char buffer[128];
-    std::string result = "";
-    while(!feof(pipe)) {
-    	if(fgets(buffer, 128, pipe) != NULL)
-    		result += buffer;
-    }
-#ifdef __unix__
-    int exit_status = pclose(pipe);
-#else
-    int exit_status = _pclose(pipe);
-#endif
-    if (exit_status) {
-        (*err) += result;
-    }
-    return exit_status;
-}
-inline int _removeFile(const char * filename)
-{
-    std::string command = std::string("rm ") + std::string(filename);
-    return system(command.c_str());
-}
 double CUDAImpl::Build(std::string * err)
 {
     _StartTimer();
@@ -145,7 +153,7 @@ double CUDAImpl::Build(std::string * err)
     out << "#include \"" << file_helper_math_h << "\"\n";
     out << "extern \"C\" { \n"; // To avoid function name mangling 
     for(size_t i = 0; i < _kernels.size(); ++i) {
-        out << _kernels[i]->code << "\n";
+        out << _kernels[i]->Code() << "\n";
     }
     out << "}"; // End the extern C bracket
     out.close();
@@ -195,8 +203,8 @@ double CUDAImpl::Build(std::string * err)
     _cudaKernels.resize(_kernels.size());
     for(size_t i = 0; i < _kernels.size(); ++i) {
         c_err = cuModuleGetFunction(&_cudaKernels[i], _cudaModule,
-                                    _kernels[i]->name.c_str());
-        if (_cudaErrorGetFunction(c_err, err, _kernels[i]->name)) {
+                                    _kernels[i]->Name().c_str());
+        if (_cudaErrorGetFunction(c_err, err, _kernels[i]->Name())) {
             return GPUIP_ERROR;
         }
     }
@@ -227,13 +235,13 @@ double CUDAImpl::Copy(Buffer::Ptr buffer,
     cudaError_t e = cudaSuccess;
     const size_t size = _BufferSize(buffer);
     if (op == Buffer::COPY_FROM_GPU) {
-        e =cudaMemcpy(data, _cudaBuffers[buffer->name],
+        e =cudaMemcpy(data, _cudaBuffers[buffer->Name()],
                       size, cudaMemcpyDeviceToHost);
     } else if (op == Buffer::COPY_TO_GPU) {
-        e = cudaMemcpy(_cudaBuffers[buffer->name],data,
+        e = cudaMemcpy(_cudaBuffers[buffer->Name()],data,
                        size, cudaMemcpyHostToDevice);
     }
-    if (_cudaErrorCopy(e, err, buffer->name, op)) {
+    if (_cudaErrorCopy(e, err, buffer->Name(), op)) {
         return GPUIP_ERROR;
     }
     return _StopTimer();
@@ -246,28 +254,13 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
     // Set CUDA kernel arguments
     CUresult c_err;
     int paramOffset = 0;
-    for(size_t i = 0; i < kernel.inBuffers.size(); ++i) {
-        c_err = cuParamSetv(cudaKernel, paramOffset,
-                            &_cudaBuffers[kernel.inBuffers[i].buffer->name],
-                            sizeof(void*));
-        paramOffset += sizeof(void *);
-    }
-    for(size_t i = 0; i < kernel.outBuffers.size(); ++i) {
-        c_err = cuParamSetv(cudaKernel, paramOffset,
-                            &_cudaBuffers[kernel.outBuffers[i].buffer->name],
-                            sizeof(void*));
-        paramOffset += sizeof(void *);
-    }
-    for(size_t i = 0; i < kernel.paramsInt.size(); ++i) {
-        c_err = cuParamSetv(cudaKernel, paramOffset,
-                            &kernel.paramsInt[i].value, sizeof(int));
-        paramOffset += sizeof(int);
-    }
-    for(size_t i = 0; i < kernel.paramsFloat.size(); ++i) {
-        c_err = cuParamSetv(cudaKernel, paramOffset,
-                            &kernel.paramsFloat[i].value, sizeof(float));
-        paramOffset += sizeof(float);
-    }
+    _SetBufferArgs(cudaKernel, kernel.InputBuffers(),
+                   _cudaBuffers, paramOffset);
+    _SetBufferArgs(cudaKernel, kernel.OutputBuffers(),
+                   _cudaBuffers, paramOffset);
+    _SetParamArgs(cudaKernel, kernel.ParamsInt(), paramOffset);
+    _SetParamArgs(cudaKernel, kernel.ParamsFloat(), paramOffset);
+
     // int and width parameters
     c_err = cuParamSetv(cudaKernel, paramOffset, &_w, sizeof(int));
     paramOffset += sizeof(int);
@@ -275,12 +268,12 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
     paramOffset += sizeof(int);
     
     // It should be fine to check once all the arguments have been set
-    if(_cudaErrorCheckParamSet(c_err, err, kernel.name)) {
+    if(_cudaErrorCheckParamSet(c_err, err, kernel.Name())) {
         return false;
     }
     
     c_err = cuParamSetSize(cudaKernel, paramOffset);
-    if (_cudaErrorParamSetSize(c_err, err, kernel.name)) {
+    if (_cudaErrorParamSetSize(c_err, err, kernel.Name())) {
         return false;
     }
 
@@ -289,7 +282,7 @@ bool CUDAImpl::_LaunchKernel(Kernel & kernel,
     const int nBlocksVer = _h / 16 + 1;
     cuFuncSetBlockShape(cudaKernel, 16, 16, 1);
     c_err = cuLaunchGrid(cudaKernel, nBlocksHor, nBlocksVer);
-    if (_cudaErrorLaunchKernel(c_err, err, kernel.name)) {
+    if (_cudaErrorLaunchKernel(c_err, err, kernel.Name())) {
         return false;
     }
         
@@ -300,159 +293,44 @@ std::string CUDAImpl::BoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
 
-    // Indent string
-    ss << ",\n" << std::string(kernel->name.size() + 1, ' ');
+    // Indent string (used to indent arguments)
+    ss << ",\n" << std::string(kernel->Name().size() + 1, ' ');
     const std::string indent = ss.str();
     ss.str("");
+
+    // Header with arguments
+    ss << "__global__ void\n" << kernel->Name() << "(";
+    int argcount = 0;
+    _BoilerplateBufferArgs(ss, kernel->InputBuffers(), indent, argcount, true);
+    _BoilerplateBufferArgs(ss, kernel->OutputBuffers(),indent,argcount, false);
+    _BoilerplateParamArgs(ss, kernel->ParamsInt(), "int", indent,argcount);
+    _BoilerplateParamArgs(ss, kernel->ParamsFloat(), "float", indent,argcount);
+    ss << indent << "const int width"
+       << indent << "const int height)\n";
+
+    // Code for index and dimension check
+    ss << "{\n"
+       << "    const int x = blockIdx.x * blockDim.x + threadIdx.x;\n"
+       << "    const int y = blockIdx.y * blockDim.y + threadIdx.y;\n"
+       << "\n"
+       << "    // array index\n"
+       << "    const int idx = x + width * y;\n"
+       << "\n"
+       << "    // inside image bounds check\n"
+       << "    if (x >= width || y >= height) {\n"
+       << "        return;\n"
+       << "    }\n"
+       << "\n";
    
-    ss << "__global__ void\n" << kernel->name << "(";
+    // Do half to float conversions  on input buffers (if needed)
+    _BoilerplateHalfToFloat(ss, kernel->InputBuffers());
 
-    bool first = true;
+    // Starting kernel code, writing single value or vectors to all zero
+    _BoilerplateKernelCode(ss, kernel->OutputBuffers());
 
-    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;
-        const std::string & name = kernel->inBuffers[i].buffer->name;
-        ss << "const " << _GetTypeStr(_buffers.find(name)->second)
-           << " * " << kernel->inBuffers[i].name
-           << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");   }
-
-    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;
-        const std::string & name = kernel->outBuffers[i].buffer->name;
-        ss <<  _GetTypeStr(_buffers.find(name)->second)
-           << " * " << kernel->outBuffers[i].name
-           << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");
-    }
-
-    for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;        
-        ss << "const int " << kernel->paramsInt[i].name;
-    }
-    for(size_t i = 0; i < kernel->paramsFloat.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;
-        ss << "const float " << kernel->paramsFloat[i].name;
-    }
-    ss << indent << "const int width" << indent << "const int height)\n";
-  
-    ss << "{\n";
-    ss << "    const int x = blockIdx.x * blockDim.x + threadIdx.x;\n";
-    ss << "    const int y = blockIdx.y * blockDim.y + threadIdx.y;\n\n";
-    ss << "    // array index\n";
-    ss << "    const int idx = x + width * y;\n\n";
-    ss << "    // inside image bounds check\n";
-    ss << "    if (x >= width || y >= height) {\n";
-    ss << "        return;\n";
-    ss << "    }\n\n";
-   
-    // Do half to float conversions (if needed)
-    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        const std::string & bname = kernel->inBuffers[i].buffer->name;
-        Buffer::Ptr buf = _buffers.find(bname)->second;
-        if (buf->type == Buffer::HALF) {
-            if (!i) {
-                ss << "    // half to float conversion\n";
-            }
-            
-            if (buf->channels == 1) {
-                ss << "    const float " << kernel->inBuffers[i].name
-                   << " = " << "__half2float(" <<  kernel->inBuffers[i].name
-                   << "_half[idx]);\n";
-                continue;
-            }
-            
-            std::stringstream subss;
-            subss << "    const float" << buf->channels << " "
-                  << kernel->inBuffers[i].name
-                  << " = make_float" << buf->channels << "(";
-            const std::string preindent = subss.str();
-            subss.str("");
-            subss << ",\n" << std::string(preindent.size(), ' ');
-            const std::string subindent = subss.str();
-            ss << preindent;
-            bool subfirst = true;
-            for (unsigned int j = 0; j < buf->channels; ++j) {
-                ss << (subfirst ? "" : subindent);
-                subfirst = false;
-                ss << "__half2float(" <<  kernel->inBuffers[i].name
-                   << "_half[" << buf->channels << " * idx + " << j << "])";
-            }
-            ss <<");\n";
-
-            if (i == kernel->inBuffers.size() - 1) {
-                ss << "\n";
-            }
-        }
-    }
-
-    ss << "    // kernel code\n";
-    for (size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        Buffer::Ptr b = _buffers.find(
-            kernel->outBuffers[i].buffer->name)->second;
-        ss << "    ";
-        if (b->type == Buffer::HALF) {
-            ss << "float" << b->channels << " ";
-        }
-        ss << kernel->outBuffers[i].name;
-        if (b->type != Buffer::HALF) {
-            ss << "[idx]";
-        }
-        ss << " = ";
-        if (b->channels == 1) {
-            ss << "0;\n";
-        } else {
-            ss << "make_";
-            if (b->type != Buffer::HALF) {
-                ss << _GetTypeStr(b);
-            } else {
-                ss << "float" << b->channels;
-            }
-            ss << "(";
-            for (size_t j = 0; j < b->channels; ++j) {
-                ss << (j ==0 ? "" : ", ") << "0";
-            }
-            ss << ");\n";
-        }
-    }
-
-    // Do half to float conversions (if needed)
-    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        const std::string & bname = kernel->outBuffers[i].buffer->name;
-        Buffer::Ptr buf = _buffers.find(bname)->second;
-        if (buf->type == Buffer::HALF) {
-            if (!i) {
-                ss << "\n    // float to half conversion\n";
-            }
-
-            for (unsigned int j = 0; j < buf->channels; ++j) {
-                ss << "    " << kernel->outBuffers[i].name << "_half[";
-                if (buf->channels > 1) {
-                    ss << buf->channels << " * ";
-                }
-                ss << "idx + " << j << "] = __float2half_rn("
-                   << kernel->outBuffers[i].name;
-                switch(j) {
-                    case 0:
-                        ss << (buf->channels > 1 ? ".x" : "");
-                        break;
-                    case 1:
-                        ss << ".y";
-                        break;
-                    case 2:
-                        ss << ".z";
-                        break;
-                    case 3:
-                        ss << ".w";
-                        break;
-                }
-                ss << ");\n";
-            }
-        }
-    }
-   
+    // Do float to half conversions on output buffers (if needed)
+    _BoilerplateFloatToHalf(ss, kernel->OutputBuffers());
+    
     ss << "}";
     return ss.str();
 }
@@ -502,9 +380,9 @@ bool CUDAImpl::_UnloadModule(std::string * err)
 std::string _GetTypeStr(const Buffer::Ptr & buffer)
 {
     std::stringstream type;
-    switch(buffer->type) {
+    switch(buffer->Type()) {
         case Buffer::UNSIGNED_BYTE:
-            if (buffer->channels > 1) {
+            if (buffer->Channels() > 1) {
                 type << "uchar";
             } else {
                 type << "unsigned char";
@@ -517,8 +395,8 @@ std::string _GetTypeStr(const Buffer::Ptr & buffer)
         default:
             type << "float";
     };
-    if (buffer->channels > 1 && buffer->type != Buffer::HALF) {
-        type << buffer->channels;
+    if (buffer->Channels() > 1 && buffer->Type() != Buffer::HALF) {
+        type << buffer->Channels();
     }
     return type.str();
 }
@@ -552,6 +430,268 @@ int _cudaGetMaxGflopsDeviceId()
 	}
 
 	return max_gflops_device;
+}
+//----------------------------------------------------------------------------//
+int _execPipe(const char* cmd, std::string * err) {
+#ifdef __unix__
+    FILE* pipe = popen(cmd, "r");
+#else
+    FILE* pipe = _popen(cmd, "r");
+#endif
+    if (!pipe) {
+        (*err) += "Could not execute command";
+        (*err) += std::string(cmd);
+        return 1;
+    }
+    char buffer[128];
+    std::string result = "";
+    while(!feof(pipe)) {
+    	if(fgets(buffer, 128, pipe) != NULL)
+    		result += buffer;
+    }
+#ifdef __unix__
+    int exit_status = pclose(pipe);
+#else
+    int exit_status = _pclose(pipe);
+#endif
+    if (exit_status) {
+        (*err) += result;
+    }
+    return exit_status;
+}
+//----------------------------------------------------------------------------//
+int _removeFile(const char * filename)
+{
+    std::string command = std::string("rm ") + std::string(filename);
+    return system(command.c_str());
+}
+//----------------------------------------------------------------------------//
+CUresult _SetBufferArgs(const CUfunction & cudaKernel,
+                        const std::vector<Kernel::BufferLink> & buffers,
+                        std::map<std::string, float*> & cudaBuffers,
+                        int & paramOffset)
+{
+    CUresult err = CUDA_SUCCESS;
+    for(size_t i = 0; i < buffers.size(); ++i) {
+        const Buffer::Ptr & targetBuffer = buffers[i].TargetBuffer();
+        float * cudaBuffer = cudaBuffers.find(targetBuffer->Name())->second;
+        err = cuParamSetv(cudaKernel,paramOffset, &cudaBuffer,sizeof(void*));
+        paramOffset += sizeof(void *);
+    }
+    return err;
+}
+//----------------------------------------------------------------------------//
+template<typename T>
+CUresult _SetParamArgs(const CUfunction & cudaKernel,
+                   const std::vector<Parameter<T> > & params,
+                   int & paramOffset)
+{
+    CUresult err;
+    for(size_t i = 0; i < params.size(); ++i) {
+        T v = params[i].Value();
+        err = cuParamSetv(cudaKernel,paramOffset, &v, sizeof(T));
+        paramOffset += sizeof(T);
+    }
+    return err;
+}
+//----------------------------------------------------------------------------//
+void _BoilerplateBufferArgs(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks,
+    const std::string & indent,
+    int & argcount,
+    bool input)
+{
+    for(size_t i = 0; i < bufferLinks.size(); ++i) {
+        //if first argument, don't indent
+        if(!argcount++) {
+            ss << indent;
+        }
+
+        // Only input buffers are declared const
+        if(input) {
+            ss << "const ";
+        }
+
+        const Buffer::Ptr & buffer = bufferLinks[i].TargetBuffer();
+        
+        // Actual pointer
+        ss << _GetTypeStr(buffer)  << " * " << bufferLinks[i].Name();
+
+        // Rename if half
+        if(buffer->Type() == Buffer::HALF) {
+            ss << "_half";
+        }
+    }
+}
+//----------------------------------------------------------------------------//
+template<typename T>
+void _BoilerplateParamArgs(std::stringstream & ss,
+                           const std::vector<Parameter<T > > & params,
+                           const char * typenameStr,
+                           const std::string & indent,
+                           int & argcount)
+{
+    for(size_t i = 0; i < params.size(); ++i) {
+        if (!argcount++) {
+            ss << indent;
+        }
+        ss << "const " << typenameStr << " " << params[i].Name();
+    }
+}
+//----------------------------------------------------------------------------//
+void _BoilerplateHalfToFloat(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks)
+{
+    int count = 0;
+    for(size_t i = 0; i < bufferLinks.size(); ++i) {
+        const Buffer::Ptr & buf = bufferLinks[i].TargetBuffer();
+        const std::string & name = bufferLinks[i].Name();
+        // if buffer is of type half, do conversion
+        if (buf->Type() == Buffer::HALF) {
+            if (!count++) { // only place comment once
+                ss << "    // half to float conversion\n";
+            }
+
+            // Only 1 channel is a specialcase
+            if (buf->Channels() == 1) {
+                ss << "    const float " << name << " = "
+                   << "__half2float(" << name << "_half[idx]);\n";
+                continue;
+            }
+
+            // const floatX = make_floatX( 
+            std::stringstream subss;
+            subss << "    const float" << buf->Channels() << " "
+                  << bufferLinks[i].Name()
+                  << " = make_float" << buf->Channels() << "(";
+            const std::string preindent = subss.str();
+            ss << preindent;
+            
+            // Indent for every row in the make_floatX call
+            subss.str("");
+            subss << ",\n" << std::string(preindent.size(), ' ');
+            const std::string subindent = subss.str();
+
+            
+            for (unsigned int j = 0; j < buf->Channels(); ++j) {
+                if(!j) { // only subindent after first row
+                    ss << subindent;
+                }
+
+                // half2float conversion from single value unsigned short
+                ss << "__half2float(" <<  name << "_half["
+                   << buf->Channels() << " * idx + " << j << "])";
+            }
+            ss <<");\n";
+        }
+    }
+
+    // If any half to float conversions were added, end with a new line
+    if (count) {
+        ss << "\n";
+    }
+}
+//----------------------------------------------------------------------------//
+void _BoilerplateKernelCode(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks)
+{
+    ss << "    // kernel code\n";
+    for (size_t i = 0; i < bufferLinks.size(); ++i) {
+        Buffer::Ptr b = bufferLinks[i].TargetBuffer();
+        ss << "    ";
+
+        // If half, we need to declare a new variable
+        if (b->Type() == Buffer::HALF) {
+            ss << "float";
+
+            // If more than 1 channel, then it's a vector
+            if(b->Channels() > 1) {
+                ss << b->Channels();
+            }
+            ss << " ";
+        }
+
+        // variale name
+        ss << bufferLinks[i].Name();
+
+        // if not half, then we write directly to the global memory
+        if (b->Type() != Buffer::HALF) {
+            ss << "[idx]";
+        }
+        
+        ss << " = ";
+        if (b->Channels() == 1) { // single value -> just a zero
+            ss << "0;\n";
+        } else { // if not single value -> vector
+            ss << "make_";
+            if (b->Type() != Buffer::HALF) {
+                ss << _GetTypeStr(b);
+            } else {
+                ss << "float" << b->Channels();
+            }
+
+            // populate vector with zeros
+            ss << "(";
+            for (size_t j = 0; j < b->Channels(); ++j) {
+                ss << (j ==0 ? "" : ", ") << "0";
+            }
+            ss << ");\n";
+        }
+    }
+}
+//----------------------------------------------------------------------------//
+void _BoilerplateFloatToHalf(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks)
+{
+    // Do half to float conversions (if needed)
+    int count = 0;
+    for(size_t i = 0; i < bufferLinks.size(); ++i) {
+        const Buffer::Ptr & buf = bufferLinks[i].TargetBuffer();
+        const std::string name = bufferLinks[i].Name();
+
+        // if buffer pixel type is half, do conversion
+        if (buf->Type() == Buffer::HALF) {
+            //only write count once
+            if (!count++) {
+                    ss << "\n    // float to half conversion\n";
+            }
+
+            // need to write every channel individually
+            for (unsigned int j = 0; j < buf->Channels(); ++j) {
+                // variable name (defined in arguments
+                ss << "    " << name << "_half";
+
+                // index
+                ss << "[";
+                if (buf->Channels() > 1) {
+                    ss << buf->Channels() << " * ";
+                }
+                ss << "idx + " << j << "]";
+
+                // conversion from float4
+                ss << "= __float2half_rn(" << name;
+                switch(j) {
+                    case 0:
+                        ss << (buf->Channels() > 1 ? ".x" : "");
+                        break;
+                    case 1:
+                        ss << ".y";
+                        break;
+                    case 2:
+                        ss << ".z";
+                        break;
+                    case 3:
+                        ss << ".w";
+                        break;
+                }
+                ss << ");\n";
+            }
+        }
+    }
 }
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

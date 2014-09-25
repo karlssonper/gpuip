@@ -32,6 +32,68 @@ SOFTWARE.
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
+Buffer::Buffer(const std::string & name, PixelType type, unsigned int channels)
+        : _name(name), _type(type), _channels(_channels)
+{
+}
+//----------------------------------------------------------------------------//
+void Buffer::SetType(PixelType type)
+{
+    _type = type;
+}
+//----------------------------------------------------------------------------//
+void Buffer::SetChannels(unsigned int channels)
+{
+    _channels = channels;
+}
+//----------------------------------------------------------------------------//
+Kernel::BufferLink::BufferLink(const std::string & name, Buffer::Ptr buffer)
+        : _name(name), _buffer(buffer)
+{
+}
+//----------------------------------------------------------------------------//
+Kernel::Kernel(const std::string & name)
+        : _name(name)
+{
+}
+//----------------------------------------------------------------------------//
+void Kernel::SetCode(const std::string & code)
+{
+    _code = code;
+}
+//----------------------------------------------------------------------------//
+void Kernel::AddInputBuffer(const std::string & name, Buffer::Ptr buffer)
+{
+    _inputBuffers.push_back(BufferLink(name, buffer));
+}
+//----------------------------------------------------------------------------//
+void Kernel::AddOutputBuffer(const std::string & name, Buffer::Ptr buffer)
+{
+    _outputBuffers.push_back(BufferLink(name, buffer));
+}
+//----------------------------------------------------------------------------//
+template<typename T>
+void _SetParam(std::vector<Parameter<T> > & params,
+               const std::string & name,
+               T value)
+{
+    for(size_t i = 0; i < params.size(); ++i) {
+        if(params[i].Name() == name) {
+            params[i].SetValue(value);
+            return;
+        }
+    }
+    params.push_back(Parameter<T>(name, value));
+}
+void Kernel::SetParamInt(const std::string & name, int value)
+{
+    _SetParam(_paramsInt, name, value);
+}
+void Kernel::SetParamFloat(const std::string & name, float value)
+{
+    _SetParam(_paramsFloat, name, value);
+}
+//----------------------------------------------------------------------------//
 inline const char * _GetSharedLibraryFilename(GpuEnvironment env)
 {
     std::stringstream ss;
@@ -85,21 +147,6 @@ bool ImageProcessor::CanCreate(const std::string & filename)
         return true;
     } */
     return false;
-}
-//----------------------------------------------------------------------------//
-Buffer::Buffer(const std::string & name_, Type type_, unsigned int channels_)
-        : name(name_), type(type_), channels(channels_)
-{
-}
-//----------------------------------------------------------------------------//
-Kernel::Kernel(const std::string & name_)
-        : name(name_)
-{
-}
-//----------------------------------------------------------------------------//
-Kernel::BufferLink::BufferLink(Buffer::Ptr buffer_, const std::string & name_)
-        : buffer(buffer_), name(name_)
-{
 }
 //----------------------------------------------------------------------------//
 ImageProcessor::ImageProcessor(const char * filename)
@@ -165,7 +212,7 @@ ImageProcessor::~ImageProcessor()
 }
 //----------------------------------------------------------------------------//
 Buffer::Ptr ImageProcessor::CreateBuffer(const std::string & name,
-                                         Buffer::Type type,
+                                         Buffer::PixelType type,
                                          unsigned int channels)
 {
     return _impl->CreateBuffer(name, type, channels);

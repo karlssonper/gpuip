@@ -109,8 +109,8 @@ double OpenCLImpl::Build(std::string * error)
     
     cl_int cl_err;
     for(size_t i = 0; i < _kernels.size(); ++i) {
-        const char * code = _kernels[i]->code.c_str();
-        const char * name = _kernels[i]->name.c_str();
+        const char * code = _kernels[i]->Code().c_str();
+        const char * name = _kernels[i]->Name().c_str();
         cl_program program = clCreateProgramWithSource(
             _ctx, 1, &code, NULL,  &cl_err);
         if (_clErrorCreateProgram(cl_err, error)) {

@@ -71,16 +71,18 @@ enum GpuEnvironment {
 
     /*! <a href="http://www.opengl.org/">
       GLSL, OpenGL Shading Language by Khronos Group.</a> */
-    GLSL = 2};
+    GLSL = 2
+};
 //----------------------------------------------------------------------------//
 /*!
-  \struct Buffer
+  \class Buffer
   \brief A chunk of memory allocated on the GPU.
 
   This class 
- */
-struct GPUIP_DECLSPEC Buffer
+*/
+class GPUIP_DECLSPEC Buffer
 {
+  public:
     /*! \brief Smart pointer. */
 #ifdef _GPUIP_PYTHON_BINDINGS
     typedef boost::shared_ptr<Buffer> Ptr;
@@ -95,7 +97,7 @@ struct GPUIP_DECLSPEC Buffer
         COPY_FROM_GPU };
 
     /*! \brief Supported data types */
-    enum Type{
+    enum PixelType{
         /*! 8 bits per channel. Used in png, jpeg, tga, tiff formats */
         UNSIGNED_BYTE,
         
@@ -106,41 +108,78 @@ struct GPUIP_DECLSPEC Buffer
           not supported in the current environemnt. */
         FLOAT };
     
-    Buffer(const std::string & name, Type type, unsigned int channels);
+    Buffer(const std::string & name, PixelType type, unsigned int channels);
 
     /*! \brief Unique identifying name.
 
       Each buffer has a unique name. The buffer can still be called referenced
       as something else in a kernel. */
-    const std::string name;
-    
-    Type type;
+    const std::string & Name() const
+    {
+        return _name;
+    }
+
+    PixelType Type() const
+    {
+        return _type;
+    }
 
     /*! \brief Channels of data per pixel.
 
       A typical RGBA image has 4 channels. Gpuip buffers  with 2 or 3 channels
       have not been tested as much as 1 or 4 channel buffers. */
-    unsigned int channels;
+    unsigned int Channels() const
+    {
+        return _channels;
+    }
+
+    void SetType(PixelType type);
+
+    void SetChannels(unsigned int channels);
+    
+  private:
+    const std::string _name;
+    PixelType _type;
+    unsigned int _channels;
 };
 //----------------------------------------------------------------------------//
 /*!
-  \struct Parameter
+  \class Parameter
   \brief A parameter has a name and a value.
 */
 template<typename T>
-struct Parameter
+class Parameter
 {
-    Parameter(const std::string & n, T v) : name(n), value(v) {}
-    std::string name;
-    T value;
+  public:
+    Parameter(const std::string & n, T v) : _name(n), _value(v) {}
+
+    const std::string & Name() const
+    {
+        return _name;
+    }
+
+    T Value() const
+    {
+        return _value;
+    }
+
+    void SetValue(T value)
+    {
+        _value = value;
+    }
+    
+  private:
+    std::string _name;
+    T _value;
 };
 //----------------------------------------------------------------------------//
 /*!
-  \struct Kernel
+  \class Kernel
   \brief 
 */
-struct GPUIP_DECLSPEC Kernel
+class GPUIP_DECLSPEC Kernel
 {
+  public:
     /*! \brief Smart pointer. */
 #ifdef _GPUIP_PYTHON_BINDINGS
     typedef boost::shared_ptr<Kernel> Ptr;
@@ -148,54 +187,106 @@ struct GPUIP_DECLSPEC Kernel
     typedef std::tr1::shared_ptr<Kernel> Ptr;
 #endif
     /*!
-      \struct BufferLink
+      \class BufferLink
       \brief Tells a kernel which buffers to use in the argument list
     */
-    struct BufferLink
+    class GPUIP_DECLSPEC BufferLink
     {
-        BufferLink(Buffer::Ptr buffer_, const std::string & name_);
-        
-        /*! \brief Buffer to be used in the kernel arguments list. */
-        Buffer::Ptr buffer;
+      public:
+        BufferLink(const std::string & name, Buffer::Ptr buffer);
 
         /*! \brief The name of buffer in kernel arguments list.
           
           This does not have to be the same as the Buffer::name.*/
-        std::string name;
+        const std::string & Name() const
+        {
+            return _name;
+        }
+
+        /*! \brief Buffer to be used in the kernel arguments list. */
+        Buffer::Ptr TargetBuffer() const
+        {
+            return _buffer;
+        }
+
+  private:
+        std::string _name;
+        Buffer::Ptr _buffer;
     };
+    
+    /*! \brief Each kernel must have a unique name.
+
+      The kernel function in OpenCL and CUDA has to have the same name.
+    */    
     Kernel(const std::string & name);
 
-    /*! \brief Unique identifying name.
+    const std::string & Name() const
+    {
+        return _name;
+    }
 
-      Each kernel must have a unique name.
-      The kernel function in OpenCL and CUDA has to have the same name.
-     */
-    const std::string name;
+    /*! \brief Kernel code. */
+    const std::string & Code() const
+    {
+        return _code;
+    }
 
-    /*! \brief Kernel code.
+    /*! \brief Buffers used as input in kernel */
+    const std::vector<BufferLink> & InputBuffers() const
+    {
+        return _inputBuffers;
+    }
 
-     Must be set before the ImageProcessor::Build call.*/
-    std::string code;
+    /*! \brief Buffers used as output in kernel */
+    const std::vector<BufferLink> & OutputBuffers() const
+    {
+        return _outputBuffers;
+    }
+
+    /*! \brief Input Int parameters. */
+    const std::vector<Parameter<int> > & ParamsInt() const
+    {
+        return _paramsInt;
+    }
+
+    /*! \brief Input Float parameters. */
+    const std::vector<Parameter<float> > & ParamsFloat() const
+    {
+        return _paramsFloat;
+    }
+
+    /*! \brief Set Kernel code
+      
+      Must be set before the ImageProcessor::Build call. */
+    void SetCode(const std::string & code);
 
     /*! \brief Buffers used for input data. Can not be modified.
 
      Must be set before the ImageProcessor::Run call.*/
-    std::vector<BufferLink> inBuffers;
+    void AddInputBuffer(const std::string & name, Buffer::Ptr buffer);
 
     /*! \brief Buffers used to output data. Can not be read from.
 
      Must be set before the ImageProcessor::Run call. */
-    std::vector<BufferLink> outBuffers;
+    void AddOutputBuffer(const std::string & name, Buffer::Ptr buffer);
 
-    /*! \brief Integer parameters.
-
-     Must be set before the ImageProcessor::Run call. */
-    std::vector<Parameter<int> > paramsInt;
-
-    /*! \brief Float parameters.
+    /*! \brief Set input integer parameter.
 
      Must be set before the ImageProcessor::Run call. */
-    std::vector<Parameter<float> > paramsFloat;
+    void SetParamInt(const std::string & name, int value);
+
+    /*! \brief Set input float parameter.
+
+     Must be set before the ImageProcessor::Run call. */
+    void SetParamFloat(const std::string & name, float value);
+    
+  private:
+    const std::string _name;
+    std::string _code;
+    std::vector<BufferLink> _inputBuffers;
+    std::vector<BufferLink> _outputBuffers;
+    std::vector<Parameter<int> > _paramsInt;
+    std::vector<Parameter<float> > _paramsFloat;
 };
 //----------------------------------------------------------------------------//
 /*!
@@ -248,7 +339,7 @@ class GPUIP_DECLSPEC ImageProcessor
       before the ImageProcessor::Allocate call.      
      */
     Buffer::Ptr CreateBuffer(const std::string & name,
-                             Buffer::Type type,
+                             Buffer::PixelType type,
                              unsigned int channels);
 
     /*! \brief Creates and registeres a Kernel object.

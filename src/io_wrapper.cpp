@@ -277,7 +277,7 @@ void _HalfExrToNumpy(boost::numpy::ndarray & data,
     Imath::Box2i dw = file.dataWindow();
     unsigned int width = dw.max.x - dw.min.x + 1;
     unsigned int height = dw.max.y - dw.min.y + 1;
-    if (buffer.type == gpuip::Buffer::HALF && buffer.channels == 4) {
+    if (buffer.Type() == gpuip::Buffer::HALF && buffer.Channels() == 4) {
         data = np::zeros(boost::python::make_tuple(width,height,4),
                          np::detail::get_float_dtype<16>());
         file.setFrameBuffer(reinterpret_cast<Rgba*>(data.get_data()), 1, width);
@@ -287,18 +287,18 @@ void _HalfExrToNumpy(boost::numpy::ndarray & data,
         file.setFrameBuffer(halfdata.data(), 1, width);
         file.readPixels(dw.min.y, dw.max.y);
 
-        if (buffer.type == gpuip::Buffer::HALF) {
-            data = np::zeros(bp::make_tuple(width,height,buffer.channels),
+        if (buffer.Type() == gpuip::Buffer::HALF) {
+            data = np::zeros(bp::make_tuple(width,height,buffer.Channels()),
                              np::detail::get_float_dtype<16>());
             _ConvertFromExr<half>(halfdata.data(),
                                   reinterpret_cast<half*>(data.get_data()),
-                                  width, height, buffer.channels);
-        } else if (buffer.type == gpuip::Buffer::FLOAT) {
-            data = np::zeros(bp::make_tuple(width,height,buffer.channels),
+                                  width, height, buffer.Channels());
+        } else if (buffer.Type() == gpuip::Buffer::FLOAT) {
+            data = np::zeros(bp::make_tuple(width,height,buffer.Channels()),
                              np::detail::get_float_dtype<32>());
             _ConvertFromExr<float>(halfdata.data(),
                                    reinterpret_cast<float*>(data.get_data()),
-                                   width, height, buffer.channels);
+                                   width, height, buffer.Channels());
         }
     }
 }
@@ -308,9 +308,9 @@ void ReadFromFile(boost::numpy::ndarray * npyarray,
                   const std::string & filename,
                   int numThreads)
 {
-    switch(buffer.type) {
+    switch(buffer.Type()) {
         case Buffer::UNSIGNED_BYTE:
-            _CImgToNumpy<unsigned char>(*npyarray, buffer.channels, filename);
+            _CImgToNumpy<unsigned char>(*npyarray, buffer.Channels(), filename);
             break;
         case Buffer::HALF:
             _HalfExrToNumpy(*npyarray, filename, buffer, numThreads);
@@ -326,15 +326,15 @@ void WriteToFile(const boost::numpy::ndarray * npyarray,
                  const std::string & filename,
                  int numThreads)
 {
-    switch(buffer.type) {
+    switch(buffer.Type()) {
         case Buffer::UNSIGNED_BYTE:
-            _NumpyToCImg<unsigned char>(*npyarray, buffer.channels, filename);
+            _NumpyToCImg<unsigned char>(*npyarray, buffer.Channels(), filename);
             break;
         case Buffer::HALF:
-            _NumpyToHalfExr(*npyarray, buffer.channels, filename, numThreads);
+            _NumpyToHalfExr(*npyarray, buffer.Channels(), filename, numThreads);
             break;
         case Buffer::FLOAT:
-            _NumpyToHalfExr(*npyarray, buffer.channels, filename, numThreads);
+            _NumpyToHalfExr(*npyarray, buffer.Channels(), filename, numThreads);
             break;
     }
 }
