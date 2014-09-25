@@ -24,6 +24,9 @@ SOFTWARE.
 
 #ifndef GPUIP_OPENCL_ERROR_H_
 #define GPUIP_OPENCL_ERROR_H_
+#ifdef _WIN32
+#  pragma warning (disable : 4065)
+#endif
 #include <sstream>
 //----------------------------------------------------------------------------//
 namespace gpuip {

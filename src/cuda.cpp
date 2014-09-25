@@ -30,16 +30,21 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 //----------------------------------------------------------------------------//
-extern "C" {
-    gpuip::ImplInterface * CreateImpl() { return new gpuip::CUDAImpl(); }
-    void DeleteImpl(gpuip::ImplInterface * impl) { delete impl; }
+// Plugin interface
+extern "C" GPUIP_DECLSPEC gpuip::ImplInterface * CreateImpl()
+{
+    return new gpuip::CUDAImpl();
+}
+extern "C" GPUIP_DECLSPEC void DeleteImpl(gpuip::ImplInterface * impl)
+{
+    delete impl;
 }
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
 inline int _cudaGetMaxGflopsDeviceId();
 //----------------------------------------------------------------------------//
-inline std::string _GetTypeStr(Buffer::Ptr buffer);
+inline std::string _GetTypeStr(const Buffer::Ptr & buffer);
 //----------------------------------------------------------------------------//
 CUDAImpl::CUDAImpl()
         : _cudaBuild(false)
@@ -494,7 +499,7 @@ bool CUDAImpl::_UnloadModule(std::string * err)
     return true;
 }
 //----------------------------------------------------------------------------//
-std::string _GetTypeStr(Buffer::Ptr buffer)
+std::string _GetTypeStr(const Buffer::Ptr & buffer)
 {
     std::stringstream type;
     switch(buffer->type) {
@@ -509,8 +514,6 @@ std::string _GetTypeStr(Buffer::Ptr buffer)
             type << "unsigned short";
             break;
         case Buffer::FLOAT:
-            type << "float";
-            break;
         default:
             type << "float";
     };

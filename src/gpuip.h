@@ -25,6 +25,16 @@ SOFTWARE.
 #ifndef GPUIP_H_
 #define GPUIP_H_
 //----------------------------------------------------------------------------//
+#ifdef _WIN32
+#  ifdef _GPUIP_BUILD_DLL
+#    define GPUIP_DECLSPEC __declspec(dllexport)
+#  else
+#    define GPUIP_DECLSPEC __declspec(dllimport)
+#  endif
+#else
+#define GPUIP_DECLSPEC
+#endif
+//----------------------------------------------------------------------------//
 #include <string>
 #include <map>
 #include <vector>
@@ -32,9 +42,13 @@ SOFTWARE.
 #include <stdexcept>
 //----------------------------------------------------------------------------//
 #ifdef _GPUIP_PYTHON_BINDINGS
-#include <boost/shared_ptr.hpp>
+#  include <boost/shared_ptr.hpp>
 #else
-#include <tr1/memory>
+#  ifdef _WIN32
+#    include <memory>
+#  else
+#    include <tr1/memory>
+#  endif
 #endif
 //----------------------------------------------------------------------------//
 /*! \file */
@@ -49,15 +63,15 @@ namespace gpuip {
 enum GpuEnvironment {
     /*! <a href="https://www.khronos.org/opencl/">
       OpenCL, Open Computing Language by Khronos Group.</a>  */
-    OpenCL,
+    OpenCL = 0,
 
     /*! <a href="https://developer.nvidia.com/cuda-zone">
       CUDA, Compute Unified Device Architecture by NVIDIA Corporation.</a>*/
-    CUDA,
+    CUDA = 1,
 
     /*! <a href="http://www.opengl.org/">
       GLSL, OpenGL Shading Language by Khronos Group.</a> */
-    GLSL };
+    GLSL = 2};
 //----------------------------------------------------------------------------//
 /*!
   \struct Buffer
@@ -65,7 +79,7 @@ enum GpuEnvironment {
 
   This class 
  */
-struct Buffer
+struct GPUIP_DECLSPEC Buffer
 {
     /*! \brief Smart pointer. */
 #ifdef _GPUIP_PYTHON_BINDINGS
@@ -125,7 +139,7 @@ struct Parameter
   \struct Kernel
   \brief 
 */
-struct Kernel
+struct GPUIP_DECLSPEC Kernel
 {
     /*! \brief Smart pointer. */
 #ifdef _GPUIP_PYTHON_BINDINGS
@@ -188,7 +202,7 @@ struct Kernel
   \class ImageProcessor
   \brief
 */
-class ImageProcessor
+class GPUIP_DECLSPEC ImageProcessor
 {
   public:
     /*! \brief Smart pointer. */

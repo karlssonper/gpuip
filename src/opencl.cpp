@@ -26,9 +26,14 @@ SOFTWARE.
 #include "opencl_error.h"
 #include <ctime>
 //----------------------------------------------------------------------------//
-extern "C" {
-    gpuip::ImplInterface * CreateImpl() { return new gpuip::OpenCLImpl(); }
-    void DeleteImpl(gpuip::ImplInterface * impl) { delete impl; }
+// Plugin interface
+extern "C" GPUIP_DECLSPEC gpuip::ImplInterface * CreateImpl()
+{
+    return new gpuip::OpenCLImpl();
+}
+extern "C" GPUIP_DECLSPEC void DeleteImpl(gpuip::ImplInterface * impl)
+{
+    delete impl;
 }
 //----------------------------------------------------------------------------//
 namespace gpuip {
@@ -215,7 +220,7 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
 
     // It should be fine to check once all the arguments have been set
     if (_clErrorSetKernelArg(cl_err, err, kernel.name)) {
-        return GPUIP_ERROR;
+        return false;
     }
     
     const size_t global_work_size[] = { _w, _h };    

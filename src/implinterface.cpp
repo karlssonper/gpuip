@@ -26,11 +26,6 @@ SOFTWARE.
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
-ImplInterface::ImplInterface()
-        :_w(0), _h(0)
-{
-}
-//----------------------------------------------------------------------------//
 Buffer::Ptr ImplInterface::CreateBuffer(const std::string & name,
                              Buffer::Type type,
                              unsigned int channels)
@@ -56,23 +51,6 @@ void ImplInterface::SetDimensions(unsigned int width, unsigned int height)
 {
     _w = width;
     _h = height;
-}
-//----------------------------------------------------------------------------//
-unsigned int  ImplInterface::_BufferSize(Buffer::Ptr buffer) const
-{
-    unsigned int bpp = 0; // bytes per pixel
-    switch(buffer->type) {
-        case Buffer::UNSIGNED_BYTE:
-            bpp = buffer->channels;
-            break;
-        case Buffer::HALF:
-            bpp = sizeof(float)/2 * buffer->channels;
-            break;
-        case Buffer::FLOAT:
-            bpp = sizeof(float) * buffer->channels;
-            break;
-    }
-    return bpp * _w * _h;
 }
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

@@ -56,7 +56,7 @@ class ImplInterface
     virtual std::string BoilerplateCode(Kernel::Ptr kernel) const = 0;
 
   protected:
-    ImplInterface();
+    ImplInterface() : _w(0), _h(0) {}
     
     std::map<std::string, Buffer::Ptr> _buffers;
     std::vector<Kernel::Ptr> _kernels;
@@ -64,8 +64,22 @@ class ImplInterface
     unsigned int _w; // width
     unsigned int _h; // height
     
-    unsigned int _BufferSize(Buffer::Ptr buffer) const;
-
+    unsigned int _BufferSize(Buffer::Ptr buffer) const
+    {
+        unsigned int bpp = 0; // bytes per pixel
+        switch(buffer->type) {
+            case Buffer::UNSIGNED_BYTE:
+                bpp = buffer->channels;
+                break;
+            case Buffer::HALF:
+                bpp = sizeof(float)/2 * buffer->channels;
+                break;
+            case Buffer::FLOAT:
+                bpp = sizeof(float) * buffer->channels;
+                break;
+        }
+        return bpp * _w * _h;
+    }
 };
 //----------------------------------------------------------------------------//
 } // end namespace gpuip

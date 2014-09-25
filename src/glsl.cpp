@@ -27,9 +27,14 @@ SOFTWARE.
 #include "glcontext.h"
 #include <string.h>
 //----------------------------------------------------------------------------//
-extern "C" {
-    gpuip::ImplInterface * CreateImpl() { return new gpuip::GLSLImpl(); }
-    void DeleteImpl(gpuip::ImplInterface * impl) { delete impl; }
+// Plugin interface
+extern "C" GPUIP_DECLSPEC gpuip::ImplInterface * CreateImpl()
+{
+    return new gpuip::GLSLImpl();
+}
+extern "C" GPUIP_DECLSPEC void DeleteImpl(gpuip::ImplInterface * impl)
+{
+    delete impl;
 }
 //----------------------------------------------------------------------------//
 namespace gpuip {

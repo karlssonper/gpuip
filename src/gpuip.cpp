@@ -23,23 +23,33 @@ SOFTWARE.
 */
 #include "gpuip.h"
 #include "implinterface.h"
-#include <dlfcn.h>
 #include <sstream>
+#ifdef _WIN32
+#  include <windows.h>
+#else
+#  include <dlfcn.h>
+#endif
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
 inline const char * _GetSharedLibraryFilename(GpuEnvironment env)
 {
-    switch(env) {
-        case OpenCL:
-            return "libgpuipOpenCL.so";
-        case CUDA:
-            return "libgpuipCUDA.so";
-        case GLSL:
-            return "libgpuipGLSL.so";
-        default:
-            return "#error enum does not have setup";
-    }
+    std::stringstream ss;
+#ifndef _WIN32
+    ss << "lib";
+#endif
+    const char * envStr[3] = { "OpenCL", "CUDA", "GLSL" };
+    ss << "gpuip" << envStr[env];
+#ifdef _WIN32
+    ss << ".dll";
+#else
+#  ifdef __APPLE__
+    ss << ".dylib";
+#  else
+    ss << ".so"; // linux
+#  endif
+#endif
+    return ss.str().c_str();
 }
 //----------------------------------------------------------------------------//
 ImageProcessor::Ptr ImageProcessor::Create(GpuEnvironment env)
@@ -60,9 +70,10 @@ bool ImageProcessor::CanCreate(GpuEnvironment env)
 //----------------------------------------------------------------------------//
 bool ImageProcessor::CanCreate(const std::string & filename)
 {
+    /*
     void * handle = dlopen(filename.c_str(), RTLD_NOW);
     if (handle == NULL) {
-        std::cerr << "rov" << std::endl;
+        return false;
     }
 
     if (dlsym(handle, "CreateImpl")) {
@@ -72,7 +83,7 @@ bool ImageProcessor::CanCreate(const std::string & filename)
     if (handle != NULL && dlsym(handle, "CreateImpl") != NULL) {
         dlclose(handle);
         return true;
-    } 
+    } */
     return false;
 }
 //----------------------------------------------------------------------------//
@@ -95,17 +106,25 @@ ImageProcessor::ImageProcessor(const char * filename)
         : _dynamicLibObj(NULL), _impl(NULL)
 {
     // Open shared library
+#ifdef _WIN32
+    _dynamicLibObj = LoadLibrary(filename);
+#else
     _dynamicLibObj = dlopen(filename, RTLD_NOW);
+#endif
     if (_dynamicLibObj == NULL) {
         std::stringstream ss;
         ss << "Could not open shared library " << filename << "\n";
+#ifdef _WIN32
+        ss << GetLastError();
+#else
         const char * err = dlerror();
         if (err) {
             ss << err;
         }
+#endif
         throw std::runtime_error(ss.str().c_str());
     }
-  
+    /*
     // Look for CreateImpl symbol
     void* loadSym = dlsym(_dynamicLibObj, "CreateImpl");
     if(loadSym == NULL) {
@@ -125,10 +144,12 @@ ImageProcessor::ImageProcessor(const char * filename)
         ss << "Could not create gpuip impl from shared library " << filename;
         throw std::runtime_error(ss.str().c_str());
     }
+    */
 }
 //----------------------------------------------------------------------------//
 ImageProcessor::~ImageProcessor()
 {
+    /*
     // Look for CreateImpl symbol
     void* loadSym = dlsym(_dynamicLibObj, "DeleteImpl");
     if(loadSym == NULL) {
@@ -140,6 +161,7 @@ ImageProcessor::~ImageProcessor()
 
     // Close shared library
     dlclose(_dynamicLibObj);
+    */
 }
 //----------------------------------------------------------------------------//
 Buffer::Ptr ImageProcessor::CreateBuffer(const std::string & name,
