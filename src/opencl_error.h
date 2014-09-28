@@ -36,38 +36,43 @@ inline bool _clErrorEnqueueKernel(cl_int cl_err, std::string * err,
 {
     if (cl_err != CL_SUCCESS) {
         (*err) += "OpenCL: error when enqueuing kernel ";
-        (*err) += kernel.name;
+        (*err) += kernel.Name();
         std::cout << cl_err << std::endl;
+        const std::vector<Kernel::BufferLink> & ibls = kernel.InputBuffers();
+        const std::vector<Kernel::BufferLink> & obls = kernel.OutputBuffers();
+        const std::vector<Parameter<int> > & pInt = kernel.ParamsInt();
+        const std::vector<Parameter<float> > & pFloat = kernel.ParamsFloat();
         switch(cl_err) {
             case CL_INVALID_KERNEL_ARGS: {
                 (*err) += ". Invalid kernel arguments. The gpuip kernel has the"
                         " following data:\n";
                 std::stringstream ss;
                 ss << "In buffers: ";
-                for (size_t i = 0; i < kernel.inBuffers.size(); ++i) {
-                    ss << kernel.inBuffers[i].name << "("
-                       << kernel.inBuffers[i].buffer->name << "), ";
+                
+                for (size_t i = 0; i < ibls.size(); ++i) {
+                    ss << ibls[i].Name() << "("
+                       << ibls[i].TargetBuffer()->Name() << "), ";
                 }
                 ss << "\n";
                 
                 ss << "Out buffers: ";
-                for (size_t i = 0; i < kernel.outBuffers.size(); ++i) {
-                    ss << kernel.outBuffers[i].name << "("
-                       << kernel.outBuffers[i].buffer->name << "), ";
+                for (size_t i = 0; i < obls.size(); ++i) {
+                    ss << obls[i].Name() << "("
+                       << obls[i].TargetBuffer()->Name() << "), ";
                 }
                 ss << "\n";
 
                 ss << "Parameters int: ";
-                for (size_t i = 0; i < kernel.paramsInt.size(); ++i) {
-                    ss << "(" << kernel.paramsInt[i].name << ","
-                       << kernel.paramsInt[i].value << "), ";
+                for (size_t i = 0; i < pInt.size(); ++i) {
+                    ss << "(" << pInt[i].Name() << ","
+                       << pInt[i].Value() << "), ";
                 }
                 ss << "\n";
 
                 ss << "Parameters float: ";
-                for (size_t i = 0; i < kernel.paramsFloat.size(); ++i) {
-                    ss << "(" << kernel.paramsFloat[i].name << ","
-                       << kernel.paramsFloat[i].value << "), ";
+                for (size_t i = 0; i < pFloat.size(); ++i) {
+                    ss << "(" << pFloat[i].Name() << ","
+                       << pFloat[i].Value() << "), ";
                 }
                 ss << "\n";
                 (*err) += ss.str();

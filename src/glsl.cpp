@@ -140,11 +140,11 @@ double GLSLImpl::Allocate(std::string * err)
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE); 
 
         // Allocate memory on gpu (needed to bind framebuffer)
-        Buffer::Ptr b = it->second;
+        const Buffer::Ptr & b = it->second;
         glTexImage2D(GL_TEXTURE_2D, 0, _GetInternalFormat(b),
                      _w, _h, 0, _GetFormat(b), _GetType(b), 0);
         
-        _textures[it->second->name] = texID;
+        _textures[b->Name()] = texID;
 
         if (_glErrorCreateTexture(err)) {
             return GPUIP_ERROR;
@@ -165,8 +165,11 @@ double GLSLImpl::Allocate(std::string * err)
     // Attach the textures to FBOs color attachment points
     for(size_t i = 0; i < _kernels.size(); ++i) {
         glBindFramebuffer(GL_FRAMEBUFFER, _fbos[i]);
-        for(size_t j = 0; j < _kernels[i]->outBuffers.size(); ++j) {
-            GLuint texID = _textures[_kernels[i]->outBuffers[j].buffer->name];
+        const Kernel::Ptr & k = _kernels[i];
+        const std::vector<Kernel::BufferLink> & bls = k->OutputBuffers();
+        for(size_t j = 0; j < bls.size(); ++j) {
+            const Buffer::Ptr & targetBuffer = bls[j].TargetBuffer();
+            const GLuint texID = _textures[targetBuffer->Name()];
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
                                    GL_TEXTURE_2D, texID, 0 /*mipmap level*/);
         }
@@ -219,7 +222,7 @@ double GLSLImpl::Build(std::string * err)
     
     _programs.resize(_kernels.size());
     for(size_t i = 0; i < _kernels.size(); ++i) {
-        const char * code = _kernels[i]->code.c_str();
+        const char * code = _kernels[i]->Code().c_str();
         const GLuint fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
         const int length = strlen(code);
         glShaderSource(fragShaderID, 1, &code, &length);
@@ -265,15 +268,14 @@ double GLSLImpl::Copy(Buffer::Ptr b,
                       std::string * err)
 {
     _StartTimer();
+    glBindTexture(GL_TEXTURE_2D, _textures[b->Name()]);
     if (op == Buffer::COPY_FROM_GPU) {
-        glBindTexture(GL_TEXTURE_2D, _textures[b->name]);
         glGetTexImage(GL_TEXTURE_2D, 0, _GetFormat(b), _GetType(b), data);
     } else if (op == Buffer::COPY_TO_GPU) {
-        glBindTexture(GL_TEXTURE_2D, _textures[b->name]);
         glTexImage2D(GL_TEXTURE_2D, 0, _GetInternalFormat(b),
                      _w, _h, 0, _GetFormat(b), _GetType(b), data);
     }
-    if (_glErrorCopy(err, b->name, op)) {
+    if (_glErrorCopy(err, b->Name(), op)) {
         return GPUIP_ERROR;
     }
     return _StopTimer();
@@ -283,26 +285,31 @@ std::string GLSLImpl::BoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
     ss << "#version 120\n";
-    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        ss << "uniform sampler2D " << kernel->inBuffers[i].name << ";\n";
+
+    const std::vector<Kernel::BufferLink> & ibls = kernel->InputBuffers();
+    for(size_t i = 0; i < ibls.size(); ++i) {
+        ss << "uniform sampler2D " << ibls[i].Name() << ";\n";
     }
-    for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
-        ss << "uniform int " << kernel->paramsInt[i].name <<";\n";
+    const std::vector<Parameter<int> > & paramsInt = kernel->ParamsInt();
+    for(size_t i = 0; i < paramsInt.size(); ++i) {
+        ss << "uniform int " << paramsInt[i].Name() <<";\n";
     }
-    for(size_t i = 0; i < kernel->paramsFloat.size(); ++i) {
-        ss << "uniform float " << kernel->paramsFloat[i].name <<";\n";
+    const std::vector<Parameter<float> > & paramsFloat = kernel->ParamsFloat();
+    for(size_t i = 0; i < paramsFloat.size(); ++i) {
+        ss << "uniform float " << paramsFloat[i].Name() <<";\n";
     }
     ss << "varying vec2 x; // texture coordinates\n"
        << "uniform float dx; // delta\n\n"
        << "void main()\n"
        << "{\n";
-    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
+    const std::vector<Kernel::BufferLink> & obls = kernel->OutputBuffers();
+    for(size_t i = 0; i < obls.size(); ++i) {
         if (i) {
             ss << "\n";
         }
         ss << "    // gl_FragData[" << i << "] is buffer "
-           << kernel->outBuffers[i].name << "\n"
-           << "    gl_FragData[" << i<<"] = vec4(0,0,0,1);\n";  
+           << obls[i].Name() << "\n"
+           << "    gl_FragData[" << i<< "] = vec4(0,0,0,1);\n";  
     }    
     ss << "}";
     return ss.str();
@@ -319,7 +326,7 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
 
     // Tell OpenGL how many buffers to draw
     std::vector<GLenum> enums;
-    for(size_t i = 0; i < kernel.outBuffers.size(); ++i) {
+    for(size_t i = 0; i < kernel.OutputBuffers().size(); ++i) {
         enums.push_back(GL_COLOR_ATTACHMENT0 + i);
     }
     glDrawBuffers(enums.size(), &enums[0]);
@@ -336,13 +343,15 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
     glVertexAttribPointer(loc, 2, GL_FLOAT, 0, 8, 0);
        
     // Uniform data setup
-    for(size_t i = 0; i < kernel.paramsInt.size(); ++i) {
-        loc = glGetUniformLocation(program, kernel.paramsInt[i].name.c_str());
-        glUniform1i(loc, kernel.paramsInt[i].value);
+    const std::vector<Parameter<int> > & paramsInt = kernel.ParamsInt();
+    for(size_t i = 0; i < paramsInt.size(); ++i) {
+        loc = glGetUniformLocation(program, paramsInt[i].Name().c_str());
+        glUniform1i(loc, paramsInt[i].Value());
     }
-    for(size_t i = 0; i < kernel.paramsFloat.size(); ++i) {
-        loc = glGetUniformLocation(program, kernel.paramsFloat[i].name.c_str());
-        glUniform1f(loc, kernel.paramsFloat[i].value);
+    const std::vector<Parameter<float> > & paramsFloat = kernel.ParamsFloat();
+    for(size_t i = 0; i < paramsFloat.size(); ++i) {
+        loc = glGetUniformLocation(program, paramsFloat[i].Name().c_str());
+        glUniform1f(loc, paramsFloat[i].Value());
     }
     glUniform1f(glGetUniformLocation(program, "dx"), 1.0f/_w);
 
@@ -351,21 +360,23 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
     glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTexture);
 
     // Texture setup
-    for(size_t i = 0; i < kernel.inBuffers.size(); ++i) {
-        loc = glGetUniformLocation(program, kernel.inBuffers[i].name.c_str());
+    const std::vector<Kernel::BufferLink> & ibls = kernel.InputBuffers();
+    for(size_t i = 0; i < ibls.size(); ++i) {
+        loc = glGetUniformLocation(program, ibls[i].Name().c_str());
         glUniform1i(loc, i);
         glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, _textures[kernel.inBuffers[i].buffer->name]);
+        const Buffer::Ptr & targetBuffer = ibls[i].TargetBuffer();
+        glBindTexture(GL_TEXTURE_2D, _textures[targetBuffer->Name()]);
     }
 
-    if (_glErrorDrawSetup(error, kernel.name)) {
+    if (_glErrorDrawSetup(error, kernel.Name())) {
         return false;
     }
 
     // Draw quad
     glDrawArrays(GL_QUADS, 0, 4);
     
-    if (_glErrorDraw(error, kernel.name)) {
+    if (_glErrorDraw(error, kernel.Name())) {
         return false;
     }
     
@@ -382,7 +393,7 @@ bool GLSLImpl::_DrawQuad(const Kernel & kernel,
 //----------------------------------------------------------------------------//
 GLenum _GetType(const Buffer::Ptr & b)
 {
-    switch(b->type) {
+    switch(b->Type()) {
         case Buffer::UNSIGNED_BYTE:
             return GL_UNSIGNED_BYTE;
         case Buffer::HALF:
@@ -397,7 +408,7 @@ GLenum _GetType(const Buffer::Ptr & b)
 //----------------------------------------------------------------------------//
 GLenum _GetFormat(const Buffer::Ptr & b)
 {
-    switch(b->channels) {
+    switch(b->Channels()) {
         case 1:
             return GL_RED;
         case 2:
@@ -407,8 +418,8 @@ GLenum _GetFormat(const Buffer::Ptr & b)
         case 4:
             return GL_RGBA;
         default:
-            std::cerr << "gouip: Unknown OpenGL buffer channels " << b->channels
-                      << std::endl;
+            std::cerr << "gouip: Unknown OpenGL buffer channels "
+                      << b->Channels() << std::endl;
             return GL_RGB;
     }
 }

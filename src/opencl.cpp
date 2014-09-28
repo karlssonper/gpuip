@@ -38,6 +38,46 @@ extern "C" GPUIP_DECLSPEC void DeleteImpl(gpuip::ImplInterface * impl)
 //----------------------------------------------------------------------------//
 namespace gpuip {
 //----------------------------------------------------------------------------//
+bool _SetBufferArgs(const std::vector<Kernel::BufferLink> & bls,
+                    const std::map<std::string, cl_mem> & clBuffers,
+                    const cl_kernel & clKernel,
+                    cl_int & argc,
+                    std::string * err);
+//----------------------------------------------------------------------------//
+template<typename T>
+bool _SetParamArgs(const std::vector<Parameter<T> > & params,
+                   const cl_kernel & clKernel,
+                   cl_int & argc,
+                   std::string * err);
+//----------------------------------------------------------------------------//
+std::string _GetTypeStr(const Buffer::Ptr & buffer);
+//----------------------------------------------------------------------------//
+void _BoilerplateBufferArgs(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks,
+    const std::string & indent,
+    int & argcount,
+    bool input);
+//----------------------------------------------------------------------------//
+template<typename T>
+void _BoilerplateParamArgs(std::stringstream & ss,
+                           const std::vector<Parameter<T > > & params,
+                           const char * typenameStr,
+                           const std::string & indent,
+                           int & argcount);
+//----------------------------------------------------------------------------//
+void _BoilerplateHalfToFloat(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks);
+//----------------------------------------------------------------------------//
+void _BoilerplateKernelCode(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks);
+//----------------------------------------------------------------------------//
+void _BoilerplateFloatToHalf(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks);
+//----------------------------------------------------------------------------//
 OpenCLImpl::OpenCLImpl()
 {
     // Get Platform ID
@@ -89,9 +129,9 @@ double OpenCLImpl::Allocate(std::string * err)
     cl_int cl_err;
     std::map<std::string,Buffer::Ptr>::const_iterator it;
     for (it = _buffers.begin(); it != _buffers.end(); ++it) {
-        _clBuffers[it->second->name] = clCreateBuffer(
-            _ctx, CL_MEM_READ_WRITE,
-            _BufferSize(it->second), NULL, &cl_err);
+        const Buffer::Ptr & b = it->second;
+        _clBuffers[b->Name()] = clCreateBuffer(
+            _ctx, CL_MEM_READ_WRITE,  _BufferSize(b), NULL, &cl_err);
         if (_clErrorInitBuffers(cl_err, err)) {
             return GPUIP_ERROR;
         }
@@ -159,16 +199,16 @@ double OpenCLImpl::Copy(Buffer::Ptr buffer,
     cl_int cl_err = CL_SUCCESS; //set to success to get rid of compiler warnings
     if (op == Buffer::COPY_FROM_GPU) {
         cl_err =  clEnqueueReadBuffer(
-            _queue,  _clBuffers[buffer->name],
+            _queue,  _clBuffers[buffer->Name()],
             CL_TRUE /* function call returns when copy is done */ ,
             0, _BufferSize(buffer), data, 0 , NULL, &event);
     } else if (op == Buffer::COPY_TO_GPU) {
         cl_err =  clEnqueueWriteBuffer(
-            _queue,  _clBuffers[buffer->name],
+            _queue,  _clBuffers[buffer->Name()],
             CL_TRUE /* function call returns when copy is done */ ,
             0, _BufferSize(buffer), data, 0 , NULL, &event);
     }
-    if (_clErrorCopy(cl_err, error, buffer->name, op)) {
+    if (_clErrorCopy(cl_err, error, buffer->Name(), op)) {
         return GPUIP_ERROR;
     }
     clWaitForEvents(1, &event);
@@ -190,28 +230,23 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     
     // Set kernel arguments in the following order:
     // 1. Input buffers.
-    const size_t size = sizeof(cl_mem);
-    for(size_t j = 0; j < kernel.inBuffers.size(); ++j) {
-        cl_err = clSetKernelArg(clKernel, argc++, size,
-                                &_clBuffers[kernel.inBuffers[j].buffer->name]);
+    if (!_SetBufferArgs(kernel.InputBuffers(), _clBuffers,clKernel,argc,err)) {
+        return false;
     }
-
-    // 2. Output buffers.
-    for(size_t j = 0; j < kernel.outBuffers.size(); ++j) {
-        cl_err = clSetKernelArg(clKernel, argc++, size,
-                                &_clBuffers[kernel.outBuffers[j].buffer->name]);
+    
+     // 2. Output buffers.
+    if(!_SetBufferArgs(kernel.OutputBuffers(), _clBuffers,clKernel,argc,err)) {
+        return false;
     }
-
+    
     // 3. Int parameters
-    for(size_t i = 0; i < kernel.paramsInt.size(); ++i) {
-        cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),
-                                &kernel.paramsInt[i].value);
+    if(!_SetParamArgs(kernel.ParamsInt(), clKernel, argc, err)) {
+        return false;
     }
 
     // 4. Float parameters
-    for(size_t i = 0; i < kernel.paramsFloat.size(); ++i) {
-        cl_err = clSetKernelArg(clKernel, argc++, sizeof(float),
-                                &kernel.paramsFloat[i].value);
+    if(!_SetParamArgs(kernel.ParamsFloat(), clKernel, argc, err)) {
+        return false;
     }
 
     // Set width and height parameters
@@ -219,7 +254,7 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     cl_err = clSetKernelArg(clKernel, argc++, sizeof(int),&_h);
 
     // It should be fine to check once all the arguments have been set
-    if (_clErrorSetKernelArg(cl_err, err, kernel.name)) {
+    if (_clErrorSetKernelArg(cl_err, err, kernel.Name())) {
         return false;
     }
     
@@ -234,72 +269,26 @@ bool OpenCLImpl::_EnqueueKernel(const Kernel & kernel,
     return true;
 }
 //----------------------------------------------------------------------------//
-inline std::string _GetTypeStr(const Buffer::Ptr & buffer)
-{
-    std::stringstream type;
-    switch(buffer->type) {
-        case Buffer::UNSIGNED_BYTE:
-            type << "uchar";
-            break;
-        case Buffer::HALF:
-            type << "half";
-            break;
-        case Buffer::FLOAT:
-            type << "float";
-            break;
-        default:
-            type << "float";
-    };
-    
-    // Half vector type is not always supported
-    // instead of half4 * data, we have to use half * data
-    if (buffer->channels > 1 && buffer->type != Buffer::HALF) {
-        type << buffer->channels;
-    }
-    return type.str();
-}
-//----------------------------------------------------------------------------//
 std::string OpenCLImpl::BoilerplateCode(Kernel::Ptr kernel) const
 {
     std::stringstream ss;
 
-    // Indent string
-    ss << ",\n" << std::string(kernel->name.size() + 1, ' ');
+    // Indent string (used to indent arguments)
+    ss << ",\n" << std::string(kernel->Name().size() + 1, ' ');
     const std::string indent = ss.str();
     ss.str(""); //clears the sstream
-    
-    ss << "__kernel void\n" << kernel->name << "(";
 
-    bool first = true;
+    // Header with arguments
+    ss << "__kernel void\n" << kernel->Name() << "(";
+    int argcount = 0;
+    _BoilerplateBufferArgs(ss, kernel->InputBuffers(), indent, argcount, true);
+    _BoilerplateBufferArgs(ss, kernel->OutputBuffers(),indent,argcount, false);
+    _BoilerplateParamArgs(ss, kernel->ParamsInt(), "int", indent,argcount);
+    _BoilerplateParamArgs(ss, kernel->ParamsFloat(), "float", indent,argcount);
+    ss << indent << "const int width"
+       << indent << "const int height)\n";
 
-    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;
-        const std::string & name = kernel->inBuffers[i].buffer->name;
-        ss << "__global const " << _GetTypeStr(_buffers.find(name)->second)
-           << " * " << kernel->inBuffers[i].name
-           << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");
-    }
-    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;
-        const std::string & name = kernel->outBuffers[i].buffer->name;
-        ss << "__global " <<  _GetTypeStr(_buffers.find(name)->second)
-           << " * " << kernel->outBuffers[i].name
-           << (_buffers.find(name)->second->type == Buffer::HALF ? "_half" : "");
-    }
-    for(size_t i = 0; i < kernel->paramsInt.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;        
-        ss << "const int " << kernel->paramsInt[i].name;
-    }
-    for(size_t i = 0; i < kernel->paramsFloat.size(); ++i) {
-        ss << (first ? "" : indent);
-        first = false;
-        ss << "const float " << kernel->paramsFloat[i].name;
-    }
-    ss << indent << "const int width" << indent << "const int height)\n";
-    
+    // Code for index and dimension check
     ss << "{\n";
     ss << "    const int x = get_global_id(0);\n";
     ss << "    const int y = get_global_id(1);\n\n";
@@ -310,113 +299,14 @@ std::string OpenCLImpl::BoilerplateCode(Kernel::Ptr kernel) const
     ss << "        return;\n";
     ss << "    }\n\n";
 
-    // Do half to float conversions (if needed)
-    for(size_t i = 0; i < kernel->inBuffers.size(); ++i) {
-        const std::string & bname = kernel->inBuffers[i].buffer->name;
-        Buffer::Ptr buf = _buffers.find(bname)->second;
-        if (buf->type == Buffer::HALF) {
-            if (!i) {
-                ss << "    // half to float conversion\n";
-            }
-            
-            if (buf->channels == 1) {
-                ss << "    const float " << kernel->inBuffers[i].name
-                   << " = vload_half(idx, "
-                   << kernel->inBuffers[i].name << "_half);\n";
-                continue;
-            }
-            
-            std::stringstream subss;
-            subss << "    const float" << buf->channels << " "
-                  << kernel->inBuffers[i].name
-                  << " = (float" << buf->channels << ")(";
-            const std::string preindent = subss.str();
-            subss.str("");
-            subss << ",\n" << std::string(preindent.size(), ' ');
-            const std::string subindent = subss.str();
-            ss << preindent;
-            bool subfirst = true;
-            for (unsigned int j = 0; j < buf->channels; ++j) {
-                ss << (subfirst ? "" : subindent);
-                subfirst = false;
-                ss << "vload_half(" << buf->channels << " * idx + " << j << ", "
-                   << kernel->inBuffers[i].name << "_half)";
-            }
-            ss <<");\n";
+     // Do half to float conversions  on input buffers (if needed)
+    _BoilerplateHalfToFloat(ss, kernel->InputBuffers());
 
-            if (i == kernel->inBuffers.size() - 1) {
-                ss << "\n";
-            }
-        }
-    }
+    // Starting kernel code, writing single value or vectors to all zero
+    _BoilerplateKernelCode(ss, kernel->OutputBuffers());
 
-    ss << "    // kernel code\n";
-    for (size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        Buffer::Ptr b = _buffers.find(
-            kernel->outBuffers[i].buffer->name)->second;
-        ss << "    ";
-        if (b->type == Buffer::HALF) {
-            ss << "float" << b->channels << " ";
-        }
-        ss << kernel->outBuffers[i].name;
-        if (b->type != Buffer::HALF) {
-            ss << "[idx]";
-        }
-        ss << " = ";
-        if (b->channels == 1) {
-            ss << "0;\n";
-        } else {
-            ss << "(";
-            if (b->type != Buffer::HALF) {
-                ss << _GetTypeStr(b);
-            } else {
-                ss << "float" << b->channels;
-            }
-            ss << ")(";
-            for (size_t j = 0; j < b->channels; ++j) {
-                ss << (j ==0 ? "" : ", ") << "0";
-            }
-            ss << ");\n";
-        }
-    }
-
-    // Do half to float conversions (if needed)
-    for(size_t i = 0; i < kernel->outBuffers.size(); ++i) {
-        const std::string & bname = kernel->outBuffers[i].buffer->name;
-        Buffer::Ptr buf = _buffers.find(bname)->second;
-        if (buf->type == Buffer::HALF) {
-            if (!i) {
-                ss << "\n    // float to half conversion\n";
-            }
-
-            for (unsigned int j = 0; j < buf->channels; ++j) {
-                ss << "    vstore_half(" << kernel->outBuffers[i].name;
-                switch(j) {
-                    case 0:
-                        ss << (buf->channels > 1 ? ".x" : "");
-                        break;
-                    case 1:
-                        ss << ".y";
-                        break;
-                    case 2:
-                        ss << ".z";
-                        break;
-                    case 3:
-                        ss << ".w";
-                        break;
-                }
-                        
-                ss << ", ";
-                if (buf->channels > 1) {
-                    ss << buf->channels << " * ";
-                }
-                ss << "idx + " << j << ", "
-                   << kernel->outBuffers[i].name << "_half);\n";
-            }
-        }
-    }
-    
-    ss << "}";
+    // Do float to half conversions on output buffers (if needed)
+    _BoilerplateFloatToHalf(ss, kernel->OutputBuffers());
     
     return ss.str();
 }
@@ -446,4 +336,263 @@ bool OpenCLImpl::_ReleaseKernels(std::string * err)
     return true;
 }
 //----------------------------------------------------------------------------//
+bool _SetBufferArgs(const std::vector<Kernel::BufferLink> & bls,
+                    const std::map<std::string, cl_mem> & clBuffers,
+                    const cl_kernel & clKernel,
+                    cl_int & argc,
+                    std::string * err)
+{
+    const size_t size = sizeof(cl_mem);
+    for(size_t i = 0; i < bls.size(); ++i) {
+        const Buffer::Ptr & targetBuffer = bls[i].TargetBuffer();
+        const cl_mem * clBuffer = &clBuffers.find(targetBuffer->Name())->second;
+        cl_int cl_err = clSetKernelArg(clKernel, argc++, size, clBuffer);
+        if (_clErrorSetKernelArg(cl_err, err, bls[i].Name())) {
+            return false;
+        }
+    }
+    return true;
+}
+//----------------------------------------------------------------------------//
+template<typename T>
+bool _SetParamArgs(const std::vector<Parameter<T> > & params,
+                   const cl_kernel & clKernel,
+                   cl_int & argc,
+                   std::string * err)
+{
+    for(size_t i = 0; i < params.size(); ++i) {
+        T value = params[i].Value();
+        cl_int cl_err = clSetKernelArg(clKernel, argc++, sizeof(T), &value);
+        if (_clErrorSetKernelArg(cl_err, err, params[i].Name())) {
+            return false;
+        }
+    }
+    return true;
+}
+//----------------------------------------------------------------------------//
+std::string _GetTypeStr(const Buffer::Ptr & buffer)
+{
+    std::stringstream type;
+    switch(buffer->Type()) {
+        case Buffer::UNSIGNED_BYTE:
+            type << "uchar";
+            break;
+        case Buffer::HALF:
+            type << "half";
+            break;
+        case Buffer::FLOAT:
+            type << "float";
+            break;
+        default:
+            type << "float";
+    };
+    
+    // Half vector type is not always supported
+    // instead of half4 * data, we have to use half * data
+    if (buffer->Channels() > 1 && buffer->Type() != Buffer::HALF) {
+        type << buffer->Channels();
+    }
+    return type.str();
+}
+//----------------------------------------------------------------------------//
+void _BoilerplateBufferArgs(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks,
+    const std::string & indent,
+    int & argcount,
+    bool input)
+{
+    for(size_t i = 0; i < bufferLinks.size(); ++i) {
+        //if first argument, don't indent
+        if(!argcount++) {
+            ss << indent;
+        }
+
+        ss << "__global ";
+        
+        // Only input buffers are declared const
+        if(input) {
+            ss << "const ";
+        }
+
+        const Buffer::Ptr & buffer = bufferLinks[i].TargetBuffer();
+        
+        // Actual pointer
+        ss << _GetTypeStr(buffer)  << " * " << bufferLinks[i].Name();
+
+        // Rename if half
+        if(buffer->Type() == Buffer::HALF) {
+            ss << "_half";
+        }
+    }
+}
+//----------------------------------------------------------------------------//
+template<typename T>
+void _BoilerplateParamArgs(std::stringstream & ss,
+                           const std::vector<Parameter<T > > & params,
+                           const char * typenameStr,
+                           const std::string & indent,
+                           int & argcount)
+{
+    for(size_t i = 0; i < params.size(); ++i) {
+        if (!argcount++) {
+            ss << indent;
+        }
+        ss << "const " << typenameStr << " " << params[i].Name();
+    }
+}
+//----------------------------------------------------------------------------//
+void _BoilerplateHalfToFloat(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks)
+{
+    int count = 0;
+    for(size_t i = 0; i < bufferLinks.size(); ++i) {
+        const Buffer::Ptr & buf = bufferLinks[i].TargetBuffer();
+        const std::string & name = bufferLinks[i].Name();
+        // if buffer is of type half, do conversion
+        if (buf->Type() == Buffer::HALF) {
+            if (!count++) { // only place comment once
+                ss << "    // half to float conversion\n";
+            }
+
+            // Only 1 channel is a specialcase
+            if (buf->Channels() == 1) {
+                ss << "    const float " << name << " = "
+                   << " = vload_half(idx, " << name << "_half);\n";
+                continue;
+            }
+
+            // const floatX = make_floatX( 
+            std::stringstream subss;
+            subss << "    const float" << buf->Channels() << " "
+                  << bufferLinks[i].Name()
+                  << " = (float" << buf->Channels() << ")(";
+            const std::string preindent = subss.str();
+            ss << preindent;
+            
+            // Indent for every row in the make_floatX call
+            subss.str("");
+            subss << ",\n" << std::string(preindent.size(), ' ');
+            const std::string subindent = subss.str();
+            
+            for (unsigned int j = 0; j < buf->Channels(); ++j) {
+                if(!j) { // only subindent after first row
+                    ss << subindent;
+                }
+
+                // half2float conversion from single value unsigned short
+                ss << "vload_half("
+                   << buf->Channels() << " * idx + " << j
+                   << ", " << name << "_half)";
+            }
+            ss <<");\n";
+        }
+    }
+
+    // If any half to float conversions were added, end with a new line
+    if (count) {
+        ss << "\n";
+    }
+}
+//----------------------------------------------------------------------------//
+void _BoilerplateKernelCode(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks)
+{
+    ss << "    // kernel code\n";
+    for (size_t i = 0; i < bufferLinks.size(); ++i) {
+        Buffer::Ptr b = bufferLinks[i].TargetBuffer();
+        ss << "    ";
+
+        // If half, we need to declare a new variable
+        if (b->Type() == Buffer::HALF) {
+            ss << "float";
+
+            // If more than 1 channel, then it's a vector
+            if(b->Channels() > 1) {
+                ss << b->Channels();
+            }
+            ss << " ";
+        }
+
+        // variale name
+        ss << bufferLinks[i].Name();
+
+        // if not half, then we write directly to the global memory
+        if (b->Type() != Buffer::HALF) {
+            ss << "[idx]";
+        }
+        
+        ss << " = ";
+        if (b->Channels() == 1) { // single value -> just a zero
+            ss << "0;\n";
+        } else { // if not single value -> vector
+            ss << "make_";
+            if (b->Type() != Buffer::HALF) {
+                ss << _GetTypeStr(b);
+            } else {
+                ss << "float" << b->Channels();
+            }
+
+            // populate vector with zeros
+            ss << "(";
+            for (size_t j = 0; j < b->Channels(); ++j) {
+                ss << (j ==0 ? "" : ", ") << "0";
+            }
+            ss << ");\n";
+        }
+    }
+}
+//----------------------------------------------------------------------------//
+void _BoilerplateFloatToHalf(
+    std::stringstream & ss,
+    const std::vector<Kernel::BufferLink> & bufferLinks)
+{
+    // Do half to float conversions (if needed)
+    int count = 0;
+    for(size_t i = 0; i < bufferLinks.size(); ++i) {
+        const Buffer::Ptr & buf = bufferLinks[i].TargetBuffer();
+        const std::string name = bufferLinks[i].Name();
+
+        // if buffer pixel type is half, do conversion
+        if (buf->Type() == Buffer::HALF) {
+            //only write count once
+            if (!count++) {
+                    ss << "\n    // float to half conversion\n";
+            }
+
+            // need to write every channel individually
+            for (unsigned int j = 0; j < buf->Channels(); ++j) {
+                // variable name (defined in arguments
+                ss << "    vstore_half(" << name;
+
+
+                switch(j) {
+                    case 0:
+                        ss << (buf->Channels() > 1 ? ".x" : "");
+                        break;
+                    case 1:
+                        ss << ".y";
+                        break;
+                    case 2:
+                        ss << ".z";
+                        break;
+                    case 3:
+                        ss << ".w";
+                        break;
+                }
+                        
+                ss << ", ";
+                if (buf->Channels() > 1) {
+                    ss << buf->Channels() << " * ";
+                }
+                ss << "idx + " << j << ", "
+                   << name << "_half);\n";
+            }
+        }
+    }
+}
+//----------------------------------------------------------------------------//
 } // end namespace gpuip
+//----------------------------------------------------------------------------//

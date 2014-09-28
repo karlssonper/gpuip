@@ -24,10 +24,10 @@ void use_gpuip()
     gpuip::Buffer::Ptr b0 = ip->CreateBuffer("b0", gpuip::FLOAT, 4);
     gpuip::Buffer::Ptr b1 = ip->CreateBuffer("b1", gpuip::FLOAT, 4);
     gpuip::Kernel::Ptr kernel = gpuipip->CreateKernel("modify_red");
-    kernel->code = GetKernelCode(); // definied somewhere else
-    kernel->inBuffers.push_back(gpuip::Kernel::BufferLink(b0, "img"));
-    kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b1, "out_img"));
-    kernel->paramsFloat.push_back(gpuip::Parameter<float>("alpha", 0.4));
+    kernel->SetCode(GetKernelCode() /* GetKernelCode defined somewhere else */);
+    kernel->AddInputBuffer("img", b0);
+    kernel->AddOutputBuffer("out_img", b1);
+    kernel->SetParamFloat("alpha", 0.4f);
     print_timings("Build", ip->Build(&err), &err);
     print_timings("Allocate", ip->Allocate(&err), &err);
     print_timings("Copy", ip->Copy(b0, gpuip::Buffer::COPY_TO_GPU, data, &err), &err);

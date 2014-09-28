@@ -132,11 +132,12 @@ bool ImageProcessor::CanCreate(GpuEnvironment env)
 //----------------------------------------------------------------------------//
 bool ImageProcessor::CanCreate(const std::string & filename)
 {
-    /*
+    std::cout << "Trying to open " << filename << std::endl;
     void * handle = dlopen(filename.c_str(), RTLD_NOW);
     if (handle == NULL) {
         return false;
     }
+    std::cout << 'first test' << std::endl;
 
     if (dlsym(handle, "CreateImpl")) {
         std::cerr << dlerror() << std::endl;
@@ -145,7 +146,7 @@ bool ImageProcessor::CanCreate(const std::string & filename)
     if (handle != NULL && dlsym(handle, "CreateImpl") != NULL) {
         dlclose(handle);
         return true;
-    } */
+    }
     return false;
 }
 //----------------------------------------------------------------------------//
@@ -171,7 +172,7 @@ ImageProcessor::ImageProcessor(const char * filename)
 #endif
         throw std::runtime_error(ss.str().c_str());
     }
-    /*
+   
     // Look for CreateImpl symbol
     void* loadSym = dlsym(_dynamicLibObj, "CreateImpl");
     if(loadSym == NULL) {
@@ -191,12 +192,10 @@ ImageProcessor::ImageProcessor(const char * filename)
         ss << "Could not create gpuip impl from shared library " << filename;
         throw std::runtime_error(ss.str().c_str());
     }
-    */
 }
 //----------------------------------------------------------------------------//
 ImageProcessor::~ImageProcessor()
 {
-    /*
     // Look for CreateImpl symbol
     void* loadSym = dlsym(_dynamicLibObj, "DeleteImpl");
     if(loadSym == NULL) {
@@ -208,7 +207,6 @@ ImageProcessor::~ImageProcessor()
 
     // Close shared library
     dlclose(_dynamicLibObj);
-    */
 }
 //----------------------------------------------------------------------------//
 Buffer::Ptr ImageProcessor::CreateBuffer(const std::string & name,

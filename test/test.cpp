@@ -277,25 +277,21 @@ void test(gpuip::GpuEnvironment env, const char * codeA, const char * codeB,
     gpuip::Kernel::Ptr kernelA = ip->CreateKernel("my_kernelA");
     assert(kernelA.get() != NULL);
     assert(kernelA->name == std::string("my_kernelA"));
-    kernelA->code = codeA;
-    kernelA->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"A"));
-    kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"B"));
-    kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"C"));
-
-
-    const gpuip::Parameter<int> incA("incA", 2);
-    const gpuip::Parameter<float> incB("incB", 0.25);
-    kernelA->paramsInt.push_back(incA);
-    kernelA->paramsFloat.push_back(incB);
+    kernelA->SetCode(codeA);
+    kernelA->AddInputBuffer("A", b1);
+    kernelA->AddOutputBuffer("B", b2);
+    kernelA->AddOutputBuffer("C", b3);
+    kernelA->SetParamInt("incA", 2);
+    kernelA->SetParamFloat("incB", 0.25);
     assert(ip->BoilerplateCode(kernelA) == std::string(boilerplateA));
     
     gpuip::Kernel::Ptr kernelB = ip->CreateKernel("my_kernelB");
     assert(kernelB.get() != NULL);
     assert(kernelB->name == std::string("my_kernelB"));
-    kernelB->code = codeB;
-    kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b2,"B"));
-    kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b3,"C"));
-    kernelB->outBuffers.push_back(gpuip::Kernel::BufferLink(b1,"A"));
+    kernelB->SetCode(codeB);
+    kernelB->AddInputBuffer("B", b2);
+    kernelB->AddInputBuffer("C", b3);
+    kernelB->AddOutputBuffer("A", b1);
     assert(ip->BoilerplateCode(kernelB) == std::string(boilerplateB));
     
     std::string err;

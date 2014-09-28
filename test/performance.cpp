@@ -413,20 +413,16 @@ void GaussianBlurSeparableGPU(gpuip::GpuEnvironment env,
     gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF, 4);
 
     gpuip::Kernel::Ptr kernelA = ip->CreateKernel("gaussian_blur_hor");
-    kernelA->code = codeHor;
-    kernelA->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"input"));
-    kernelA->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"output"));
-
-    const gpuip::Parameter<int> nA("n", BLUR_N);
-    kernelA->paramsInt.push_back(nA);
+    kernelA->SetCode(codeHor);
+    kernelA->AddInputBuffer("input", b1);
+    kernelA->AddOutputBuffer("output", b2);
+    kernelA->SetParamInt("n", BLUR_N);
 
     gpuip::Kernel::Ptr kernelB = ip->CreateKernel("gaussian_blur_vert");
-    kernelB->code = codeVert;
-    kernelB->inBuffers.push_back(gpuip::Kernel::BufferLink(b2,"input"));
-    kernelB->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"output"));
-
-    const gpuip::Parameter<int> nB("n", BLUR_N);
-    kernelB->paramsInt.push_back(nB);
+    kernelB->SetCode(codeVert);
+    kernelB->AddInputBuffer("input", b2);
+    kernelB->AddOutputBuffer("output", b3);
+    kernelB->SetParamInt("n", BLUR_N);
 
     std::string error;
     ip->Allocate(&error);
@@ -466,12 +462,10 @@ void BlurGPU(gpuip::GpuEnvironment env,
     gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF, 4);
 
     gpuip::Kernel::Ptr kernel = ip->CreateKernel(blur);
-    kernel->code = code;
-    kernel->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"input"));
-    kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"output"));
-
-    const gpuip::Parameter<int> n("n", BLUR_N);
-    kernel->paramsInt.push_back(n);
+    kernel->SetCode(code);
+    kernel->AddInputBuffer("input", b1);
+    kernel->AddOutputBuffer("output", b2);
+    kernel->SetParamInt("n", BLUR_N);
 
     std::string error;
     ip->Allocate(&error);
@@ -511,13 +505,11 @@ void LerpGPU(gpuip::GpuEnvironment env,
     gpuip::Buffer::Ptr b3 = ip->CreateBuffer("b3", gpuip::Buffer::HALF, 4);    
     
     gpuip::Kernel::Ptr kernel = ip->CreateKernel("lerp");
-    kernel->code = code;
-    kernel->inBuffers.push_back(gpuip::Kernel::BufferLink(b1,"a"));
-    kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b2,"b"));
-    kernel->outBuffers.push_back(gpuip::Kernel::BufferLink(b3,"c"));
-   
-    const gpuip::Parameter<float> alpha( "alpha", ALPHA);
-    kernel->paramsFloat.push_back(alpha);
+    kernel->SetCode(code);
+    kernel->AddInputBuffer("a", b1);
+    kernel->AddOutputBuffer("b", b2);
+    kernel->AddOutputBuffer("c", b3);
+    kernel->SetParamFloat("alpha", ALPHA);
 
     std::string error;
     ip->Allocate(&error);
